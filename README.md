@@ -1,6 +1,6 @@
 # ASTex
 
-ASTex is an open-source library for texture analysis and synthesis.
+[ASTex](https://astex-icube.github.io/) is an open-source library for texture analysis and synthesis.
 The term “texture” must be understood as in computer graphics.
 The purpose of this library is to support collaborative coding and to allow for comparison with recently published algorithms. 
 
