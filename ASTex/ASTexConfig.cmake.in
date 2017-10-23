@@ -1,0 +1,17 @@
+@PACKAGE_INIT@
+
+set(ASTEX_LIBRARIES "ASTex")
+set(ASTEX_INCLUDE_DIRS "@PACKAGE_ASTEX_INCLUDE_DIRS@")
+set(ITK_DIR "@PACKAGE_ITK_DIR@")
+
+#list(APPEND CMAKE_MODULE_PATH "${ASTEX_INCLUDE_DIRS}/../lib/cmake/ASTex")
+#find_package(PNG REQUIRED )
+#find_package(OpenEXR REQUIRED )
+find_package(ITK REQUIRED)
+include(${ITK_USE_FILE})
+
+if(NOT TARGET ASTex)
+  include("${CMAKE_CURRENT_LIST_DIR}/ASTexTargets.cmake")
+endif()
+
+check_required_components(PNG OpenEXR ITK)
