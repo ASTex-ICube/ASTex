@@ -1,17 +1,17 @@
-call ..\installvars.bat
+call installvars.bat
 
 cd %ROOT%
 del /S /Q build-zlib-release
 mkdir build-zlib-release
 cd build-zlib-release
-cmake -G ninja -DCMAKE_BUILD_TYPE=Release -DCMAKE_INSTALL_PREFIX=%INSTALL_REL%  %ZLIB_SRC%
+cmake -G %JOMGEN% -DCMAKE_BUILD_TYPE=Release -DCMAKE_INSTALL_PREFIX=%INSTALL_REL%  %ZLIB_SRC%
 cmake --build . --config Release --target install
 
 cd %ROOT%
 del /S /Q build-ilmbase-static-release
 mkdir build-ilmbase-static-release
 cd build-ilmbase-static-release
-cmake -G ninja -DCMAKE_BUILD_TYPE=Release -DCMAKE_INSTALL_PREFIX=%INSTALL_REL% ^
+cmake -G %JOMGEN% -DCMAKE_BUILD_TYPE=Release -DCMAKE_INSTALL_PREFIX=%INSTALL_REL% ^
  -DBUILD_SHARED_LIBS=OFF -DNAMESPACE_VERSIONING=OFF %OPENEXR_SRC%/IlmBase
 cmake --build . --config Release --target install
 
@@ -19,7 +19,7 @@ cd %ROOT%
 del /S /Q build-openexr-static-release
 mkdir build-openexr-static-release
 cd build-openexr-static-release
-cmake -G ninja -DCMAKE_BUILD_TYPE=Release -DCMAKE_INSTALL_PREFIX=%INSTALL_REL% ^
+cmake -G %JOMGEN% -DCMAKE_BUILD_TYPE=Release -DCMAKE_INSTALL_PREFIX=%INSTALL_REL% ^
  -DZLIB_INCLUDE_DIR=%INSTALL_REL%/include -DZLIB_LIBRARY_RELEASE=%INSTALL_REL%/lib/zlibstatic.lib ^
  -DBUILD_SHARED_LIBS=OFF -DILMBASE_PACKAGE_PREFIX=%INSTALL_REL% -DNAMESPACE_VERSIONING=OFF %OPENEXR_SRC%/OpenEXR
 cmake --build . --config Release --target install
@@ -28,7 +28,7 @@ cd %ROOT%
 del /S /Q build-itk-static-release
 mkdir build-itk-static-release
 cd build-itk-static-release
-cmake -G ninja -DCMAKE_BUILD_TYPE=Release -DCMAKE_INSTALL_PREFIX=%INSTALL_REL% -DITK_USE_SYSTEM_ZLIB=ON ^
+cmake -G %JOMGEN% -DCMAKE_BUILD_TYPE=Release -DCMAKE_INSTALL_PREFIX=%INSTALL_REL% -DITK_USE_SYSTEM_ZLIB=ON ^
  -DZLIB_INCLUDE_DIR=%INSTALL_REL%/include -DZLIB_LIBRARY_RELEASE=%INSTALL_REL%/lib/zlibstatic.lib  %ITK_SRC%
 cmake --build . --config Release --target install
 

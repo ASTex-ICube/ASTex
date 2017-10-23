@@ -1,4 +1,4 @@
-call ..\installvars.bat
+call installvars.bat
 
 set PATH=%PATH%;%INSTALL_REL%\lib;%INSTALL_REL%\bin
 
@@ -6,14 +6,14 @@ cd %ROOT%
 if exist build-zlib-release del /S /Q build-zlib-release
 mkdir build-zlib-release
 cd build-zlib-release
-cmake -G ninja -DCMAKE_BUILD_TYPE=Release -DCMAKE_INSTALL_PREFIX=%INSTALL_REL%  %ZLIB_SRC%
+cmake -G %JOMGEN% -DCMAKE_BUILD_TYPE=Release -DCMAKE_INSTALL_PREFIX=%INSTALL_REL%  %ZLIB_SRC%
 cmake --build . --config Release --target install
 
 cd %ROOT%
 if exist build-ilmbase-dyn-release del /S /Q build-ilmbase-dyn-release
 mkdir build-ilmbase-dyn-release
 cd build-ilmbase-dyn-release
-cmake -G ninja -DCMAKE_BUILD_TYPE=Release -DCMAKE_INSTALL_PREFIX=%INSTALL_REL% ^
+cmake -G %JOMGEN% -DCMAKE_BUILD_TYPE=Release -DCMAKE_INSTALL_PREFIX=%INSTALL_REL% ^
  -DBUILD_SHARED_LIBS=ON -DNAMESPACE_VERSIONING=OFF %OPENEXR_SRC%/IlmBase
 cmake --build . --config Release --target install
 
@@ -21,7 +21,7 @@ cd %ROOT%
 if exist build-openexr-dyn-release del /S /Q build-openexr-dyn-release
 mkdir build-openexr-dyn-release
 cd build-openexr-dyn-release
-cmake -G ninja -DCMAKE_BUILD_TYPE=Release -DCMAKE_INSTALL_PREFIX=%INSTALL_REL% -DCMAKE_PREFIX_PATH=%INSTALL_REL%^
+cmake -G %JOMGEN% -DCMAKE_BUILD_TYPE=Release -DCMAKE_INSTALL_PREFIX=%INSTALL_REL% -DCMAKE_PREFIX_PATH=%INSTALL_REL%^
  -DBUILD_SHARED_LIBS=ON -DILMBASE_PACKAGE_PREFIX=%INSTALL_REL% -DNAMESPACE_VERSIONING=OFF %OPENEXR_SRC%/OpenEXR
 cmake --build . --config Release --target install
 
@@ -31,7 +31,7 @@ cd %ROOT%
 if exist build-itk-dyn-release del /S /Q build-itk-dyn-release
 mkdir build-itk-dyn-release
 cd build-itk-dyn-release
-cmake -G ninja -DCMAKE_BUILD_TYPE=Release -DCMAKE_INSTALL_PREFIX=%INSTALL_REL% ^
+cmake -G %JOMGEN% -DCMAKE_BUILD_TYPE=Release -DCMAKE_INSTALL_PREFIX=%INSTALL_REL% ^
  -DCMAKE_PREFIX_PATH=%INSTALL_REL% -DITK_USE_SYSTEM_ZLIB=ON -DBUILD_SHARED_LIBS=ON %ITK_SRC%
 cmake --build . --config Release --target install
 

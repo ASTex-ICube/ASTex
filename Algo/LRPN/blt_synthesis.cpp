@@ -12,7 +12,7 @@ extern void biscalenoisepatchexg(const std::string& filename_source, const std::
 
 const int filt_size = 16;
 const int size_fft = 8;
-const float sig_freq = 0.03;
+const float sig_freq = 0.03f;
 const int nb_step_filt = 5;
 
 

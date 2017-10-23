@@ -275,7 +275,7 @@ unsigned int cleanup(unsigned int min)
 	{
 		// insert each region with associated size and region number
 		std::pair<std::pair<unsigned int,int>, std::vector<std::pair<int,int> > *> reg_i ;
-		reg_i.first = std::pair<unsigned int,int>(m_fragments[i].size(), m_status(m_fragments[i][0].first, m_fragments[i][0].second)) ; // couple (taille, num frag)
+		reg_i.first = std::pair<unsigned int,int>((unsigned int)(m_fragments[i].size()), m_status(m_fragments[i][0].first, m_fragments[i][0].second)) ; // couple (taille, num frag)
 		reg_i.second = &m_fragments[i] ; // (pointeur sur fragment)
 		region_order.insert(reg_i) ;
 	}

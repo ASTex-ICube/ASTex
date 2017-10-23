@@ -15,7 +15,7 @@ int main( int argc, char ** argv )
 
 	int filt_size = 16;
 	int size_fft = 8;
-	float sig_freq = 0.03;
+	float sig_freq = 0.03f;
 	int nb_step_filt = 5;
 
 	ASTex::RPnoise(filename_source, base_dir, filt_size, size_fft, sig_freq, nb_step_filt);

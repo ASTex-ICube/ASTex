@@ -1,17 +1,17 @@
-call ..\installvars.bat
+call installvars.bat
 
 cd %ROOT%
 del /S /Q build-zlib-debug
 mkdir build-zlib-debug
 cd build-zlib-debug
-cmake -G ninja -DCMAKE_BUILD_TYPE=Debug -DCMAKE_INSTALL_PREFIX=%INSTALL_DBG%  %ZLIB_SRC%
+cmake -G %JOMGEN% -DCMAKE_BUILD_TYPE=Debug -DCMAKE_INSTALL_PREFIX=%INSTALL_DBG%  %ZLIB_SRC%
 cmake --build . --config Debug --target install
 
 cd %ROOT%
 del /S /Q build-ilmbase-static-debug
 mkdir build-ilmbase-static-debug
 cd build-ilmbase-static-debug
-cmake -G ninja -DCMAKE_BUILD_TYPE=Debug -DCMAKE_INSTALL_PREFIX=%INSTALL_DBG% ^
+cmake -G %JOMGEN% -DCMAKE_BUILD_TYPE=Debug -DCMAKE_INSTALL_PREFIX=%INSTALL_DBG% ^
  -DBUILD_SHARED_LIBS=OFF -DNAMESPACE_VERSIONING=OFF %OPENEXR_SRC%/IlmBase
 cmake --build . --config Debug --target install
 
@@ -19,7 +19,7 @@ cd %ROOT%
 del /S /Q build-openexr-static-debug
 mkdir build-openexr-static-debug
 cd build-openexr-static-debug
-cmake -G ninja -DCMAKE_BUILD_TYPE=Debug -DCMAKE_INSTALL_PREFIX=%INSTALL_DBG% ^
+cmake -G %JOMGEN% -DCMAKE_BUILD_TYPE=Debug -DCMAKE_INSTALL_PREFIX=%INSTALL_DBG% ^
  -DZLIB_INCLUDE_DIR=%INSTALL_DBG%/include -DZLIB_LIBRARY_DEBUG=%INSTALL_DBG%/lib/zlibstaticd.lib ^
  -DBUILD_SHARED_LIBS=OFF -DILMBASE_PACKAGE_PREFIX=%INSTALL_DBG% -DNAMESPACE_VERSIONING=OFF %OPENEXR_SRC%/OpenEXR
 cmake --build . --config Debug --target install
@@ -29,7 +29,7 @@ cd %ROOT%
 del /S /Q build-itk-static-debug
 mkdir build-itk-static-debug
 cd build-itk-static-debug
-cmake -G ninja -DCMAKE_BUILD_TYPE=Debug -DCMAKE_INSTALL_PREFIX=%INSTALL_DBG% -DITK_USE_SYSTEM_ZLIB=ON ^
+cmake -G %JOMGEN% -DCMAKE_BUILD_TYPE=Debug -DCMAKE_INSTALL_PREFIX=%INSTALL_DBG% -DITK_USE_SYSTEM_ZLIB=ON ^
  -DZLIB_INCLUDE_DIR=%INSTALL_DBG%/include -DZLIB_LIBRARY_DEBUG=%INSTALL_DBG%/lib/zlibstaticd.lib  %ITK_SRC%
 cmake --build . --config Debug --target install
 

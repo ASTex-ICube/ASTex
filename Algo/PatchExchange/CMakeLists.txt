@@ -11,10 +11,6 @@ set (HEADERS FragmentProcessor.h PatchProcessor.h PoissonDiskSampler.h)
 set (SOURCES FragmentProcessor.cpp PatchProcessor.cpp PoissonDiskSampler.cpp)
 
 
-add_library(${PROJECT_NAME} ${SOURCES} ${HEADERS})
-target_link_libraries(${PROJECT_NAME} ASTex)
-
-
-add_executable(test_patch_exchange test_patch_exchange.cpp)
-target_link_libraries(test_patch_exchange ${PROJECT_NAME} ASTex)
+add_executable(test_patch_exchange test_patch_exchange.cpp  ${SOURCES} ${HEADERS})
+target_link_libraries(test_patch_exchange ASTex)
 

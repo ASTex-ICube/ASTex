@@ -15,8 +15,8 @@
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wunused-parameter"
 #elif defined(_MSC_VER)
-#pragma warning( push,)
-#pragma warning disable 4101
+#pragma warning( push)
+#pragma warning ( disable : 4101 )
 #endif
 
 
