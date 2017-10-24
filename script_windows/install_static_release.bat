@@ -43,7 +43,8 @@ cmake -G %SOLUTION% -DCMAKE_CONFIGURATION_TYPES="Release" -DCMAKE_PREFIX_PATH=%I
  
 copy %ITK_SRC:/=\%\Modules\ThirdParty\PNG\src\itkpng\pnglibconf.h %ITK_INCLUDES_R:/=\%\itkpng\
 
-cmake --build . --config Release
-
 echo You can remove build-zlib-release build-ilmbase-static-release build-openexr-static-release build-itk-static-release
+
+cmake-gui .
+
 pause
