@@ -5,6 +5,7 @@ before_install:
   - sudo apt-get install libpng-dev
   - sudo apt-get install libopenexr-dev 
   - sudo apt-get install cmake
+  - sudo apt-get install clang
 
   
 language: cpp
