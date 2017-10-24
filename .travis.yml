@@ -10,7 +10,7 @@ before_install:
 language: cpp
 
 compiler:
-  - g++
+  - clang++
   
 branches:
   only:
