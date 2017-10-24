@@ -14,10 +14,9 @@ compiler:
   
 branches:
   only:
-  - master
+  - develop
 
 script:
   - mkdir build
   - cd build
   - cmake .. && make
-  
