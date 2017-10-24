@@ -14,6 +14,7 @@ environment:
 
 install:
   - ps: Start-FileDownload 'http://igg.unistra.fr/people/thery/itk.zip'
+  - rmdir /S /Q installed-Release
   - 7z e itk.zip
 
 build_script:
