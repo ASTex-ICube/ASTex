@@ -10,7 +10,7 @@ clone_depth: 1                      # clone entire repository history if not def
 environment:
     GENERATOR: "Visual Studio 14 Win64"
     CONFIG: Release
-    IP: "c:/projects/installed-Release/"
+    IP: "c:/projects/itk/"
 
 install:
   - ps: Start-FileDownload 'http://igg.unistra.fr/people/thery/itk.zip'
