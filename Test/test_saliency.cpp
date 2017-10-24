@@ -63,19 +63,21 @@ ASTex::ImageGrayf saliencyFiltersTest( ASTex::ImageRGBu8 &img )
 
 int main( int argc, char **argv )
 {
-	ASTex::ImageRGBu8 img;
-	bool ok = false;
-
-	if( argc < 2 )
-		ok = img.load(TEMPO_PATH+"single-leaf-photo-03.jpg");
+	std::string fname;
+	
+	if (argc < 2)
+		fname = TEMPO_PATH + "single-leaf-photo-03.jpg";
 	else
-		ok = img.load( argv[1] );
+		fname = std::string(argv[1]);
+
+	ASTex::ImageRGBu8 img;
+	bool ok = img.load(fname);
 
 	if (ok)
 	{
 		ASTex::ImageGrayf out = saliencyFiltersTest( img );
-		std::string out_name = ASTex::IO::remove_ext(argv[1])+"saliency_out.png";
-		ASTex::IO::save01_in_u8(out,out_name);
+		std::string out_name = ASTex::IO::remove_ext(fname) + "_saliency_out.png";
+		ASTex::IO::save01_in_u8(out, out_name);
 		std::cout << out_name << " generated"<< std::endl;
 	}
 

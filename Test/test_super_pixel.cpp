@@ -102,13 +102,16 @@ void slicTest(const ASTex::ImageRGBu8 &img, ASTex::ImageRGBu8 &imgSLIC, ASTex::I
 
 int main( int argc, char **argv )
 {
-	ASTex::ImageRGBu8 img;
-	bool ok = false;
+	std::string fname;
 
-	if( argc < 2 )
-		ok = img.load(TEMPO_PATH+"single-leaf-photo-03.jpg");
+	if (argc < 2)
+		fname = TEMPO_PATH + "single-leaf-photo-03.jpg";
 	else
-		ok = img.load( argv[1] );
+		fname = std::string(argv[1]);
+
+	ASTex::ImageRGBu8 img;
+	bool ok = img.load(fname);
+
 
 	if (ok)
 	{
@@ -116,11 +119,11 @@ int main( int argc, char **argv )
 		ASTex::ImageRGBu8 imgSLIC_false;
 		slicTest(img, imgSLIC, imgSLIC_false);
 
-		std::string name1 = ASTex::IO::remove_ext(argv[1])+"_SLIC_MEAN.png";
+		std::string name1 = ASTex::IO::remove_ext(fname)+"_SLIC_MEAN.png";
 		imgSLIC.save(name1);
 		std::cout << name1 << " generated"<< std::endl;
 
-		std::string name2 = ASTex::IO::remove_ext(argv[1])+"_SLIC_FALSE.png";
+		std::string name2 = ASTex::IO::remove_ext(fname)+"_SLIC_FALSE.png";
 		imgSLIC_false.save(name2);
 		std::cout << name2 << " generated"<< std::endl;
 	}
