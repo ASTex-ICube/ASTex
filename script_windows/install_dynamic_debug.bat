@@ -46,8 +46,9 @@ cmake -G %SOLUTION% -DCMAKE_CONFIGURATION_TYPES="Debug" -DCMAKE_PREFIX_PATH=%INS
 
 copy %ITK_SRC:/=\%\Modules\ThirdParty\PNG\src\itkpng\pnglibconf.h %ITK_INCLUDES_D:/=\%\itkpng\
 
-cmake --build . --config Debug
-
 echo You can remove build-zlib-debug build-ilmbase-dyn-debug build-openexr-dyn-debug build-itk-dyn-debug
+
+cmake-gui . 
+
 pause
 

@@ -59,7 +59,8 @@ Then you can install the dependencies:
   - or/adn double click on install\_dynamic\_release.bat for compil/install of zlib/openexr/itk and creation of ASTex solution in dynamic release mode
   - you can reset the ASTex solutions with the reset\_static\_astex\_solu.bat and reset\_dynamic\_astex\_solu.bat scripts
   - after you can customize your build with cmake-gui (using the right build directory)
-- solutions are in folder build-astex-release / build-astex-debug
+- __WARNINNG__: if you want to install dynamic and static do not forget to changethe INSTALL\_REL & INSTALL\_DBG vars in installvars.bat
+- solutions are in folder build-astex-xxx-release / build-astex-xxx-debug
 - all installed libs (including ASTex) are in the same folder:
   - to install ASTex just just generate the INSTALL target
   - installed-Release for release
