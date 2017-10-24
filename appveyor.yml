@@ -10,7 +10,7 @@ clone_depth: 1                      # clone entire repository history if not def
 environment:
     GENERATOR: "Visual Studio 15 Win64"
     CONFIG: Release
-    IP: "c:\projects\ASTex\installed-Release\"
+    IP: "c:/projects/ASTex/installed-Release/"
 
 build_script:
   - wget http://igg.unistra.fr/people/thery/itk.zip
