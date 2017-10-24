@@ -1,0 +1,22 @@
+dist: trusty
+sudo: required
+before_install:
+  - sudo apt-get install libinsighttoolkit4-dev
+  - sudo apt-get install libpng-dev
+  - sudo apt-get install libopenexr-dev 
+  - sudo apt-get install cmake
+
+  
+language: cpp
+
+compiler:
+  - g++
+  
+branches:
+  only:
+  - develop
+
+script:
+  - mkdir build
+  - cd build
+  - cmake .. && make
