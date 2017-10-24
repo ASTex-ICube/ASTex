@@ -1,8 +1,4 @@
 
-# Skipping commits with particular message or from specific user
-skip_commits:
-  message: /WIP/      # Regex for matching commit message
- 
 clone_folder: c:\projects\ASTex
 
 # fetch repository as zip archive
