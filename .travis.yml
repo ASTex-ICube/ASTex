@@ -20,7 +20,7 @@ branches:
 
 install:
   - pushd /tmp/
-  - wget http://igg.unistra.fr/people/thery/itk.tgz
+  - wget wget https://mycore.core-cloud.net/index.php/s/BfSTlzfQIDqvI8l/download -O itk.tgz
   - cd /usr/
   - sudo tar xf /tmp/itk.tgz
   - popd
