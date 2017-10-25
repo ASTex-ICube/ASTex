@@ -8,11 +8,7 @@ before_install:
   - sudo apt-get install zlib1g-dev
   - sudo apt-get install libpng12-dev
   - sudo apt-get install libopenexr-dev 
-  
-language: cpp
 
-compiler:
-  - g++
   
 branches:
   only:
@@ -20,7 +16,7 @@ branches:
 
 install:
   - pushd /tmp/
-  - wget wget https://mycore.core-cloud.net/index.php/s/BfSTlzfQIDqvI8l/download -O itk.tgz
+  - wget https://mycore.core-cloud.net/index.php/s/BfSTlzfQIDqvI8l/download -O itk.tgz
   - cd /usr/
   - sudo tar xf /tmp/itk.tgz
   - popd
