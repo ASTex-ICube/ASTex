@@ -12,9 +12,7 @@ preinstall:
  - brew update
 
 install:
- # - bash .travis_install.sh
- - brew install insighttoolkit
- - brew install openexr
+  - bash .travis_install.sh
     
 branches:
   only:
