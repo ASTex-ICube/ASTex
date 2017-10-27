@@ -16,7 +16,7 @@ fi
 
 if [[ $TRAVIS_OS_NAME == 'osx' ]]; then
  pushd /tmp/
- wget https://mycore.core-cloud.net/index.php/s/jCZ3rakI3t22JSB/download -F itk_osx.tgz
+ wget https://mycore.core-cloud.net/index.php/s/jCZ3rakI3t22JSB/download -O itk_osx.tgz
  cd /usr/local
  sudo tar xf /tmp/itk_osx.tgz
  popd
