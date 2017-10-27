@@ -17,6 +17,6 @@ fi
 if [[ $TRAVIS_OS_NAME == 'osx' ]]; then
  brew install insighttoolkit
  brew install openexr
- brew install libpng
+# brew install libpng
 fi
  
