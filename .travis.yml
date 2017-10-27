@@ -1,3 +1,6 @@
+git:
+  depth: 3
+
 language: cpp
 
 dist: trusty
@@ -5,11 +8,8 @@ dist: trusty
 sudo: required
 
 os:
-#  - linux
+  - linux
   - osx
-
-preinstall:
- - brew update
 
 install:
   - bash .travis_install.sh
