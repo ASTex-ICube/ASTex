@@ -5,11 +5,11 @@ dist: trusty
 sudo: required
 
 os:
-  - linux
+#  - linux
   - osx
 
 install:
-  - bash .travis_install.sh
+  - ./.travis_install.sh
     
 branches:
   only:
