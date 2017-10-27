@@ -10,8 +10,9 @@ os:
 
 install:
  # - bash .travis_install.sh
- brew install insighttoolkit
- brew install openexr
+ - brew update
+ - brew install insighttoolkit
+ - brew install openexr
     
 branches:
   only:
