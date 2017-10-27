@@ -8,9 +8,11 @@ os:
 #  - linux
   - osx
 
+preinstall:
+ - brew update
+
 install:
  # - bash .travis_install.sh
- - brew update
  - brew install insighttoolkit
  - brew install openexr
     
