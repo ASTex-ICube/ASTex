@@ -97,7 +97,7 @@ double distRGBLum(const itkRGBu8& c1, const itkRGBu8& c2)
 	double l2 = (0.2126 * r2 + 0.7152 * g2 + 0.0722 * b2);
 	if (l2 > 1.0) l2 = 1.0;
 
-	return abs(l2 - l1);
+	return std::abs(l2 - l1);
 }
 
 // Distance between two colors (result in [0, 1])
