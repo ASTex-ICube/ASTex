@@ -161,7 +161,7 @@ public:
 
 	static const uint32_t NB_CHANNELS = 4;
 	typedef itk::RGBAPixel<CHANNEL_TYPE> PixelType;
-	typedef itk::RGBAPixel<double> DoublePixelType;
+	typedef RGBA<double> DoublePixelType;
 	typedef RGBA<CHANNEL_TYPE> ASTexPixelType;
 	typedef CHANNEL_TYPE DataType;
 

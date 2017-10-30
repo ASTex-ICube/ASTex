@@ -25,6 +25,8 @@
 
 #include <ASTex/image_rgb.h>
 #include <ASTex/image_gray.h>
+#include <ASTex/easy_io.h>
+
 #include "min_path_cut.h"
 
 
@@ -121,8 +123,6 @@ class WangTilesAlgo
 
 	static inline int random_int(int min, int max)
 	{
-//		double d = double(std::rand())/RAND_MAX;
-//		return  min + int(d*(max-min));
 		return  min + std::rand()%(max-min);
 	}
 
@@ -162,6 +162,7 @@ public:
 	IMG Rot45(const IMG& im)
 	{
 		using PIX = typename IMG::PixelType;
+		using DPIX = typename IMG::DoublePixelType;
 		using T = typename IMG::DataType;
 		int s = im.width()+im.height();
 		rot_img_.initItk(s,s,true);
@@ -180,49 +181,41 @@ public:
 			rot_img_.pixelAbsolute(xx,yy) = P;
 		});
 
-		for (int j=1; j<im.height();++j)
-			for (int i=1; i<im.width();++i)
+		for (int j = 1; j < im.height(); ++j)
+		{
+			for (int i = 1; i < im.width(); ++i)
 			{
-				int x = i+j-1;
-				int y = yb+j-i;
+				int x = i + j - 1;
+				int y = yb + j - i;
 
-				RGBd n(rot_img_.pixelAbsolute(x,y-1));
-				RGBd s(rot_img_.pixelAbsolute(x,y+1));
-				RGBd w(rot_img_.pixelAbsolute(x-1,y));
-				RGBd e(rot_img_.pixelAbsolute(x+1,y));
-
-				RGB<T> p(0.25*n + 0.25*s +0.25*w + 0.25*e);
-
-				rot_img_.pixelAbsolute(x,y) = p;
+				DPIX n = rot_img_.normalized_pixel(rot_img_.pixelAbsolute(x,y-1));
+				DPIX s = rot_img_.normalized_pixel(rot_img_.pixelAbsolute(x,y+1));
+				DPIX w = rot_img_.normalized_pixel(rot_img_.pixelAbsolute(x-1,y));
+				DPIX e = rot_img_.normalized_pixel(rot_img_.pixelAbsolute(x+1,y));
+				rot_img_.pixelAbsolute(x, y) = rot_img_.unnormalized_pixel((n + s + w + e) / 4);// (n + s + w + e) / 4.0f;
 			}
-
+			std::cout << std::endl;
+		}
 		return rot_img_;
 	}
 
-	IMG invRot45(const IMG& im)
+	IMG invRot45(/*const*/ IMG& im, int xt, int yt, int w)
 	{
 		IMG res;
 
 		using PIX = typename IMG::PixelType;
 		using T = typename IMG::DataType;
-		int s = im.width()+im.height()+1;
-		res.initItk(s,s,true);
+		res.initItk(w,w,true);
 
-		res.for_all_pixels([&] (PIX& P)
+		int xb = xt + 1 - w;
+		int yb = yt - 1 + w;
+		res.for_all_pixels([&] (PIX& P, int x, int y)
 		{
-			P=PIX(T(255));
+			int xx = xb+ x + y;
+			int yy = yb + y - x;
+			P = im.pixelAbsolute(xx, yy);
+			im.pixelAbsolute(xx, yy)[0] = 255;
 		});
-
-
-		for(int j=1;j<s;j+=2)
-		{
-			for(int i=0;i<j+1;++i)
-			{
-				int y =j/2;
-				int x = s/2-j/2+i;
-				res.pixelAbsolute(x,y) = im.pixelAbsolute(i,j-i);
-			}
-		}
 		return res;
 	}
 
@@ -744,45 +737,49 @@ void app_key_pressed(int /*code*/, char /*key*/,int /*id*/)
 
 bool test_overlap()
 {
-	ImageRGBu8 im;
-	im.load("/tmp/melon.png");
+	using IMG = ImageRGBf;
+
+	IMG im;
+	ASTex::IO::loadu8_in_01(im,"C:/Users/thery/Desktop/blue_rust.png");
+
+//	im.load("C:/Users/thery/Desktop/blue_rust.png");
 	im.copy_pixels(gen_index(100,10), im, gen_region(10,10,20,200));
 	im.copy_pixels(gen_index(130,10), im, gen_region(10,10,20,200));
 	im.copy_pixels(gen_index(160,10), im, gen_region(10,10,20,200));
 	im.copy_pixels(gen_index(190,10), im, gen_region(10,10,20,200));
 
-	im.for_region_pixels(gen_region(160,10,20,200),[] (ImageRGBu8::PixelType &P)
+	im.for_region_pixels(gen_region(160,10,20,200),[] (IMG::PixelType &P)
 	{
 		P[0] = 0;
 	});
-	im.for_region_pixels(gen_region(190,10,20,200),[] (ImageRGBu8::PixelType &P)
+	im.for_region_pixels(gen_region(190,10,20,200),[] (IMG::PixelType &P)
 	{
 		P[0] = 0;
 		P[1] = 0;
 		P[2] = 0;
 	});
 
-	ImageRGBu8::PixelType P = im.pixelAbsolute(195,15);
+	IMG::PixelType P = im.pixelAbsolute(195,15);
 	std::cout << "PIX:" << P << std::endl;
 
-	im.save("/tmp/mel3.png");
-
+//	im.save("C:/Users/thery/Desktop/blue_rust13.png");
+	ASTex::IO::save01_in_u8(im, "C:/Users/thery/Desktop/blue_rust13.png");
 
 	double err = computeErrorOverlap(im, gen_region(10,10,20,200), im, gen_region(10,10,20,200),
-									 [] (const ImageRGBu8::PixelType& P, const ImageRGBu8::PixelType& Q)
+									 [] (const IMG::PixelType& P, const IMG::PixelType& Q)
 	{
-		double err0 = ImageRGBu8::normalized_value(P[0]) - ImageRGBu8::normalized_value(Q[0]);
-		double err1 = ImageRGBu8::normalized_value(P[1]) - ImageRGBu8::normalized_value(Q[1]);
-		double err2 = ImageRGBu8::normalized_value(P[2]) - ImageRGBu8::normalized_value(Q[2]);
+		double err0 = IMG::normalized_value(P[0]) - IMG::normalized_value(Q[0]);
+		double err1 = IMG::normalized_value(P[1]) - IMG::normalized_value(Q[1]);
+		double err2 = IMG::normalized_value(P[2]) - IMG::normalized_value(Q[2]);
 		return err0*err0 + err1*err1 + err2*err2;
 	 });
 
 	std::cout << err<< std::endl;
-	err = computeErrorOverlap(im, gen_region(10,10,20,200), im, gen_region(130,10,20,200), ssd_error_pixels<ImageRGBu8>);
+	err = computeErrorOverlap(im, gen_region(10,10,20,200), im, gen_region(130,10,20,200), ssd_error_pixels<IMG>);
 	std::cout << err<< std::endl;
-	err = computeErrorOverlap(im, gen_region(10,10,20,200), im, gen_region(160,10,20,200), ssd_error_pixels<ImageRGBu8>);
+	err = computeErrorOverlap(im, gen_region(10,10,20,200), im, gen_region(160,10,20,200), ssd_error_pixels<IMG>);
 	std::cout << err<< std::endl;
-	err = computeErrorOverlap(im, gen_region(10,10,20,200), im, gen_region(190,10,20,200), ssd_error_pixels<ImageRGBu8>);
+	err = computeErrorOverlap(im, gen_region(10,10,20,200), im, gen_region(190,10,20,200), ssd_error_pixels<IMG>);
 	std::cout << err<< std::endl;
 
 
@@ -800,20 +797,22 @@ bool test_overlap()
 
 int main(int argc, char** argv)
 {
-	test_overlap();
-	return 0;
+	//test_overlap();
+	//return 0;
 
 
 	QApplication app(argc, argv);
 
 	ImageRGBu8 im;
-	im.load("/tmp/melon.png");
+	im.load("C:/Users/thery/Desktop/blue_rust.png");
 
 
 	auto start_chrono = std::chrono::system_clock::now();
 
 	WangTilesAlgo<ImageRGBu8,2> wta(im,60,10);
 	ImageRGBu8 imr = wta.Rot45(im);
+
+	ImageRGBu8 imrr = wta.invRot45(imr,501,100,200 );
 
 	int nb_samples = 8*1024;
 
@@ -857,12 +856,17 @@ int main(int argc, char** argv)
 
 
 	ImageViewer imgv("Rot45", &app, 0);
-	imgv.set_rgb(imr.getDataPtr(), imr.width(),imr.height(),2);
+	imgv.set_rgb(imr.getDataPtr(), imr.width(),imr.height(),1);
 	imgv.show();
 
-	ImageViewer imgvt("Tile", &app, 1);
-	imgvt.set_rgb(imt.getDataPtr(), imt.width(),imt.height(),2);
-	imgvt.show();
+	ImageViewer imgv2("Rot00", &app, 1);
+	imgv2.set_rgb(imrr.getDataPtr(), imrr.width(), imrr.height(), 1);
+	imgv2.show();
+
+
+	//ImageViewer imgvt("Tile", &app, 1);
+	//imgvt.set_rgb(imt.getDataPtr(), imt.width(),imt.height(),2);
+	//imgvt.show();
 
 
 //	ImageViewer imgvt2("Tile", &app, 1);
@@ -870,8 +874,8 @@ int main(int argc, char** argv)
 //	imgvt2.show();
 
 
-	imgv_ptr = &imgv;
-	imr_ptr = & imr;
+	//imgv_ptr = &imgv;
+	//imr_ptr = & imr;
 //	vi_ptr = &vi;
 
 	//imr.save("melon_r45.png");

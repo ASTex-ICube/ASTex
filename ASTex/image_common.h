@@ -158,17 +158,48 @@ public:
 		return double(v - std::numeric_limits<DataType>::lowest()) / (double(std::numeric_limits<DataType>::max()) - double(std::numeric_limits<DataType>::lowest()));
 	}
 
-
-	inline static DoublePixelType normalized_pixel(const PixelType& p)
+	inline static DataType unnormalized_value(double v)
 	{
-		if (!std::is_arithmetic<PixelType>::value) //compile time resolved
-			return normalized_value(p);
+		if (std::is_floating_point<DataType>::value) //compile time resolved
+			return DataType(v);
 
+		if (std::is_unsigned<DataType>::value) //compile time resolved
+			return DataType(v * std::numeric_limits<DataType>::max());
+
+		return DataType(v*(double(std::numeric_limits<DataType>::max()) - double(std::numeric_limits<DataType>::lowest())) + std::numeric_limits<DataType>::lowest());
+	}
+
+	template <bool B=true>
+	auto normalized_pixel(const PixelType& p) -> typename std::enable_if<B && std::is_arithmetic<PixelType>::value, DoublePixelType>::type
+	{
+		return normalized_value(p);
+	}
+
+	template <bool B = true>
+	auto normalized_pixel(const PixelType& p) -> typename std::enable_if<B && !std::is_arithmetic<PixelType>::value, DoublePixelType>::type
+	{
 		DoublePixelType q;
-		for (uint32_t i=0; i<INHERIT::NB_CHANNELS; ++i)
+		for (uint32_t i = 0; i<INHERIT::NB_CHANNELS; ++i)
 			q[i] = Self::normalized_value(p[i]);
 		return q;
 	}
+
+
+	template <bool B = true>
+	auto unnormalized_pixel(const DoublePixelType& p) -> typename std::enable_if<B && std::is_arithmetic<PixelType>::value, PixelType>::type
+	{
+		return unnormalized_value(p);
+	}
+
+	template <bool B = true>
+	auto unnormalized_pixel(const DoublePixelType& p) -> typename std::enable_if<B && !std::is_arithmetic<PixelType>::value, PixelType>::type
+	{
+		PixelType q;
+		for (uint32_t i = 0; i<INHERIT::NB_CHANNELS; ++i)
+			q[i] = Self::unnormalized_value(p[i]);
+		return q;
+	}
+
 
 	template <bool B=true>
 	inline static auto channel(const PixelType& p, uint32_t i)-> typename std::enable_if<!B || std::is_arithmetic<PixelType>::value , DataType>::type
