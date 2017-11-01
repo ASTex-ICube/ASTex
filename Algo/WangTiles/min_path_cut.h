@@ -40,13 +40,14 @@ class MinCutBuffer
 	using PIX = typename IMG::PixelType;
 	using T = typename IMG::DataType;
 
-	double* data_err_;
-	double* data_err_cum_;
+	const IMG& imA_;
+	const IMG& imB_;
+
 	int length_;
 	int overlay_;
 
-	const IMG& imA_;
-	const IMG& imB_;
+	std::vector<double> data_err_;
+	std::vector<double> data_err_cum_;
 
 	std::vector<int> minPos_;
 
@@ -63,6 +64,8 @@ public:
 	MinCutBuffer(const IMG& imA, const IMG& imB, int tw, int to):
 		imA_(imA), imB_(imB),
 		length_(tw),overlay_(to),
+		data_err_(tw*to),
+		data_err_cum_(tw*to),
 		minPos_(tw)
 	{
 		data_err_ = new double[2*length_*overlay_];
@@ -71,7 +74,6 @@ public:
 
 	~MinCutBuffer()
 	{
-		delete[] data_err_;
 	}
 
 	template <typename ERROR_PIX>
@@ -158,7 +160,6 @@ protected:
 		// compute initial error
 		auto dir_index = [] (int i,int j) {if (DIR==1) return gen_index(i,j); else return gen_index(j,i);};
 
-
 		// compute initial error
 
 		for (int j=0; j<length_; ++j)
@@ -225,13 +226,12 @@ protected:
 			}
 		}
 	}
-
 };
 
 
 
 template <typename IMG>
-inline double ssd_error_pixels(const IMG& imA, const Index& iA, const IMG& imB, const Index& iB)
+inline double ssd_error_pixel(const IMG& imA, const Index& iA, const IMG& imB, const Index& iB)
 {
 	const typename IMG::PixelType& P = imA.pixelAbsolute(iA);
 	const typename IMG::PixelType& Q = imB.pixelAbsolute(iB);

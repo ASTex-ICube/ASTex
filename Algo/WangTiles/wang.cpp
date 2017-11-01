@@ -419,7 +419,6 @@ public:
 			rAe[i] = {gen_index(iA[0]+tw_-ov_,iA[1]),vo};
 		}
 
-
 		std::vector<double> errors(random_pos.size(),0.0);
 		for (int j=0; j<random_pos.size(); ++j)
 		{
@@ -458,10 +457,9 @@ public:
 
 		double err = 0.0;
 		// and create positions
-		std::array<Index,NBC> res;
 		for (uint32_t i=0; i<NBC; ++i)
 		{
-			res[i] = random_pos[best[i]];
+			B[i] = random_pos[best[i]];
 			err += errors[i];
 		}
 
