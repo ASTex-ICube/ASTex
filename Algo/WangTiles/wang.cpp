@@ -148,7 +148,7 @@ public:
 	WangTilesAlgo(const IMG& img, int tw, int ov, int nbcol=2):
 	input_img_(img),tw_(tw),ov_(ov)//,nb_colors_(nbcol)
 	{
-		error_func_ = ssd_error_pixels<IMG>;
+		error_func_ = ssd_error_pixel<IMG>;
 	}
 
 
@@ -541,7 +541,7 @@ public:
 
 	IMG create_tile(const Index& nw, const Index& ne, const Index& se, const Index& sw)
 	{
-	MinCutBuffer<IMG,0> mcb(rot_img_,rot_img_,tw_,ov_);
+		MinCutBuffer<IMG,0> mcb(rot_img_,rot_img_,tw_,ov_);
 	}
 
 
@@ -773,11 +773,11 @@ bool test_overlap()
 	 });
 
 	std::cout << err<< std::endl;
-	err = computeErrorOverlap(im, gen_region(10,10,20,200), im, gen_region(130,10,20,200), ssd_error_pixels<IMG>);
+	err = computeErrorOverlap(im, gen_region(10,10,20,200), im, gen_region(130,10,20,200), ssd_error_pixel<IMG>);
 	std::cout << err<< std::endl;
-	err = computeErrorOverlap(im, gen_region(10,10,20,200), im, gen_region(160,10,20,200), ssd_error_pixels<IMG>);
+	err = computeErrorOverlap(im, gen_region(10,10,20,200), im, gen_region(160,10,20,200), ssd_error_pixel<IMG>);
 	std::cout << err<< std::endl;
-	err = computeErrorOverlap(im, gen_region(10,10,20,200), im, gen_region(190,10,20,200), ssd_error_pixels<IMG>);
+	err = computeErrorOverlap(im, gen_region(10,10,20,200), im, gen_region(190,10,20,200), ssd_error_pixel<IMG>);
 	std::cout << err<< std::endl;
 
 
@@ -795,14 +795,13 @@ bool test_overlap()
 
 int main(int argc, char** argv)
 {
-	//test_overlap();
-	//return 0;
-
+//	std::string fn = "C:/Users/thery/Desktop/blue_rust.png";
+	std::string fn = "/tmp/blue_rust.png";
 
 	QApplication app(argc, argv);
 
 	ImageRGBu8 im;
-	im.load("C:/Users/thery/Desktop/blue_rust.png");
+	im.load(fn);
 
 
 	auto start_chrono = std::chrono::system_clock::now();
@@ -810,38 +809,32 @@ int main(int argc, char** argv)
 	WangTilesAlgo<ImageRGBu8,2> wta(im,60,10);
 	ImageRGBu8 imr = wta.Rot45(im);
 
-	ImageRGBu8 imrr = wta.invRot45(imr,501,100,200 );
+//	ImageRGBu8 imrr = wta.invRot45(imr,501,100,200 );
+
+
+	ImageRGBu8 imcb(400,400);
+	imcb.for_all_pixels([&] (ImageRGBu8::PixelType& P)
+	{
+		P=itkRGBPixel<uint8_t>(0,0,0);
+	});
+
+
+	MinCutBuffer<ImageRGBu8,0> mcb0(imr,imr,300,100);
+	mcb0.fusion({{451,220}},{{453,220}}, imcb, {{0,0}});
+
+
+	MinCutBuffer<ImageRGBu8,1> mcb(imr,imr,300,100);
+	mcb.fusion({{451,220}},{{453,220}}, imcb, {{100,100}});
+
+
+
 
 	int nb_samples = 8*1024;
-
 	Size lsz = gen_size(im.width(),im.height());
 	wta.random_index_patches45(lsz, nb_samples);
 
-	std::vector<int> errs(nb_samples);
-
-//#pragma omp parallel for
-//	for(int j=0;j<nb_samples-4;++j)
-//	{
-//		errs[j] =  wta.computeErrorPatchesOverlaps(vi.data()+4*j);
-//	}
 
 
-
-
-	int min_pos=0;
-	for(int j=1;j<nb_samples/4;++j)
-	{
-		if (errs[j] < errs[min_pos])
-			min_pos = j;
-	}
-
-
-//	std::array<Index,4> ind;
-//	for (int i=0;i<4;++i)
-//		ind[i] = vi[4*min_pos+i];
-//	ImageRGBu8 imt = wta.createTile(ind);
-
-//	ImageRGBu8 imt2 = wta.invRot45(imt);
 
 	ImageRGBu8 imt;
 	ImageRGBu8 imt2;
@@ -857,9 +850,14 @@ int main(int argc, char** argv)
 	imgv.set_rgb(imr.getDataPtr(), imr.width(),imr.height(),1);
 	imgv.show();
 
-	ImageViewer imgv2("Rot00", &app, 1);
-	imgv2.set_rgb(imrr.getDataPtr(), imrr.width(), imrr.height(), 1);
+	ImageViewer imgv2("MCB", &app, 1);
+	imgv2.set_rgb(imcb.getDataPtr(), imcb.width(), imcb.height(), 1);
 	imgv2.show();
+
+
+//	ImageViewer imgv2("Rot00", &app, 1);
+//	imgv2.set_rgb(imrr.getDataPtr(), imrr.width(), imrr.height(), 1);
+//	imgv2.show();
 
 
 	//ImageViewer imgvt("Tile", &app, 1);

@@ -37,6 +37,16 @@ namespace ASTex
 #undef RGB
 #endif
 
+
+template<typename CHANNEL_TYPE>
+inline itk::RGBPixel<CHANNEL_TYPE> itkRGBPixel(CHANNEL_TYPE r, CHANNEL_TYPE g, CHANNEL_TYPE b)
+{
+	return itk::RGBPixel<CHANNEL_TYPE>(std::array<CHANNEL_TYPE,3>({{r,g,b}}).data());
+}
+
+
+
+
 /**
  * @brief The Pixem RGB class (just to add nice constructor)
  * @tparam CHANNEL_TYPE (uchar/char/ushort/short/.../float/double)
@@ -140,7 +150,6 @@ public:
 		Self res = Self(Inherit::GetRed()/s,Inherit::GetGreen()/s,Inherit::GetBlue()/s);
 		return res;
 	}
-
 };
 
 template<typename CHANNEL_TYPE>
@@ -156,7 +165,7 @@ itk::RGBPixel<T> blend(const itk::RGBPixel<T>& c1, const itk::RGBPixel<T>& c2, d
 	double r = double(c1.GetRed())*alpha+double(c2.GetRed())*beta;
 	double g = double(c1.GetGreen())*alpha+double(c2.GetGreen())*beta;
 	double b = double(c1.GetBlue())*alpha+double(c2.GetBlue())*beta;
-	return  itk::RGBPixel<T>((T)r, (T)g, (T)b);
+	return  itkRGBPixel((T)r, (T)g, (T)b);
 }
 
 

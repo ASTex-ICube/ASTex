@@ -29,6 +29,27 @@
 
 namespace ASTex
 {
+
+
+
+template <typename IMG>
+inline double ssd_error_pixel(const IMG& imA, const Index& iA, const IMG& imB, const Index& iB)
+{
+	const typename IMG::PixelType& P = imA.pixelAbsolute(iA);
+	const typename IMG::PixelType& Q = imB.pixelAbsolute(iB);
+
+	double sum_err2 = 0.0;
+
+	for (uint32_t i=0; i<IMG::NB_CHANNELS; ++i)
+	{
+		double err = IMG::normalized_value(IMG::channel(P,i)) - IMG::normalized_value(IMG::channel(Q,i));
+		sum_err2 += err*err;
+	}
+	return sum_err2;
+}
+
+
+
 /**
  *
  *  DIR: 0=Horizontal
@@ -68,8 +89,7 @@ public:
 		data_err_cum_(tw*to),
 		minPos_(tw)
 	{
-		data_err_ = new double[2*length_*overlay_];
-		data_err_cum_ = data_err_+ length_*overlay_;
+		error_func_ = ssd_error_pixel<IMG>;
 	}
 
 	~MinCutBuffer()
@@ -199,52 +219,56 @@ protected:
 		}
 	}
 
+public:
 	void fusion(const Index& posA, const Index& posB, IMG& dst, const Index& pos)
 	{
 		pathCut(posA, posB);
 
+//		for (auto x: minPos_)
+//			std::cout << x <<" / ";
+//		std::cout << std::endl;
+
 		auto dir_index = [] (int i,int j) {if (DIR==1) return gen_index(i,j); return gen_index(j,i);};
 
-		int y = pos[DIR];
-		for(int i=0; i<length_;++i)
-		{
-			int x = pos[1-DIR];
-			int j=0;
-			while(j<minPos_[i])
+//		int y = posA[DIR];
+//		int yy = posB[DIR];
+//		for(int i=0; i<length_;++i)
+//		{
+//			int x = posA[1-DIR];
+//			int xx = posB[1-DIR];
+//			int j=0;
+//			while(j<minPos_[i])
+//			{
+//				dst.pixelAbsolute(dir_index(j,i)) = imA_.pixelAbsolute(dir_index(x,y));
+//				std::cout <<"A "<< j <<" / "<< i <<" <- "<< x <<" / "<< y << std::endl;
+//				++x;++xx;
+//				++j;
+//			}
+//			dst.pixelAbsolute(dir_index(j,i)) = blend(imA_.pixelAbsolute(dir_index(x,y)),imB_.pixelAbsolute(dir_index(xx,yy)),0.5);
+//			j++;
+//			while(j<overlay_)
+//			{
+//				dst.pixelAbsolute(dir_index(j,i)) = imB_.pixelAbsolute(dir_index(xx,yy));
+//				std::cout <<"B "<< j <<" / "<< i <<" <- "<< xx <<" / "<< yy << std::endl;
+//				++xx;
+//				++j;
+//			}
+//			y++;
+//		}
+		for(int j=0; j<length_;++j)
+			for(int i=0; i<overlay_;++i)
 			{
-				dst.pixel_absolute(dir_index(x,y)) = imA_.pixel_absolute(dir_index(x,y));
-				++x;
-				++j;
+				if (i < minPos_[j])
+					dst.pixelAbsolute(dir_index(i+pos[0],j+pos[1])) = imA_.pixelAbsolute(dir_index(i+posA[0],j+posA[1]));
+				else if (i > minPos_[j])
+					dst.pixelAbsolute(dir_index(i+pos[0],j+pos[1])) = imB_.pixelAbsolute(dir_index(i+posB[0],j+posB[1]));
+				else
+					dst.pixelAbsolute(dir_index(i+pos[0],j+pos[1])) = itkRGBPixel<T>(255,0,0);
 			}
-			dst.pixel_absolute(dir_index(x,y)) = blend(imA_.pixel_absolute(dir_index(x,y)),imB_.pixel_absolute(dir_index(x,y)),0.5);
-			j++;
-			while(j<overlay_)
-			{
-				dst.pixel_absolute(dir_index(x,y)) = imB_.pixel_absolute(dir_index(x,y));
-				++x;
-				++j;
-			}
-		}
 	}
 };
 
 
-
-template <typename IMG>
-inline double ssd_error_pixel(const IMG& imA, const Index& iA, const IMG& imB, const Index& iB)
-{
-	const typename IMG::PixelType& P = imA.pixelAbsolute(iA);
-	const typename IMG::PixelType& Q = imB.pixelAbsolute(iB);
-
-	double sum_err2 = 0.0;
-
-	for (uint32_t i=0; i<IMG::NB_CHANNELS; ++i)
-	{
-		double err = IMG::normalized_value(IMG::channel(P,i)) - IMG::normalized_value(IMG::channel(Q,i));
-		sum_err2 += err*err;
-	}
-	return sum_err2;
-}
 
 
 } // namespace ASTex
