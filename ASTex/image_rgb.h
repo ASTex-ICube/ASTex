@@ -27,6 +27,7 @@
 #define __ASTEX_IMAGE_RGB__
 
 #include <ASTex/image_common.h>
+#include <array>
 
 
 namespace ASTex
@@ -169,6 +170,27 @@ itk::RGBPixel<T> blend(const itk::RGBPixel<T>& c1, const itk::RGBPixel<T>& c2, d
 }
 
 
+
+template<typename T>
+itk::RGBPixel<T> operator*(const itk::RGBPixel<T>& c, double a)
+{
+	return  itkRGBPixel(a*c[0], a*c[1], a*c[2]);
+}
+
+template<typename T>
+itk::RGBPixel<T> operator*(double a, const itk::RGBPixel<T>& c)
+{
+	return  itkRGBPixel(a*c[0], a*c[1], a*c[2]);
+}
+
+
+template<typename T>
+itk::RGBPixel<T> operator/(const itk::RGBPixel<T>& c, double a)
+{
+	return c*(1.0 / a); // ???
+}
+
+
 /**
  * @brief The RGB Image class
  * @tparam CHANNEL_TYPE (uchar/char/ushort/short/.../float/double)
@@ -203,6 +225,26 @@ public:
 	ImageRGBBase(typename itk::Image< itk::RGBPixel<CHANNEL_TYPE> >::Pointer itk_im):
 		itk_img_(itk_im)
 	{}
+
+	inline static PixelType itkPixel(CHANNEL_TYPE r, CHANNEL_TYPE g, CHANNEL_TYPE b)
+	{
+		return PixelType(std::array<CHANNEL_TYPE, 3>({ { r,g,b } }).data());
+	}
+
+	template <bool B = true>
+	inline static auto itkPixelNorm(double r, double g, double b) -> typename std::enable_if<B && std::is_arithmetic<CHANNEL_TYPE>::value, PixelType>::type
+	{
+		if (std::is_floating_point<CHANNEL_TYPE>::value)
+			return itkPixel(r,g,b);
+
+		if (std::is_unsigned<CHANNEL_TYPE>::value)
+			return itkPixel(r * std::numeric_limits<CHANNEL_TYPE>::max(), g * std::numeric_limits<CHANNEL_TYPE>::max(), b * std::numeric_limits<CHANNEL_TYPE>::max());
+
+		return itkPixel(r*(double(std::numeric_limits<CHANNEL_TYPE>::max()) - double(std::numeric_limits<CHANNEL_TYPE>::lowest())) + std::numeric_limits<CHANNEL_TYPE>::lowest(),
+			g*(double(std::numeric_limits<CHANNEL_TYPE>::max()) - double(std::numeric_limits<CHANNEL_TYPE>::lowest())) + std::numeric_limits<CHANNEL_TYPE>::lowest(), 
+			b*(double(std::numeric_limits<CHANNEL_TYPE>::max()) - double(std::numeric_limits<CHANNEL_TYPE>::lowest())) + std::numeric_limits<CHANNEL_TYPE>::lowest());
+	}
+
 
 protected:
 

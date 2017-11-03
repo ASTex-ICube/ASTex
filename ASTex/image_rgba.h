@@ -32,6 +32,13 @@
 namespace ASTex
 {
 
+template<typename CHANNEL_TYPE>
+inline itk::RGBAPixel<CHANNEL_TYPE> itkRGBPixel(CHANNEL_TYPE r, CHANNEL_TYPE g, CHANNEL_TYPE b, CHANNEL_TYPE a)
+{
+	return itk::RGBAPixel<CHANNEL_TYPE>(std::array<CHANNEL_TYPE, 4>({ { r,g,b,a } }).data());
+}
+
+
 /**
  * @brief The Pixel RGBA class (just to add nice constructor)
  * @tparam CHANNEL_TYPE (uchar/char/ushort/short/.../float/double)
@@ -140,6 +147,43 @@ inline RGBA<CHANNEL_TYPE> operator * (CHANNEL_TYPE s, const RGBA<CHANNEL_TYPE>& 
 }
 
 
+
+
+template<typename T>
+itk::RGBAPixel<T> blend(const itk::RGBAPixel<T>& c1, const itk::RGBAPixel<T>& c2, double alpha)
+{
+	double beta = 1.0 - alpha;
+	double r = double(c1.GetRed())*alpha + double(c2.GetRed())*beta;
+	double g = double(c1.GetGreen())*alpha + double(c2.GetGreen())*beta;
+	double b = double(c1.GetBlue())*alpha + double(c2.GetBlue())*beta;
+	double a = double(c1.GetAlpha())*alpha + double(c2.GetAlpha())*beta;
+
+	return  itkRGBAPixel(r, g, b, a);
+}
+
+
+
+template<typename T>
+itk::RGBAPixel<T> operator*(const itk::RGBAPixel<T>& c, double a)
+{
+	return  itkRGBPixel(a*c[0], a*c[1], a*c[2], a*c[3]);
+}
+
+template<typename T>
+itk::RGBAPixel<T> operator*(double a, const itk::RGBAPixel<T>& c)
+{
+	return  itkRGBAPixel(a*c[0], a*c[1], a*c[2], a*c[3]);
+}
+
+
+template<typename T>
+itk::RGBAPixel<T> operator/(const itk::RGBAPixel<T>& c, double a)
+{
+	return c*(1.0 / a); // ???
+}
+
+
+
 /**
  * @brief The RGBA image class
  * @tparam CHANNEL_TYPE (uchar/char/ushort/short/.../float/double)
@@ -172,6 +216,26 @@ public:
 	ImageRGBABase(typename itk::Image< itk::RGBAPixel<CHANNEL_TYPE> >::Pointer itk_im):
 		itk_img_(itk_im)
 	{}
+
+	inline static PixelType itkPixel(CHANNEL_TYPE r, CHANNEL_TYPE g, CHANNEL_TYPE b, CHANNEL_TYPE a)
+	{
+		return PixelType(std::array<CHANNEL_TYPE, 4>({ { r,g,b,a } }).data());
+	}
+
+	template <bool B = true>
+	inline static auto itkPixelNorm(double r, double g, double b, double a) -> typename std::enable_if<B && std::is_arithmetic<CHANNEL_TYPE>::value, PixelType>::type
+	{
+		if (std::is_floating_point<CHANNEL_TYPE>::value)
+			return itkPixel(r, g, b, a);
+
+		if (std::is_unsigned<CHANNEL_TYPE>::value)
+			return itkPixel(r * std::numeric_limits<CHANNEL_TYPE>::max(), g * std::numeric_limits<CHANNEL_TYPE>::max(), b * std::numeric_limits<CHANNEL_TYPE>::max(), a * std::numeric_limits<CHANNEL_TYPE>::max());
+
+		return itkPixel(r*(double(std::numeric_limits<CHANNEL_TYPE>::max()) - double(std::numeric_limits<CHANNEL_TYPE>::lowest())) + std::numeric_limits<CHANNEL_TYPE>::lowest(),
+			g*(double(std::numeric_limits<CHANNEL_TYPE>::max()) - double(std::numeric_limits<CHANNEL_TYPE>::lowest())) + std::numeric_limits<CHANNEL_TYPE>::lowest(),
+			b*(double(std::numeric_limits<CHANNEL_TYPE>::max()) - double(std::numeric_limits<CHANNEL_TYPE>::lowest())) + std::numeric_limits<CHANNEL_TYPE>::lowest(),
+			a*(double(std::numeric_limits<CHANNEL_TYPE>::max()) - double(std::numeric_limits<CHANNEL_TYPE>::lowest())) + std::numeric_limits<CHANNEL_TYPE>::lowest());
+	}
 
 protected:
 

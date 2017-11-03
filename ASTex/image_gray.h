@@ -62,6 +62,23 @@ public:
 		itk_img_(itk_im)
 	{}
 
+	inline static PixelType itkPixel(CHANNEL_TYPE v)
+	{
+		return PixelType(v);
+	}
+
+	template <bool B=true>
+	inline static auto itkPixelNorm(double v)->typename std::enable_if<B && std::is_arithmetic<CHANNEL_TYPE>::value,PixelType>::type
+	{
+		if (std::is_floating_point<CHANNEL_TYPE>::value)
+			return PixelType(v);
+
+		if (std::is_unsigned<CHANNEL_TYPE>::value)
+			return PixelType(v * std::numeric_limits<CHANNEL_TYPE>::max());
+
+		return PixelType(v*(double(std::numeric_limits<CHANNEL_TYPE>::max()) - double(std::numeric_limits<CHANNEL_TYPE>::lowest())) + std::numeric_limits<CHANNEL_TYPE>::lowest());
+	}
+
 protected:
 
 	inline PixelType* getPixelsPtr()

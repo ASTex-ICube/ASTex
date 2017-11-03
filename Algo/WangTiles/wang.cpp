@@ -795,8 +795,8 @@ bool test_overlap()
 
 int main(int argc, char** argv)
 {
-//	std::string fn = "C:/Users/thery/Desktop/blue_rust.png";
-	std::string fn = "/tmp/blue_rust.png";
+	std::string fn = "C:/Users/thery/Desktop/blue_rust.png";
+//	std::string fn = "/tmp/blue_rust.png";
 
 	QApplication app(argc, argv);
 
@@ -815,8 +815,19 @@ int main(int argc, char** argv)
 	ImageRGBu8 imcb(400,400);
 	imcb.for_all_pixels([&] (ImageRGBu8::PixelType& P)
 	{
-		P=itkRGBPixel<uint8_t>(0,0,0);
+		P = ImageRGBu8::itkPixel(0,0,0);
 	});
+
+	ImageRGBu8::PixelType P = ImageRGBu8::itkPixelNorm(0.5, 1, 0);
+
+	ImageRGBu8::PixelType Q = ImageRGBu8::itkPixelNorm(0, 1, 0.5);
+
+	std::cout << P<< std::endl;
+	std::cout << Q  << std::endl;
+
+	std::cout << (P+Q)/2 << std::endl;
+
+	std::cout << 0.5*P + Q*0.5 << std::endl;
 
 
 	MinCutBuffer<ImageRGBu8,0> mcb0(imr,imr,300,100);
