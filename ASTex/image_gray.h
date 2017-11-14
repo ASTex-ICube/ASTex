@@ -35,41 +35,48 @@ namespace ASTex
 template<typename CHANNEL_TYPE>
 class ImageGrayBase : public ImageBase
 {
-protected:
-	typename itk::Image< CHANNEL_TYPE >::Pointer itk_img_;
-
 public:
-
-	typedef itk::Image< CHANNEL_TYPE >				       ItkImg;
-	typedef itk::ImageRegionIteratorWithIndex<ItkImg>      IteratorIndexed;
-	typedef itk::ImageRegionIterator<ItkImg>               Iterator;
-	typedef itk::ImageRegionConstIteratorWithIndex<ItkImg> ConstIteratorIndexed;
-	typedef itk::ImageRegionConstIterator<ItkImg>          ConstIterator;
-
+	using PixelType =            CHANNEL_TYPE;
+	using ItkImg =               itk::Image< PixelType >;
+	using IteratorIndexed =      itk::ImageRegionIteratorWithIndex<ItkImg>;
+	using Iterator =             itk::ImageRegionIterator<ItkImg>;
+	using ConstIteratorIndexed = itk::ImageRegionConstIteratorWithIndex<ItkImg> ;
+	using ConstIterator =        itk::ImageRegionConstIterator<ItkImg>;
+	using DoublePixelEigen =     double;
+	using DataType =             CHANNEL_TYPE;
 
 	static const uint32_t NB_CHANNELS = 1;
-	typedef CHANNEL_TYPE PixelType;
-	typedef double DoublePixelType;
-	typedef CHANNEL_TYPE ASTexPixelType;
-	typedef CHANNEL_TYPE DataType;
 
+protected:
+	typename ItkImg::Pointer itk_img_;
+
+public:
 	ImageGrayBase():
 		itk_img_(NULL)
 	{}
-
 
 	ImageGrayBase(typename itk::Image< CHANNEL_TYPE >::Pointer itk_im):
 		itk_img_(itk_im)
 	{}
 
+	/**
+	 * @brief itkPixel
+	 * @return a pixel of value (v)
+	 */
 	inline static PixelType itkPixel(CHANNEL_TYPE v)
 	{
 		return PixelType(v);
 	}
 
+	/**
+	 * @brief itkPixelNorm
+	 * @param v normalized value [0,1]
+	 * @return a pixel V
+	 */
 	template <bool B=true>
 	inline static auto itkPixelNorm(double v)->typename std::enable_if<B && std::is_arithmetic<CHANNEL_TYPE>::value,PixelType>::type
 	{
+		assert((v>=0.0)&&(v<=1.0));
 		if (std::is_floating_point<CHANNEL_TYPE>::value)
 			return PixelType(v);
 
@@ -78,6 +85,22 @@ public:
 
 		return PixelType(v*(double(std::numeric_limits<CHANNEL_TYPE>::max()) - double(std::numeric_limits<CHANNEL_TYPE>::lowest())) + std::numeric_limits<CHANNEL_TYPE>::lowest());
 	}
+
+	/**
+	 * @brief eigenPixel
+	 * @param p a itk::Pixel
+	 * @return a double with same value
+	 */
+	inline static DoublePixelEigen eigenPixel(const PixelType& p)
+	{
+		return DoublePixelEigen(p);
+	}
+
+	inline static DoublePixelEigen eigenPixel(double v)
+	{
+		return v;
+	}
+
 
 protected:
 

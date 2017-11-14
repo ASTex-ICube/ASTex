@@ -36,6 +36,8 @@
 #include <ASTex/thread_pool.h>
 #include <ASTex/dll.h>
 
+#include <Eigen/Dense>
+
 #include <thread>
 #include <vector>
 #include <algorithm>
@@ -139,66 +141,29 @@ public:
 	typedef typename INHERIT::ConstIterator        ConstIterator;
 
 	typedef typename INHERIT::PixelType            PixelType;
-	typedef typename INHERIT::DoublePixelType      DoublePixelType;
-	typedef typename INHERIT::ASTexPixelType       ASTexPixelType;
+	typedef typename INHERIT::DoublePixelEigen     DoublePixelEigen;
+//	typedef typename INHERIT::ASTexPixelType       ASTexPixelType;
 	typedef typename INHERIT::DataType             DataType;
 	static const uint32_t NB_CHANNELS = INHERIT::NB_CHANNELS;
 
 	using Self = ImageCommon<INHERIT, CST>;
 
-
-	inline static double normalized_value(DataType v)
+	class EigenProxy
 	{
-		if (std::is_floating_point<DataType>::value) //compile time resolved
-			return double(v);
+		PixelType& pix_;
+	public:
+		EigenProxy(PixelType& p): pix_(p) {}
 
-		if (std::is_unsigned<DataType>::value) //compile time resolved
-					return double(v) / double(std::numeric_limits<DataType>::max());
+		operator DoublePixelEigen() const
+		{
+			return INHERIT::eigenPixel(pix_);
+		}
 
-		return double(v - std::numeric_limits<DataType>::lowest()) / (double(std::numeric_limits<DataType>::max()) - double(std::numeric_limits<DataType>::lowest()));
-	}
-
-	inline static DataType unnormalized_value(double v)
-	{
-		if (std::is_floating_point<DataType>::value) //compile time resolved
-			return DataType(v);
-
-		if (std::is_unsigned<DataType>::value) //compile time resolved
-			return DataType(v * std::numeric_limits<DataType>::max());
-
-		return DataType(v*(double(std::numeric_limits<DataType>::max()) - double(std::numeric_limits<DataType>::lowest())) + std::numeric_limits<DataType>::lowest());
-	}
-
-	template <bool B=true>
-	auto normalized_pixel(const PixelType& p) -> typename std::enable_if<B && std::is_arithmetic<PixelType>::value, DoublePixelType>::type
-	{
-		return normalized_value(p);
-	}
-
-	template <bool B = true>
-	auto normalized_pixel(const PixelType& p) -> typename std::enable_if<B && !std::is_arithmetic<PixelType>::value, DoublePixelType>::type
-	{
-		DoublePixelType q;
-		for (uint32_t i = 0; i<INHERIT::NB_CHANNELS; ++i)
-			q[i] = Self::normalized_value(p[i]);
-		return q;
-	}
-
-
-	template <bool B = true>
-	auto unnormalized_pixel(const DoublePixelType& p) -> typename std::enable_if<B && std::is_arithmetic<PixelType>::value, PixelType>::type
-	{
-		return unnormalized_value(p);
-	}
-
-	template <bool B = true>
-	auto unnormalized_pixel(const DoublePixelType& p) -> typename std::enable_if<B && !std::is_arithmetic<PixelType>::value, PixelType>::type
-	{
-		PixelType q;
-		for (uint32_t i = 0; i<INHERIT::NB_CHANNELS; ++i)
-			q[i] = Self::unnormalized_value(p[i]);
-		return q;
-	}
+		void operator = (const DoublePixelEigen& p)
+		{
+			pix_ = INHERIT::itkPixel(p);
+		}
+	};
 
 
 	template <bool B=true>
@@ -260,7 +225,7 @@ public:
 		initItk(w,h,init_to_zero);
 	}
 
-	NOT_CONST inline auto getPixelsPtr() -> RETURNED_TYPE(ASTexPixelType*)
+	NOT_CONST inline auto getPixelsPtr() -> RETURNED_TYPE(PixelType*)
 	{
 		return INHERIT::getPixelsPtr();
 	}
@@ -271,7 +236,7 @@ public:
 	}
 
 
-	const ASTexPixelType* getPixelsPtr() const
+	const PixelType* getPixelsPtr() const
 	{
 		return INHERIT::getPixelsPtr();
 	}
@@ -389,6 +354,10 @@ public:
 		return this->itk_img_->GetPixel(pos);
 	}
 
+	DoublePixelEigen pixelEigenAbsolute(const Index& pos) const
+	{
+		return INHERIT::eigenPixel(this->itk_img_->GetPixel(pos));
+	}
 
 	NOT_CONST auto pixelAbsolute( int i, int j) -> RETURNED_TYPE(PixelType&)
 	{
@@ -400,6 +369,10 @@ public:
 		return this->itk_img_->GetPixel({{i,j}});
 	}
 
+	DoublePixelEigen pixelEigenAbsolute(int i, int j) const
+	{
+		return INHERIT::eigenPixel(this->itk_img_->GetPixel({{i,j}}));
+	}
 
 	NOT_CONST auto pixelRegion( int i, int j) -> RETURNED_TYPE(PixelType&)
 	{
@@ -417,6 +390,13 @@ public:
 		return this->itk_img_->GetPixel(pixelIndex);
 	}
 
+	DoublePixelEigen pixelEigenRegion(int i, int j) const
+	{
+		const Index& imgIdx = this->itk_img_->GetLargestPossibleRegion().GetIndex();
+		Index pixelIndex = {{ i+imgIdx[0] ,j+imgIdx[1] }};
+		return INHERIT::eigenPixel(this->itk_img_->GetPixel(pixelIndex));
+	}
+
 
 	NOT_CONST auto pixelRelative( int i, int j) -> RETURNED_TYPE(PixelType&)
 	{
@@ -430,6 +410,11 @@ public:
 		return  this->itk_img_->GetPixel(pixelIndex);
 	}
 
+	DoublePixelEigen pixelEigenRelative(int i, int j) const
+	{
+		Index pixelIndex = {{ i+center_[0] ,j+center_[1] }};
+		return INHERIT::eigenPixel(this->itk_img_->GetPixel(pixelIndex));
+	}
 
 	const PixelType& pixelChecked(int i, int j) const
 	{
@@ -1421,6 +1406,45 @@ IMG create_from_buffer(int w, int h, char * buffer, bool manage_dest)
 }
 
 
+
+template <typename FUNC>
+void parallel_for(int begin, int end, int inc, const FUNC& f)
+{
+	ThreadPool* thread_pool = internal_thread_pool();
+	uint16_t nbt = nb_launched_threads();
+	std::vector<ThreadPool::Future> futures(nbt);
+	int inct = inc*nbt;
+	for (uint16_t i = 0; i<nbt; ++i)
+	{
+		futures[i] = thread_pool->enqueue([inct, begin, end, &f]()
+		{
+			for (int y = begin; y<end; y += inct)
+				f(y);
+		});
+		begin += inc;
+	}
+	for (auto& f : futures)
+		f.wait();
+}
+
+template <typename FUNC>
+void parallel_for(int begin, int end, const FUNC& f)
+{
+	ThreadPool* thread_pool = internal_thread_pool();
+	uint16_t nbt = nb_launched_threads();
+	std::vector<ThreadPool::Future> futures(nbt);
+	for (uint16_t i = 0; i<nbt; ++i)
+	{
+		futures[i] = thread_pool->enqueue([nbt, begin, end, &f]()
+		{
+			for (int y = begin; y<end; y += nbt)
+				f(y);
+		});
+		++begin;
+	}
+	for (auto& f : futures)
+		f.wait();
+}
 
 }
 

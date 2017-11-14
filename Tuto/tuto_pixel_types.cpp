@@ -39,7 +39,6 @@ int main()
 
 	ImageRGBu8 image(4,4);
 	// ImageRGBu8::PixelType => itk::RGBPixel<uint8>
-	// ImageRGBu8::ASTexPixelType => RGBu8 (derived from itk::RGBPixel<uint8>)
 
 	// pixelAbsolute return ref or const-ref to PixelType
 	ImageRGBu8::PixelType& p1 = image.pixelAbsolute(0,0);
@@ -58,23 +57,35 @@ int main()
 	});
 
 
-	// Why using ASTexPixelType:
+	// Why using DoublePixelEigen:
 	// - more nice constructor
 	// - more nices operators (*/)
 
 	// Examples of constructors
-	p1 = RGBu8(134);
-	p2 = RGBu8(128,128,128);
+	p1 = ImageRGBu8::itkPixel(134);
+	p2 = ImageRGBu8::itkPixel(128,128,128);
 
 	p3 = p1 + p2; // possible overflow !
 //	p3 /= 2; not possible with pixel type
 	std::cout<< p1 << " + "<< p2 << " (compute uint8) = " << p3 << std::endl;
 
+	using DoublePix = ImageRGBu8::DoublePixelEigen;
+
 	// easy type conversion to any compatible type:
-	p3 = RGBu8( (RGBu16(p1)+RGBu16(p2))/2 );
-	// and more operations like /
+
+	p3 = ImageRGBu8::itkPixel((ImageRGBu8::eigenPixel(p1)+ImageRGBu8::eigenPixel(p2))/2);
 
 	std::cout<< p1 << " + "<< p2 << " /2 (compute uint16) = " << p3 << std::endl;
+
+
+	DoublePix ep1 = image.pixelEigenAbsolute(0,0);
+	DoublePix ep2 = image.pixelEigenAbsolute(1,0);
+	DoublePix ep3 = image.pixelEigenAbsolute(2,0);
+
+	image.pixelEigenAbsolute(1,1) = (ep1+ep2+ep3)/3 ;
+
+	std::cout<< image.pixelAbsolute(0,0) << " + "<< image.pixelAbsolute(1,0) << " + "<< image.pixelAbsolute(2,0) << " /3 = " << " + "<< image.pixelAbsolute(1,1) << std::endl;
+
 
 	return EXIT_SUCCESS;
 }

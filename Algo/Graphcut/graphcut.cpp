@@ -45,7 +45,12 @@
 
 using namespace ASTex;
 
-typedef itk::RGBPixel<uint8_t > itkRGBu8;
+using itkRGBu8 = ImageRGBu8::PixelType;
+
+inline itkRGBu8 RGBu8(uint8_t r, uint8_t g, uint8_t b)
+{
+	return ImageRGBu8::itkPixel(r,g,b);
+}
 
 // ---- Utility functions ----
 
@@ -188,7 +193,7 @@ void GCTexture::fillOutputImage()
 			}
 			else
 			{
-				outputImage.pixelAbsolute(i, j) = RGB<uint8_t >(0, 0, 0);
+				outputImage.pixelAbsolute(i, j) = RGBu8(0,0,0);
 			}
 		}
 	}
@@ -321,7 +326,7 @@ void GCTexture::revealSeamsMaxError(int radius)
 			int ti = maxErrX + si;
 			if ((ti >= 0 && ti < output_w) && (tj >= 0 && tj < output_h))
 			{
-				outputImage.pixelAbsolute(ti, tj) = RGB<uint8_t >(255, 0, 255);
+				outputImage.pixelAbsolute(ti, tj) = RGBu8(255u, 0u, 255u);
 			}
 		}
 	}
@@ -1132,7 +1137,7 @@ int GCTexture::insertPatch(int x, int y, int px, int py, int sx, int sy, bool fi
 						if (bb < 0) bb = 0;
 						if (bb > 255) bb = 255;
 
-						globalNode[nodeNbGlobal].setColorOtherPatch(RGB<uint8_t >(rr, gg, bb));
+						globalNode[nodeNbGlobal].setColorOtherPatch(RGBu8(rr, gg, bb));
 					}
 					else
 					{
@@ -1162,7 +1167,7 @@ int GCTexture::insertPatch(int x, int y, int px, int py, int sx, int sy, bool fi
 						if (bb < 0) bb = 0;
 						if (bb > 255) bb = 255;
 
-						globalNode[nodeNbGlobal].setColor(RGB<uint8_t >(rr, gg, bb));
+						globalNode[nodeNbGlobal].setColor(RGBu8(rr, gg, bb));
 
 						if (!globalNode[nodeNbGlobal].onNewSeam())
 						{

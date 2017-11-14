@@ -74,25 +74,6 @@ void copyGray2Vec( const typename TSRC::PixelType& v_in, typename TDST::PixelTyp
 
 
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 /**
  * @brief image conversion function
  * @tparam TSCR input pointer image type (deduced)
@@ -118,6 +99,119 @@ void convertImage(typename TSRC::Pointer src, typename TDST::Pointer dst, CONV c
 		}
 	}
 }
+
+
+
+
+
+
+template<typename T>
+/**
+ * @brief interlace 3 scalar images into rgb image
+ * @param im_r
+ * @param im_g
+ * @param im_b
+ * @return
+ */
+ImageRGB<T> interlace(const ImageGray<T>& im_r, const ImageGray<T>& im_g, const ImageGray<T>& im_b)
+{
+	using GRAY = typename ImageGray<T>::PixelType;
+	using RGB = typename ImageRGB<T>::PixelType;
+	using OUT_IT = typename ImageRGB<T>::Iterator;
+	using IN_IT  = typename ImageGray<T>::ConstIterator;
+
+	ImageRGB<T> res(im_r.width(),im_r.height());
+
+	IN_IT ir = im_r.beginConstIterator();
+	IN_IT ig = im_g.beginConstIterator();
+	IN_IT ib = im_b.beginConstIterator();
+	IN_IT ia = im_a.beginConstIterator();
+	for (OUT_IT irgb = res.beginIterator(); !irgb.IsAtEnd(); ++irgb)
+	{
+		irgb.Value() = RGBA(ir.Value(),ig.Value(),ib.Value());
+		++ir; ++ig; ++ib;
+	}
+}
+
+template<typename T>
+ImageRGBA<T> interlace(const ImageGray<T>& im_r, const ImageGray<T>& im_g, const ImageGray<T>& im_b, const ImageGray<T>& im_a)
+{
+	using GRAY = typename ImageGray<T>::PixelType;
+	using RGBA = typename ImageRGBA<T>::PixelType;
+	using OUT_IT = typename ImageRGBA<T>::Iterator;
+	using IN_IT  = typename ImageGray<T>::ConstIterator;
+
+	ImageRGBA<T> res(im_r.width(),im_r.height());
+
+	IN_IT ir = im_r.beginConstIterator();
+	IN_IT ig = im_g.beginConstIterator();
+	IN_IT ib = im_b.beginConstIterator();
+	IN_IT ia = im_a.beginConstIterator();
+	for (OUT_IT irgba = res.beginIterator(); !irgba.IsAtEnd(); ++irgba)
+	{
+		irgba.Value() = RGBA(ir.Value(),ig.Value(),ib.Value(),ia.Value());
+		++ir; ++ig; ++ib; ++ia;
+	}
+}
+
+
+template<typename T>
+const deinterlace(const ImageRGB<T> im_rgb, ImageGray<T>& im_r, ImageGray<T>& im_g, ImageGray<T>& im_b)
+{
+	using GRAY = typename ImageGray<T>::PixelType;
+	using RGB = typename ImageRGB<T>::PixelType;
+	using IN_IT = typename ImageRGB<T>::ConstIterator;
+	using OUT_IT  = typename ImageGray<T>::Iterator;
+
+	OUT_IT ir = im_r.beginIterator();
+	OUT_IT ig = im_g.beginIterator();
+	OUT_IT ib = im_b.beginIterator();
+	OUT_IT ia = im_a.beginIterator();
+	for (IN_IT irgb = im_rgb.beginIterator(); !irgb.IsAtEnd(); ++irgb)
+	{
+		const RGB& P = irgb.Value();
+		ir.Value() = P.GetRed();
+		ig.Value() = P.GetGreen();
+		ib.Value() = P.GetBlue();
+		++ir; ++ig; ++ib;
+	}
+}
+
+template<typename T>
+const deinterlace(const ImageRGBA<T> im_rgba, ImageGray<T>& im_r, ImageGray<T>& im_g, ImageGray<T>& im_b, ImageGray<T>& im_a)
+{
+	using GRAY = typename ImageGray<T>::PixelType;
+	using RGBA = typename ImageRGBA<T>::PixelType;
+	using IN_IT = typename ImageRGBA<T>::ConstIterator;
+	using OUT_IT  = typename ImageGray<T>::Iterator;
+
+	OUT_IT ir = im_r.beginIterator();
+	OUT_IT ig = im_g.beginIterator();
+	OUT_IT ib = im_b.beginIterator();
+	OUT_IT ia = im_a.beginIterator();
+	for (IN_IT irgba = im_rgba.beginIterator(); !irgba.IsAtEnd(); ++irgba)
+	{
+		const RGBA& P = irgba.Value();
+		ir.Value() = P.GetRed();
+		ig.Value() = P.GetGreen();
+		ib.Value() = P.GetBlue();
+		ia.Value() = P.GetAlpha();
+		++ir; ++ig; ++ib; ++ia;
+	}
+}
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 

@@ -28,6 +28,7 @@
 
 using namespace ASTex;
 
+
 /**
  * usage of iterators for const traversals (no modif of image)
  * Define where to iterate:
@@ -41,7 +42,7 @@ using namespace ASTex;
 void test_const_iterator(const ImageRGBu8& image)
 {
 	uint32_t nb = 0;
-	RGBd average(0.0);
+	auto average = ImageRGBu8::eigenPixel(0);
 
 	// The three following usages of ConstIterator vary only with parameter of beginConstIterator
 	// no param, 4 int, or Region
@@ -52,42 +53,42 @@ void test_const_iterator(const ImageRGBu8& image)
 	for (ImageRGBu8::ConstIterator it = image.beginConstIterator(); !it.IsAtEnd(); ++it)
 	{
 		// construct a RGBd from itValue for using +=
-		average += RGBd(it.Value());
+		average += ImageRGBu8::eigenPixel(it.Value());
 		nb ++;
 	}
 	average /= nb;
-	std::cout << "Average; "<< average << std::endl;
+	std::cout << "Average: "<<ImageRGBu8::itkPixel(average) << std::endl;
 
 	uint32_t W = image.width();
 	uint32_t H = image.height();
 	nb = 0;
-	average = RGBd(0.0);
+	average = ImageRGBu8::eigenPixel(0);
 
 	// 2 - ZONE x,y,w,h
 	// traverse a part of image (a quad of size half of image centered)
 	// Region is given by  begin pos x, begin pos y, width, height.
 	for (ImageRGBu8::ConstIterator it = image.beginConstIterator(W/4, H/4, W/2, H/2); !it.IsAtEnd(); ++it)
 	{
-		average += RGBd(it.Value());
+		average += ImageRGBu8::eigenPixel(it.Value());
 		nb ++;
 	}
 	average /= nb;
-	std::cout << "Average; "<< average << std::endl;
+	std::cout << "Average; "<< ImageRGBu8::itkPixel(average) << std::endl;
 
 
 	Region reg= gen_region(W/4, H/4, W/2, H/2);
 	nb = 0;
-	average = RGBd(0.0);
+	average = ImageRGBu8::eigenPixel(0);
 
 	// 3 - Region
 	// traverse a region
 	for (ImageRGBu8::ConstIterator it = image.beginConstIterator(reg); !it.IsAtEnd(); ++it)
 	{
-		average += RGBd(it.Value());
+		average += ImageRGBu8::eigenPixel(it.Value());
 		nb ++;
 	}
 	average /= nb;
-	std::cout << "Average; "<< average << std::endl;
+	std::cout << "Average; "<< ImageRGBu8::itkPixel(average) << std::endl;
 
 }
 
@@ -99,9 +100,7 @@ void test_iterator(ImageRGBu8& image)
 	// traverse image with modification: useIterator
 	for (ImageRGBu8::Iterator it = image.beginIterator(); !it.IsAtEnd(); ++it)
 	{
-		// it.Value -> itk::RGBPixel
-		// convert ref into RGB for /=
-		RGBu8::convert(it.Value()) /= 2;
+		it.Value() = ImageRGBu8::itkPixel(ImageRGBu8::eigenPixel(it.Value())/2);
 	}
 	// Same possible parameter than with ConstIterators (x,y,w,h) (Region)
 }
@@ -123,8 +122,7 @@ void test_many_iterators(const ImageRGBu8& input1, const ImageRGBu8& input2, Ima
 
 	while (!it_out.IsAtEnd())
 	{
-		it_out.Value() = RGBd(it_in1.Value()) + RGBd(it_in2.Value());
-		RGBd::convert(it_out.Value()) /= 512.0;
+		it_out.Value() = ImageRGBu8::itkPixel((ImageRGBu8::eigenPixel(it_in1.Value()) + ImageRGBu8::eigenPixel(it_in2.Value()))/512);
 		 ++it_out,++it_in1,++it_in2;
 	}
 
@@ -133,8 +131,9 @@ void test_many_iterators(const ImageRGBu8& input1, const ImageRGBu8& input2, Ima
 	for (auto its = std::make_tuple(output.beginIterator(),input1.beginConstIterator(),input2.beginConstIterator());
 		 !std::get<0>(its).IsAtEnd(); ++std::get<0>(its), ++std::get<1>(its), ++std::get<2>(its))
 	{
-		std::get<0>(its).Value() = RGBd(std::get<1>(its).Value()) + RGBd(std::get<2>(its).Value());
-		RGBd::convert(std::get<0>(its).Value()) /= 512.0;
+		std::get<0>(its).Value() = ImageRGBu8::itkPixel((ImageRGBu8::eigenPixel(std::get<1>(its).Value()) + ImageRGBu8::eigenPixel(std::get<2>(its).Value()))/512);
+
+
 	}
 
 }

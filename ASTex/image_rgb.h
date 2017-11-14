@@ -39,157 +39,6 @@ namespace ASTex
 #endif
 
 
-template<typename CHANNEL_TYPE>
-inline itk::RGBPixel<CHANNEL_TYPE> itkRGBPixel(CHANNEL_TYPE r, CHANNEL_TYPE g, CHANNEL_TYPE b)
-{
-	return itk::RGBPixel<CHANNEL_TYPE>(std::array<CHANNEL_TYPE,3>({{r,g,b}}).data());
-}
-
-
-
-
-/**
- * @brief The Pixem RGB class (just to add nice constructor)
- * @tparam CHANNEL_TYPE (uchar/char/ushort/short/.../float/double)
- */
-template<typename CHANNEL_TYPE>
-class RGB: public itk::RGBPixel<CHANNEL_TYPE>
-{
-	using Inherit =  itk::RGBPixel<CHANNEL_TYPE>;
-	using Self =  RGB<CHANNEL_TYPE>;
-public:
-	RGB() {}
-
-	RGB(const Inherit& itkrgb):
-		Inherit(itkrgb)
-	{}
-
-	RGB(CHANNEL_TYPE r, CHANNEL_TYPE g, CHANNEL_TYPE b)
-	{
-		Inherit::Set(r,g,b);
-	}
-
-	explicit RGB(CHANNEL_TYPE v)
-	{
-		Inherit::Set(v,v,v);
-	}
-
-	template<typename PIX>
-	explicit RGB(const PIX& p, typename std::enable_if<std::is_base_of<itk::FixedArray<CHANNEL_TYPE,3>,PIX>::value>::type* = nullptr)
-	{
-		Inherit::Set(CHANNEL_TYPE(p[0]),CHANNEL_TYPE(p[1]),CHANNEL_TYPE(p[2]));
-	}
-
-
-	/**
-	 * @brief convert a reference to itk::RGBPixel into a reference to RGB
-	 */
-	static Self& convert(Inherit& itkrgb)
-	{
-		return *(reinterpret_cast<Self*>(&itkrgb));
-	}
-
-	/**
-	 * @brief convert a const reference to itk::RGBPixel into a const reference to RGB
-	 */
-	static const Self& convert(const Inherit& itkrgb)
-	{
-		return *(reinterpret_cast<const Self*>(&itkrgb));
-	}
-
-
-
-	inline Self& operator += (const Self& p)
-	{
-		Inherit::operator += (p);
-		return *this;
-	}
-
-	inline Self& operator -= (const Self& p)
-	{
-		Inherit::operator -= (p);
-		return *this;
-	}
-
-
-	inline Self& operator *= (CHANNEL_TYPE s)
-	{
-		Inherit::operator *= (s);
-		return *this;
-	}
-
-
-	inline Self& operator /= (CHANNEL_TYPE s)
-	{
-		Inherit::operator[](0) /= s;
-		Inherit::operator[](1) /= s;
-		Inherit::operator[](2) /= s;
-		return *this;
-	}
-
-
-
-	inline Self operator + (const Self& p) const
-	{
-		return Inherit::operator + (p);
-	}
-
-	inline Self operator - (const Self& p) const
-	{
-		return Inherit::operator - (p);
-	}
-
-
-	inline Self operator * (CHANNEL_TYPE s) const
-	{
-		Self res = Self(Inherit::GetRed()*s,Inherit::GetGreen()*s,Inherit::GetBlue()*s);
-		return res;
-	}
-
-	inline Self operator / (CHANNEL_TYPE s) const
-	{
-		Self res = Self(Inherit::GetRed()/s,Inherit::GetGreen()/s,Inherit::GetBlue()/s);
-		return res;
-	}
-};
-
-template<typename CHANNEL_TYPE>
-inline RGB<CHANNEL_TYPE> operator * (CHANNEL_TYPE s, const RGB<CHANNEL_TYPE>& rgb)
-{
-	return rgb*s;
-}
-
-template<typename T>
-itk::RGBPixel<T> blend(const itk::RGBPixel<T>& c1, const itk::RGBPixel<T>& c2, double alpha)
-{
-	double beta = 1.0-alpha;
-	double r = double(c1.GetRed())*alpha+double(c2.GetRed())*beta;
-	double g = double(c1.GetGreen())*alpha+double(c2.GetGreen())*beta;
-	double b = double(c1.GetBlue())*alpha+double(c2.GetBlue())*beta;
-	return  itkRGBPixel((T)r, (T)g, (T)b);
-}
-
-
-
-template<typename T>
-itk::RGBPixel<T> operator*(const itk::RGBPixel<T>& c, double a)
-{
-	return  itkRGBPixel(a*c[0], a*c[1], a*c[2]);
-}
-
-template<typename T>
-itk::RGBPixel<T> operator*(double a, const itk::RGBPixel<T>& c)
-{
-	return  itkRGBPixel(a*c[0], a*c[1], a*c[2]);
-}
-
-
-template<typename T>
-itk::RGBPixel<T> operator/(const itk::RGBPixel<T>& c, double a)
-{
-	return c*(1.0 / a); // ???
-}
-
 
 /**
  * @brief The RGB Image class
@@ -198,26 +47,22 @@ itk::RGBPixel<T> operator/(const itk::RGBPixel<T>& c, double a)
 template<typename CHANNEL_TYPE>
 class ImageRGBBase : public ImageBase
 {
-protected:
-	typename itk::Image< itk::RGBPixel<CHANNEL_TYPE> >::Pointer itk_img_;
-
-
 public:
-
-	typedef itk::Image< itk::RGBPixel<CHANNEL_TYPE> >	   ItkImg;
-	typedef itk::ImageRegionIteratorWithIndex<ItkImg>      IteratorIndexed;
-	typedef itk::ImageRegionIterator<ItkImg>               Iterator;
-	typedef itk::ImageRegionConstIteratorWithIndex<ItkImg> ConstIteratorIndexed;
-	typedef itk::ImageRegionConstIterator<ItkImg>          ConstIterator;
-
+	using PixelType =            itk::RGBPixel<CHANNEL_TYPE>;
+	using ItkImg =               itk::Image< PixelType >;
+	using IteratorIndexed =      itk::ImageRegionIteratorWithIndex<ItkImg>;
+	using Iterator =             itk::ImageRegionIterator<ItkImg>;
+	using ConstIteratorIndexed = itk::ImageRegionConstIteratorWithIndex<ItkImg> ;
+	using ConstIterator =        itk::ImageRegionConstIterator<ItkImg>;
+	using DoublePixelEigen =     Eigen::Vector3d;
+	using DataType =             CHANNEL_TYPE;
 
 	static const uint32_t NB_CHANNELS = 3;
-	typedef itk::RGBPixel<CHANNEL_TYPE> PixelType;
-	typedef RGB<double> DoublePixelType;
-	typedef RGB<CHANNEL_TYPE> ASTexPixelType;
-	typedef CHANNEL_TYPE DataType;
 
+protected:
+	typename ItkImg::Pointer itk_img_;
 
+public:
 	ImageRGBBase():
 		itk_img_(NULL)
 	{}
@@ -226,11 +71,31 @@ public:
 		itk_img_(itk_im)
 	{}
 
+	/**
+	 * @brief itkPixel
+	 * @return a pixel of value (r/g/b)
+	 */
 	inline static PixelType itkPixel(CHANNEL_TYPE r, CHANNEL_TYPE g, CHANNEL_TYPE b)
 	{
 		return PixelType(std::array<CHANNEL_TYPE, 3>({ { r,g,b } }).data());
 	}
 
+	/**
+	 * @brief itkPixel
+	 * @return a pixel of value (r/r/r)
+	 */
+	inline static PixelType itkPixel(CHANNEL_TYPE r)
+	{
+		return PixelType(std::array<CHANNEL_TYPE, 3>({ { r,r,r } }).data());
+	}
+
+	/**
+	 * @brief itkPixelNorm
+	 * @param r normalized value [0,1]
+	 * @param g normalized value [0,1]
+	 * @param b normalized value [0,1]
+	 * @return a pixel RGB
+	 */
 	template <bool B = true>
 	inline static auto itkPixelNorm(double r, double g, double b) -> typename std::enable_if<B && std::is_arithmetic<CHANNEL_TYPE>::value, PixelType>::type
 	{
@@ -243,6 +108,35 @@ public:
 		return itkPixel(r*(double(std::numeric_limits<CHANNEL_TYPE>::max()) - double(std::numeric_limits<CHANNEL_TYPE>::lowest())) + std::numeric_limits<CHANNEL_TYPE>::lowest(),
 			g*(double(std::numeric_limits<CHANNEL_TYPE>::max()) - double(std::numeric_limits<CHANNEL_TYPE>::lowest())) + std::numeric_limits<CHANNEL_TYPE>::lowest(), 
 			b*(double(std::numeric_limits<CHANNEL_TYPE>::max()) - double(std::numeric_limits<CHANNEL_TYPE>::lowest())) + std::numeric_limits<CHANNEL_TYPE>::lowest());
+	}
+
+	/**
+	 * @brief eigenPixel
+	 * @param p a itk::Pixel
+	 * @return an Eigen::Vector3d with same value
+	 */
+	inline static DoublePixelEigen eigenPixel(const PixelType& p)
+	{
+		if (std::is_same<CHANNEL_TYPE,double>::value)
+			return *(reinterpret_cast<const DoublePixelEigen*>(&p));
+		return DoublePixelEigen(p[0],p[1],p[2]);
+	}
+
+	/**
+	 * @brief itkPixel
+	 * @param p an Eigen::Vector3d
+	 * @return an itk::Pixel with same values of p
+	 */
+	inline static PixelType itkPixel(const DoublePixelEigen& p)
+	{
+		if (std::is_same<CHANNEL_TYPE,double>::value)
+			return *(reinterpret_cast<const PixelType*>(&p));
+		return itkPixel(CHANNEL_TYPE(p[0]),CHANNEL_TYPE(p[1]),CHANNEL_TYPE(p[2]));
+	}
+
+	inline static DoublePixelEigen eigenPixel(double v)
+	{
+		return DoublePixelEigen(v,v,v);
 	}
 
 
@@ -271,17 +165,17 @@ protected:
 };
 
 
-using RGBu8  = RGB< uint8_t >;
-using RGB8   = RGB< int8_t >;
-using RGBu16 = RGB< uint16_t >;
-using RGB16  = RGB< int16_t >;
-using RGBu32 = RGB< uint32_t >;
-using RGB32  = RGB< int32_t >;
-using RGBu64 = RGB< uint64_t >;
-using RGB64  = RGB< int64_t >;
-using RGBf   = RGB< float >;
-using RGBd   = RGB< double >;
+template<typename CHANNEL_TYPE>
+inline itk::RGBPixel<CHANNEL_TYPE> itkRGBPixel(CHANNEL_TYPE r, CHANNEL_TYPE g, CHANNEL_TYPE b)
+{
+	return ImageRGBBase<CHANNEL_TYPE>::itkPixel(r,g,b);
+}
 
+template<typename CHANNEL_TYPE>
+inline itk::RGBPixel<CHANNEL_TYPE> itkRGBPixel(CHANNEL_TYPE r)
+{
+	return ImageRGBBase<CHANNEL_TYPE>::itkPixel(r);;
+}
 
 
 template <class T> using ImageRGB = ImageCommon< ImageRGBBase< T >, false >;
@@ -311,10 +205,6 @@ using ConstImageRGBu64 = ConstImageRGB< uint64_t >;
 using ConstImageRGB64  = ConstImageRGB< int64_t >;
 using ConstImageRGBf   = ConstImageRGB< float >;
 using ConstImageRGBd   = ConstImageRGB< double >;
-
-
-
-
 
 }
 
