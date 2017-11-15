@@ -37,12 +37,11 @@ class CommonSpectral: public ImageCommon<INHERIT,CST>
 {
 public:
 
-	typedef typename ImageCommon<INHERIT,CST>::ItkImg ItkImg;
-	typedef typename ImageCommon<INHERIT,CST>::IteratorIndexed IteratorIndexed;
-	typedef typename ImageCommon<INHERIT,CST>::IteratorIndexed Iterator;
-	typedef typename ImageCommon<INHERIT,CST>::PixelType PixelType;
-	typedef typename ImageCommon<INHERIT,CST>::ASTexPixelType ASTexPixelType;
-	typedef typename ImageCommon<INHERIT,CST>::DataType DataType;
+	using ItkImg =          typename ImageCommon<INHERIT,CST>::ItkImg ;
+	using IteratorIndexed = typename ImageCommon<INHERIT,CST>::IteratorIndexed ;
+	using Iterator =        typename ImageCommon<INHERIT,CST>::IteratorIndexed ;
+	using PixelType =       typename ImageCommon<INHERIT,CST>::PixelType ;
+	using DataType =        typename ImageCommon<INHERIT,CST>::DataType ;
 
 	using Self = ImageCommon<INHERIT, CST>;
 
@@ -59,12 +58,6 @@ public:
 		this->center_= {{this->width()/2,this->height()/2}};
 	}
 
-//	CommonSpectral(int w, int h)
-//	{
-//		this->initItk(w,h);
-//		this->center_= {{w/2, h/2}};
-//	}
-
 	explicit CommonSpectral(int s)
 	{
 		this->initItk(s,s);
@@ -76,8 +69,6 @@ public:
 		this->initItk(s,s,init_to_zero);
 		this->center_= {{s/2, s/2}};
 	}
-
-
 
 	void update_itk(const typename ItkImg::Pointer& ptr)
 	{

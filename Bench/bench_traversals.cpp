@@ -130,6 +130,37 @@ void bench_table()
 	elapsed_seconds = std::chrono::system_clock::now() - start_chrono;
 	std::cout << "*p++ : "<< elapsed_seconds.count() << " s."<< std::endl;
 
+
+	start_chrono = std::chrono::system_clock::now();
+
+	ASTex::parallel_for(0, im.height, [&] (int j)
+	{
+		for(int i=0; i<im.width; ++i)
+			im.pix(i,j)=0.0;
+	});
+
+	for (int k=0;k<NB_ITER;++k)
+	{
+		ASTex::parallel_for(0, im.height, [&] (int j)
+		{
+			for(int i=0; i<im.width; ++i)
+				im.pix(i,j)+=0.1;
+		});
+	}
+
+	for (int k=0;k<NB_ITER;++k)
+	{
+		ASTex::parallel_for(0, im.height, [&] (int j)
+		{
+			for(int i=0; i<im.width; ++i)
+				im.pix(i,j)-=0.1;
+		});
+	}
+
+	elapsed_seconds = std::chrono::system_clock::now() - start_chrono;
+	std::cout << "parallel_for table[i,j] : "<< elapsed_seconds.count() << " s."<< std::endl;
+
+
 }
 
 

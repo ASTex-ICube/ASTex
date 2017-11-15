@@ -162,7 +162,7 @@ public:
 	IMG Rot45(const IMG& im)
 	{
 		using PIX = typename IMG::PixelType;
-		using DPIX = typename IMG::DoublePixelType;
+		using DPIX = typename IMG::DoublePixelEigen;
 		using T = typename IMG::DataType;
 		int s = im.width()+im.height();
 		rot_img_.initItk(s,s,true);
@@ -188,13 +188,12 @@ public:
 				int x = i + j - 1;
 				int y = yb + j - i;
 
-				DPIX n = rot_img_.normalized_pixel(rot_img_.pixelAbsolute(x,y-1));
-				DPIX s = rot_img_.normalized_pixel(rot_img_.pixelAbsolute(x,y+1));
-				DPIX w = rot_img_.normalized_pixel(rot_img_.pixelAbsolute(x-1,y));
-				DPIX e = rot_img_.normalized_pixel(rot_img_.pixelAbsolute(x+1,y));
-				rot_img_.pixelAbsolute(x, y) = rot_img_.unnormalized_pixel((n + s + w + e) / 4);// (n + s + w + e) / 4.0f;
+				DPIX n = rot_img_.pixelEigenAbsolute(x,y-1);
+				DPIX s = rot_img_.pixelEigenAbsolute(x,y+1);
+				DPIX w = rot_img_.pixelEigenAbsolute(x-1,y);
+				DPIX e = rot_img_.pixelEigenAbsolute(x+1,y);
+				rot_img_.pixelEigenAbsolute(x, y) = (n + s + w + e) / 4;
 			}
-			std::cout << std::endl;
 		}
 		return rot_img_;
 	}
@@ -766,10 +765,15 @@ bool test_overlap()
 	double err = computeErrorOverlap(im, gen_region(10,10,20,200), im, gen_region(10,10,20,200),
 									 [] (const IMG::PixelType& P, const IMG::PixelType& Q)
 	{
-		double err0 = IMG::normalized_value(P[0]) - IMG::normalized_value(Q[0]);
-		double err1 = IMG::normalized_value(P[1]) - IMG::normalized_value(Q[1]);
-		double err2 = IMG::normalized_value(P[2]) - IMG::normalized_value(Q[2]);
-		return err0*err0 + err1*err1 + err2*err2;
+
+		// faire un EigenNormalized
+		auto PQ = IMG::eigenPixel(Q)-IMG::eigenPixel(P);
+		return PQ.squaredNorm();
+
+//		double err0 = IMG::normalized_value(P[0]) - IMG::normalized_value(Q[0]);
+//		double err1 = IMG::normalized_value(P[1]) - IMG::normalized_value(Q[1]);
+//		double err2 = IMG::normalized_value(P[2]) - IMG::normalized_value(Q[2]);
+//		return err0*err0 + err1*err1 + err2*err2;
 	 });
 
 	std::cout << err<< std::endl;
@@ -795,8 +799,26 @@ bool test_overlap()
 
 int main(int argc, char** argv)
 {
+	std::vector<int> vec(100000);
+	parallel_for(0,100000,1, [&](int i)
+	{
+		vec[i] = 337;
+	});
+
+	for(auto x:vec)
+		if (x!=337) std::cout << "oh noooo"<< std::endl;
+
+	parallel_for(0,100000,2, [&](int i)
+	{
+		vec[i] = 773;
+	});
+
+	for (int i=0;i<100;++i)
+		std::cout << vec[i] << std::endl;
+
 //	std::string fn = "C:/Users/thery/Desktop/blue_rust.png";
-	std::string fn = "/tmp/blue_rust.png";
+	std::string fn = "/Users/thery/Desktop/blue_rust.png";
+//	std::string fn = "/tmp/blue_rust.png";
 
 	QApplication app(argc, argv);
 
@@ -815,16 +837,27 @@ int main(int argc, char** argv)
 	ImageRGBu8 imcb(400,400);
 	imcb.for_all_pixels([&] (ImageRGBu8::PixelType& P)
 	{
-		P=itkRGBPixel<uint8_t>(0,0,0);
+		P = ImageRGBu8::itkPixel(0,0,0);
 	});
+
+	ImageRGBu8::PixelType P = ImageRGBu8::itkPixelNorm(0.5, 1, 0);
+
+	ImageRGBu8::PixelType Q = ImageRGBu8::itkPixelNorm(0, 1, 0.5);
+
+	std::cout << P<< std::endl;
+	std::cout << Q  << std::endl;
+
+//	std::cout << (P+Q)/2 << std::endl;
+
+//	std::cout << 0.5*P + Q*0.5 << std::endl;
 
 
 	MinCutBuffer<ImageRGBu8,0> mcb0(imr,imr,300,100);
-	mcb0.fusion({{451,220}},{{453,220}}, imcb, {{0,0}});
+	mcb0.fusion({{451,220}},{{533,310}}, imcb, {{0,0}});
 
 
 	MinCutBuffer<ImageRGBu8,1> mcb(imr,imr,300,100);
-	mcb.fusion({{451,220}},{{453,220}}, imcb, {{100,100}});
+	mcb.fusion({{451,220}},{{383,270}}, imcb, {{100,100}});
 
 
 

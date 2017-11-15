@@ -56,8 +56,12 @@
 
 using namespace ASTex;
 
-using itkRGBu8 = itk::RGBPixel<uint8_t> ;
+using itkRGBu8 = ImageRGBu8::PixelType;
 
+inline itkRGBu8 RGBu8(uint8_t r, uint8_t g, uint8_t b)
+{
+	return ImageRGBu8::itkPixel(r,g,b);
+}
 typedef ImageRGBd::ItkImg IMG_DBL;
 typedef ImageRGBu8::ItkImg IMG_U8;
 
@@ -189,7 +193,7 @@ double distPatchSize(const ImageRGBu8& a, const ImageRGBu8& b, int32_t ax, int32
 	return ans;
 }
 
-RGBu8 avcolor(const ImageRGBu8& a, int32_t ax, int32_t ay) {
+ImageRGBu8::PixelType avcolor(const ImageRGBu8& a, int32_t ax, int32_t ay) {
 
 	double avr = 0.0;
 	double avg = 0.0;
@@ -211,9 +215,7 @@ RGBu8 avcolor(const ImageRGBu8& a, int32_t ax, int32_t ay) {
 	avg /= patch_w * patch_w;
 	avb /= patch_w * patch_w;
 
-	RGBu8 av((uint8_t)avr, (uint8_t)avg, (uint8_t)avb);
-
-	return av;
+	return RGBu8((uint8_t)avr, (uint8_t)avg, (uint8_t)avb);
 }
 
 void improve_guess(const ImageRGBu8& a, const ImageRGBu8& b, int32_t ax, int32_t ay, uint32_t& xbest, uint32_t& ybest, double& dbest, uint32_t bx, uint32_t by) {

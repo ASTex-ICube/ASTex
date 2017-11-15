@@ -31,6 +31,8 @@
 #include <ASTex/special_io.h>
 #include <ASTex/easy_io.h>
 
+#include <ASTex/image_merging.h>
+
 using namespace ASTex;
 
 
@@ -41,6 +43,19 @@ int main()
 	bool ok = image.load(TEMPO_PATH+"simpleRGB.png");
 	if (!ok)
 		return 1;
+
+	ImageRGBu8 imx;
+
+	auto hm = Assembler1D::into(imx);
+	hm <<image << 3 << image << gen_region(50,50,150,150) << Assembler1D::HorizontalFlush;
+	imx.save(TEMPO_PATH+"h2simple.png");
+
+	Assembler1D::into(imx) <<image << 3 << image << gen_region(50,50,200,200) << 2 << image << gen_region(0,0,150,150) << Assembler1D::VerticalFlush;
+	imx.save(TEMPO_PATH+"v3simple.png");
+
+	Assembler2D::into(imx) <<image << 1 << image << Assembler2D::EndLine(2)<<image << 1 << image << Assembler2D::FinalFlush;
+	imx.save(TEMPO_PATH+"4simple.png");
+
 
 
 	int W = image.width()/4;
@@ -53,7 +68,7 @@ int main()
 		for( int i= 0; i< W ; ++i)
 		{
 			if (j%2)
-				image.pixelRelative(i,j) = RGBu8(255,128,0);
+				image.pixelRelative(i,j) = ImageRGBu8::itkPixel(255,128,0);
 			else
 				image.pixelRelative(i,j)[2]=0;
 		}
@@ -72,9 +87,6 @@ int main()
 			auto P2 = image.pixelAbsolute(i,j);
 			P2[2] = 200;
 
-			RGBu8 Q;
-			Q = P2*(uint8_t)(3) + P2*(uint8_t)(2);
-
 		}
 	}
 
@@ -83,7 +95,7 @@ int main()
 	ImageRGBAd im(512,512);
 	im.for_all_pixels([](ImageRGBAd::PixelType& P, int /*x*/, int y)
 	{
-		P = ImageRGBAd::ASTexPixelType(1.0,0.3,0,(511-y%255)/255.0);
+		P = ImageRGBAd::itkPixel(1.0,0.3,0,(511-y%255)/255.0);
 	});
 	IO::save01_in_u8(im,TEMPO_PATH + "out_rgba.png");
 

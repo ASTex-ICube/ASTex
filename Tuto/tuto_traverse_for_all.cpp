@@ -50,9 +50,17 @@ double search_max(const ImageGrayd& img)
 }
 
 
+void fonc(const Region& r)
+{
+	std::cout << r.GetIndex()<< std::endl;
+}
+
 
 int main()
 {
+	fonc(gen_region(0,0,10,10));
+
+
 	ImageGrayd img(64,64);
 
 	// for_all_pixels & for_region_pixels can take:
@@ -159,14 +167,14 @@ int main()
 	for_indices(0,img.width(),0,img.height(),[&](int i, int j)
 	{
 		double g = img.pixelAbsolute(i,j);
-		img2.pixelAbsolute(i,j) = ImageRGBd::ASTexPixelType(g,g,g);
+		img2.pixelAbsolute(i,j) = ImageRGBd::itkPixel(g,g,g);
 	});
 
 	// traverse indices of region
 	for_region(reg,[&](int i, int j)
 	{
 		double g = 4.0*img.pixelAbsolute(i,j);
-		img2.pixelAbsolute(i,j) = ImageRGBd::ASTexPixelType(g,g,g);
+		img2.pixelAbsolute(i,j) = ImageRGBd::itkPixel(g,g,g);
 	});
 
 

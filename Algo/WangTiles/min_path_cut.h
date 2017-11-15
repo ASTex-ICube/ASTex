@@ -192,15 +192,15 @@ protected:
 		// compute cumulative error
 
 		// first row
-		for(int i=0;i<length_;++i)
+		for(int i=0;i<overlay_;++i)
 			error_cumul(i,0) = error_local(i,0);
 
 		// others rows
-		for(int j=1;j<overlay_;++j)
+		for(int j=1;j<length_;++j)
 		{
 			error_cumul(0,j) = error_local(0,j) + std::min(error_cumul(0,j-1),error_cumul(1,j-1));
 			int i=1;
-			while (i<length_-1)
+			while (i<overlay_-1)
 			{
 				error_cumul(i,j) = error_local(i,j) + std::min( std::min(error_cumul(i-1,j-1),error_cumul(i,j-1)), error_cumul(i+1,j-1)) ;
 				++i;
@@ -209,7 +209,7 @@ protected:
 		}
 
 		// up to store local position of min error cut
-		int i=overlay_-1;
+		int i=length_-1;
 
 		minPos_[i] = minOf(i);
 		while (i>0)
@@ -224,47 +224,19 @@ public:
 	{
 		pathCut(posA, posB);
 
-//		for (auto x: minPos_)
-//			std::cout << x <<" / ";
-//		std::cout << std::endl;
-
 		auto dir_index = [] (int i,int j) {if (DIR==1) return gen_index(i,j); return gen_index(j,i);};
 
-//		int y = posA[DIR];
-//		int yy = posB[DIR];
-//		for(int i=0; i<length_;++i)
-//		{
-//			int x = posA[1-DIR];
-//			int xx = posB[1-DIR];
-//			int j=0;
-//			while(j<minPos_[i])
-//			{
-//				dst.pixelAbsolute(dir_index(j,i)) = imA_.pixelAbsolute(dir_index(x,y));
-//				std::cout <<"A "<< j <<" / "<< i <<" <- "<< x <<" / "<< y << std::endl;
-//				++x;++xx;
-//				++j;
-//			}
-//			dst.pixelAbsolute(dir_index(j,i)) = blend(imA_.pixelAbsolute(dir_index(x,y)),imB_.pixelAbsolute(dir_index(xx,yy)),0.5);
-//			j++;
-//			while(j<overlay_)
-//			{
-//				dst.pixelAbsolute(dir_index(j,i)) = imB_.pixelAbsolute(dir_index(xx,yy));
-//				std::cout <<"B "<< j <<" / "<< i <<" <- "<< xx <<" / "<< yy << std::endl;
-//				++xx;
-//				++j;
-//			}
-//			y++;
-//		}
 		for(int j=0; j<length_;++j)
-			for(int i=0; i<overlay_;++i)
-			{
-				if (i < minPos_[j])
-					dst.pixelAbsolute(dir_index(i+pos[0],j+pos[1])) = imA_.pixelAbsolute(dir_index(i+posA[0],j+posA[1]));
-				else if (i > minPos_[j])
-					dst.pixelAbsolute(dir_index(i+pos[0],j+pos[1])) = imB_.pixelAbsolute(dir_index(i+posB[0],j+posB[1]));
-				else
-					dst.pixelAbsolute(dir_index(i+pos[0],j+pos[1])) = itkRGBPixel<T>(255,0,0);
-			}
+		{
+			int i=0;
+			for(; i< minPos_[j];++i)
+				dst.pixelAbsolute(dir_index(i+pos[0],j+pos[1])) = imA_.pixelAbsolute(dir_index(i+posA[0],j+posA[1]));
+			dst.pixelAbsolute(dir_index(i+pos[0],j+pos[1])) = IMG::itkPixelNorm(1,0,0);
+			//imA_.pixelAbsolute(dir_index(i+posA[0],j+posA[1]))*0.5 + imB_.pixelAbsolute(dir_index(i+posB[0],j+posB[1]))*0.5;
+			i++;
+			for(; i<overlay_;++i)
+				dst.pixelAbsolute(dir_index(i+pos[0],j+pos[1])) = imB_.pixelAbsolute(dir_index(i+posB[0],j+posB[1]));
+		}
 	}
 };
 
