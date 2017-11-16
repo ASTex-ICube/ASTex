@@ -130,21 +130,30 @@ template <typename INHERIT, bool CST >
 class ImageCommon: public INHERIT
 {
 // 2 macros for more readable code
-#define NOT_CONST template <bool PIPOBOOL=true>
-#define RETURNED_TYPE(TYPE_T) typename std::enable_if<PIPOBOOL && !CST,TYPE_T>::type
-#define EIGENPROX_RETURNED_TYPE typename std::enable_if<PIPOBOOL && !std::is_same<DataType,double>::value && !CST,EigenProxy>::type
+#define NOT_CONST template <bool FAKEBOOL=true>
+#define RETURNED_TYPE(TYPE_T) typename std::enable_if<FAKEBOOL && !CST,TYPE_T>::type
 public:
 
-	typedef typename INHERIT::ItkImg               ItkImg;
-	typedef typename INHERIT::IteratorIndexed      IteratorIndexed;
-	typedef typename INHERIT::Iterator             Iterator;
-	typedef typename INHERIT::ConstIteratorIndexed ConstIteratorIndexed;
-	typedef typename INHERIT::ConstIterator        ConstIterator;
+//	typedef typename INHERIT::ItkImg               ItkImg;
+//	typedef typename INHERIT::IteratorIndexed      IteratorIndexed;
+//	typedef typename INHERIT::Iterator             Iterator;
+//	typedef typename INHERIT::ConstIteratorIndexed ConstIteratorIndexed;
+//	typedef typename INHERIT::ConstIterator        ConstIterator;
+//
+//	typedef typename INHERIT::PixelType            PixelType;
+//	typedef typename INHERIT::DoublePixelEigen     DoublePixelEigen;
+////	typedef typename INHERIT::ASTexPixelType       ASTexPixelType;
+//	typedef typename INHERIT::DataType             DataType;
 
-	typedef typename INHERIT::PixelType            PixelType;
-	typedef typename INHERIT::DoublePixelEigen     DoublePixelEigen;
-//	typedef typename INHERIT::ASTexPixelType       ASTexPixelType;
-	typedef typename INHERIT::DataType             DataType;
+	using ItkImg               = typename INHERIT::ItkImg;
+	using IteratorIndexed      = typename INHERIT::IteratorIndexed;
+	using Iterator             = typename INHERIT::Iterator;
+	using ConstIteratorIndexed = typename INHERIT::ConstIteratorIndexed ;
+	using ConstIterator        = typename INHERIT::ConstIterator;
+	using PixelType            = typename INHERIT::PixelType;
+	using DoublePixelEigen     = typename INHERIT::DoublePixelEigen;
+	using DataType             = typename INHERIT::DataType;
+
 	static const uint32_t NB_CHANNELS = INHERIT::NB_CHANNELS;
 
 	using Self = ImageCommon<INHERIT, CST>;
@@ -173,13 +182,13 @@ public:
 	}
 
 	template <bool B=true>
-	auto normalized_pixel(const PixelType& p) -> typename std::enable_if<B && std::is_arithmetic<PixelType>::value, DoublePixelEigen>::type
+	inline static auto normalized_pixel(const PixelType& p) -> typename std::enable_if<B && std::is_arithmetic<PixelType>::value, DoublePixelEigen>::type
 	{
 		return normalized_value(p);
 	}
 
 	template <bool B = true>
-	auto normalized_pixel(const PixelType& p) -> typename std::enable_if<B && !std::is_arithmetic<PixelType>::value, DoublePixelEigen>::type
+	inline static auto normalized_pixel(const PixelType& p) -> typename std::enable_if<B && !std::is_arithmetic<PixelType>::value, DoublePixelEigen>::type
 	{
 		DoublePixelEigen q;
 		for (uint32_t i = 0; i<INHERIT::NB_CHANNELS; ++i)
@@ -188,13 +197,13 @@ public:
 	}
 
 	template <bool B = true>
-	auto unnormalized_pixel(const DoublePixelEigen& p) -> typename std::enable_if<B && std::is_arithmetic<PixelType>::value, PixelType>::type
+	inline static auto unnormalized_pixel(const DoublePixelEigen& p) -> typename std::enable_if<B && std::is_arithmetic<PixelType>::value, PixelType>::type
 	{
 		return unnormalized_value(p);
 	}
 
 	template <bool B = true>
-	auto unnormalized_pixel(const DoublePixelEigen& p) -> typename std::enable_if<B && !std::is_arithmetic<PixelType>::value, PixelType>::type
+	inline static auto unnormalized_pixel(const DoublePixelEigen& p) -> typename std::enable_if<B && !std::is_arithmetic<PixelType>::value, PixelType>::type
 	{
 		PixelType q;
 		for (uint32_t i = 0; i<INHERIT::NB_CHANNELS; ++i)
@@ -271,8 +280,8 @@ public:
 	 * constructor for non-constant version of class
 	 * second parameter is for SFINAE
 	 */
-	template <bool PIPOBOOL=true>
-	ImageCommon(typename ItkImg::Pointer itk_ptr,typename std::enable_if<PIPOBOOL && !CST>::type* = nullptr):
+	template <bool FAKEBOOL=true>
+	ImageCommon(typename ItkImg::Pointer itk_ptr,typename std::enable_if<FAKEBOOL && !CST>::type* = nullptr):
 		INHERIT(itk_ptr), center_({{0,0}}), clampvalue_(DataType(0))
 	{}
 
@@ -281,13 +290,13 @@ public:
 	 * constructor for constant version of class
 	 * second parameter is for SFINAE
 	 */
-	template <bool PIPOBOOL=true>
-	ImageCommon(typename ItkImg::ConstPointer itk_ptr, typename std::enable_if<PIPOBOOL && CST>::type* = nullptr):
+	template <bool FAKEBOOL=true>
+	ImageCommon(typename ItkImg::ConstPointer itk_ptr, typename std::enable_if<FAKEBOOL && CST>::type* = nullptr):
 		INHERIT(typename ItkImg::Pointer(const_cast<ItkImg*>(itk_ptr.GetPointer()))), center_({{0,0}})
 	{}
 
-	template <bool PIPOBOOL = true>
-	ImageCommon(typename ItkImg::Pointer itk_ptr, typename std::enable_if<PIPOBOOL && CST>::type* = nullptr) :
+	template <bool FAKEBOOL = true>
+	ImageCommon(typename ItkImg::Pointer itk_ptr, typename std::enable_if<FAKEBOOL && CST>::type* = nullptr) :
 		INHERIT(itk_ptr), center_({ { 0,0 } }), clampvalue_(DataType(0))
 	{}
 
@@ -417,7 +426,8 @@ public:
 	}
 
 
-	NOT_CONST auto pixelAbsolute(const Index& pos) -> RETURNED_TYPE(PixelType&)
+	template <bool FAKEBOOL = true>
+	auto pixelAbsolute(const Index& pos) -> typename std::enable_if<FAKEBOOL && !CST, PixelType&>::type
 	{
 		return this->itk_img_->GetPixel(pos);
 	}
@@ -427,20 +437,58 @@ public:
 		return this->itk_img_->GetPixel(pos);
 	}
 
-
-	NOT_CONST auto pixelEigenAbsoluteWrite(const Index& pos) -> EigenProxy
+	template <bool FAKEBOOL = true>
+	auto pixelEigenAbsoluteWrite(const Index& pos)->typename std::enable_if<FAKEBOOL && !CST && !std::is_same<DataType, double>::value, EigenProxy>::type
 	{
 		return EigenProxy(this->itk_img_->GetPixel(pos));
 	}
 
-	DoublePixelEigen pixelEigenAbsolute(const Index& pos) const
+	template <bool FAKEBOOL = true>
+	auto pixelNormEigenAbsoluteWrite(const Index& pos)->typename std::enable_if<FAKEBOOL && !CST && !std::is_same<DataType, double>::value, NormalizedEigenProxy>::type
+	{
+		return NormalizedEigenProxy(this->itk_img_->GetPixel(pos));
+	}
+
+	template <bool FAKEBOOL = true>
+	auto pixelEigenAbsoluteWrite(const Index& pos)->typename std::enable_if<FAKEBOOL && !CST && std::is_same<DataType, double>::value, DoublePixelEigen&>::type
+	{
+		return *(reinterpret_cast<DoublePixelEigen*>(&(this->itk_img_->GetPixel(pos))));
+	}
+
+	template <bool FAKEBOOL = true>
+	auto pixelNormEigenAbsoluteWrite(const Index& pos)->typename std::enable_if<FAKEBOOL && !CST && std::is_same<DataType, double>::value, DoublePixelEigen&>::type
+	{
+		return pixelEigenAbsoluteWrite(pos);
+	}
+
+	template <bool FAKEBOOL = true>
+	auto pixelEigenAbsolute(const Index& pos) const -> typename std::enable_if<FAKEBOOL && !std::is_same<DataType, double>::value, DoublePixelEigen>::type
 	{
 		return INHERIT::eigenPixel(this->itk_img_->GetPixel(pos));
 	}
 
+	template <bool FAKEBOOL = true>
+	auto pixelNormEigenAbsolute(const Index& pos) const -> typename std::enable_if<FAKEBOOL && !std::is_same<DataType, double>::value, DoublePixelEigen>::type
+	{
+		return normalized_pixel(this->itk_img_->GetPixel(pos));
+	}
+
+	template <bool FAKEBOOL = true>
+	auto pixelEigenAbsolute(const Index& pos) const -> typename std::enable_if<FAKEBOOL && std::is_same<DataType, double>::value, const DoublePixelEigen&>::type
+	{
+		return *(reinterpret_cast<DoublePixelEigen*>(&(this->itk_img_->GetPixel(pos))));
+	}
+
+	template <bool FAKEBOOL = true>
+	auto pixelNormEigenAbsolute(const Index& pos) const -> typename std::enable_if<FAKEBOOL && std::is_same<DataType, double>::value, const DoublePixelEigen&>::type
+	{
+		return pixelEigenAbsolute(pos);
+	}
 
 
-	NOT_CONST auto pixelAbsolute( int i, int j) -> RETURNED_TYPE(PixelType&)
+
+	template <bool FAKEBOOL = true>
+	auto pixelAbsolute( int i, int j) -> typename std::enable_if<FAKEBOOL && !CST, PixelType&>::type
 	{
 		return this->itk_img_->GetPixel({{ i ,j }});
 	}
@@ -450,28 +498,60 @@ public:
 		return this->itk_img_->GetPixel({{i,j}});
 	}
 
-	NOT_CONST auto pixelEigenAbsoluteWrite(int i, int j) ->RETURNED_TYPE(EigenProxy)
+	template <bool FAKEBOOL = true>
+	auto pixelEigenAbsoluteWrite(int i,int j)->typename std::enable_if<FAKEBOOL && !CST && !std::is_same<DataType, double>::value, EigenProxy>::type
 	{
-		return EigenProxy(this->itk_img_->GetPixel({{i,j}}));
+		return pixelEigenAbsoluteWrite({ { i,j } });
+	}
+
+	template <bool FAKEBOOL = true>
+	auto pixelNormEigenAbsoluteWrite(int i,int j)->typename std::enable_if<FAKEBOOL && !CST && !std::is_same<DataType, double>::value, NormalizedEigenProxy>::type
+	{
+		return pixelNormEigenAbsoluteWrite({ { i,j } });
+	}
+
+	template <bool FAKEBOOL = true>
+	auto pixelEigenAbsoluteWrite(int i,int j)->typename std::enable_if<FAKEBOOL && !CST && std::is_same<DataType, double>::value, DoublePixelEigen&>::type
+	{
+		return pixelEigenAbsoluteWrite({ { i,j } });
+	}
+
+	template <bool FAKEBOOL = true>
+	auto pixelNormEigenAbsoluteWrite(int i,int j)->typename std::enable_if<FAKEBOOL && !CST && std::is_same<DataType, double>::value, DoublePixelEigen&>::type
+	{
+		return pixelEigenAbsoluteWrite({ { i,j } });
+	}
+
+	template <bool FAKEBOOL = true>
+	auto pixelEigenAbsolute(int i,int j) const -> typename std::enable_if<FAKEBOOL && !std::is_same<DataType, double>::value, DoublePixelEigen>::type
+	{
+		return pixelEigenAbsolute({ { i,j } });
+	}
+
+	template <bool FAKEBOOL = true>
+	auto pixelNormEigenAbsolute(int i,int j) const -> typename std::enable_if<FAKEBOOL && !std::is_same<DataType, double>::value, DoublePixelEigen>::type
+	{
+		return pixelNormEigenAbsolute({ { i,j } });
+	}
+
+	template <bool FAKEBOOL = true>
+	auto pixelEigenAbsolute(int i,int j) const -> typename std::enable_if<FAKEBOOL && std::is_same<DataType, double>::value, const DoublePixelEigen&>::type
+	{
+		return pixelEigenAbsolute({ { i,j } });
+	}
+
+	template <bool FAKEBOOL = true>
+	auto pixelNormEigenAbsolute(int i,int j) const -> typename std::enable_if<FAKEBOOL && std::is_same<DataType, double>::value, const DoublePixelEigen&>::type
+	{
+		return pixelNormEigenAbsolute({ { i,j } });
 	}
 
 
-	template <bool PIPOBOOL=true>
-	auto pixelEigenAbsolute(int i, int j) const -> typename std::enable_if<!std::is_same<DataType,double>::value && PIPOBOOL, DoublePixelEigen>::type
-	{
-		return INHERIT::eigenPixel(this->itk_img_->GetPixel({{i,j}}));
-	}
-
-	template <bool PIPOBOOL=true>
-	auto pixelEigenAbsolute(int i, int j) const -> typename std::enable_if<std::is_same<DataType,double>::value && PIPOBOOL,const DoublePixelEigen&>::type
-	{
-		return *(reinterpret_cast<DoublePixelEigen*>(&(this->itk_img_->GetPixel({{i,j}}))));
-	}
 
 
 
-
-	NOT_CONST auto pixelRelative( int i, int j) -> RETURNED_TYPE(PixelType&)
+	template <bool FAKEBOOL = true>
+	auto pixelRelative( int i, int j) -> typename std::enable_if<FAKEBOOL && !CST, PixelType&>::type
 	{
 		Index pixelIndex = {{ i+center_[0] ,j+center_[1] }};
 		return this->itk_img_->GetPixel(pixelIndex);
@@ -483,20 +563,56 @@ public:
 		return  this->itk_img_->GetPixel(pixelIndex);
 	}
 
-	NOT_CONST auto pixelEigenRelativeWrite(int i, int j) -> RETURNED_TYPE(EigenProxy)
+	template <bool FAKEBOOL = true>
+	auto pixelEigenRelativeWrite(int i, int j)->typename std::enable_if<FAKEBOOL && !CST && !std::is_same<DataType, double>::value, EigenProxy>::type
 	{
-		Index pixelIndex = {{ i+center_[0] ,j+center_[1] }};
-		return EigenProxy(this->itk_img_->GetPixel(pixelIndex));
+		return pixelEigenAbsoluteWrite({ { i+center_[0], j+center_[1] } });
 	}
 
-	auto pixelEigenRelative(int i, int j) const -> DoublePixelEigen
+	template <bool FAKEBOOL = true>
+	auto pixelNormEigenRelativeWrite(int i, int j)->typename std::enable_if<FAKEBOOL && !CST && !std::is_same<DataType, double>::value, NormalizedEigenProxy>::type
 	{
-		Index pixelIndex = {{ i+center_[0] ,j+center_[1] }};
-		return INHERIT::eigenPixel(this->itk_img_->GetPixel(pixelIndex));
+		return pixelNormEigenAbsoluteWrite({ { i+center_[0], j+center_[1] } });
+	}
+
+	template <bool FAKEBOOL = true>
+	auto pixelEigenRelativeWrite(int i, int j)->typename std::enable_if<FAKEBOOL && !CST && std::is_same<DataType, double>::value, DoublePixelEigen&>::type
+	{
+		return pixelEigenAbsoluteWrite({ { i+center_[0], j+center_[1] } });
+	}
+
+	template <bool FAKEBOOL = true>
+	auto pixelNormEigenRelativeWrite(int i, int j)->typename std::enable_if<FAKEBOOL && !CST && std::is_same<DataType, double>::value, DoublePixelEigen&>::type
+	{
+		return pixelEigenAbsoluteWrite({ { i+center_[0], j+center_[1] } });
+	}
+
+	template <bool FAKEBOOL = true>
+	auto pixelEigenRelative(int i, int j) const -> typename std::enable_if<FAKEBOOL && !std::is_same<DataType, double>::value, DoublePixelEigen>::type
+	{
+		return pixelEigenAbsolute({ { i+center_[0], j+center_[1] } });
+	}
+
+	template <bool FAKEBOOL = true>
+	auto pixelNormEigenRelative(int i, int j) const -> typename std::enable_if<FAKEBOOL && !std::is_same<DataType, double>::value, DoublePixelEigen>::type
+	{
+		return pixelNormEigenAbsolute({ { i+center_[0], j+center_[1] } });
+	}
+
+	template <bool FAKEBOOL = true>
+	auto pixelEigenRelative(int i, int j) const -> typename std::enable_if<FAKEBOOL && std::is_same<DataType, double>::value, const DoublePixelEigen&>::type
+	{
+		return pixelEigenAbsolute({ { i+center_[0], j+center_[1] } });
+	}
+
+	template <bool FAKEBOOL = true>
+	auto pixelNormEigenRelative(int i, int j) const -> typename std::enable_if<FAKEBOOL && std::is_same<DataType, double>::value, const DoublePixelEigen&>::type
+	{
+		return pixelNormEigenAbsolute({ { i+center_[0], j+center_[1] } });
 	}
 
 
-	NOT_CONST auto pixelRegion( int i, int j) -> RETURNED_TYPE(PixelType&)
+	NOT_CONST auto pixelRegion( int i, int j) -> typename std::enable_if<FAKEBOOL && !CST, PixelType&>::type
 	{
 		const Index& imgIdx = this->itk_img_->GetLargestPossibleRegion().GetIndex();
 		Index pixelIndex = {{ i+imgIdx[0] ,j+imgIdx[1] }};

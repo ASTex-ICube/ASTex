@@ -33,6 +33,7 @@
 using namespace ASTex;
 
 
+
 int main()
 {
 	// All following explanation could also apply to RGBA
@@ -51,17 +52,20 @@ int main()
 	std::cout << v << std::endl;
 
 	// for_all traversal fonction lambda take PixelType parameter for reference (const)
-	image.for_all_pixels([] (ImageRGBu8::PixelType& p)
+
+	auto pi = ImageRGBu8::itkPixel(65, 55, 45);
+	image.for_all_pixels([&] (ImageRGBu8::PixelType& p)
 	{
-		p[0]=65;
+		p = pi;
+		pi[0] += 5;
+		pi[0] += 15;
+		pi[0] += 25;
 	});
 
 
 	// Why using DoublePixelEigen:
-	// - more nice constructor
-	// - more nices operators (*/)
 
-	// Examples of constructors
+	// Examples of function-constructors
 	p1 = ImageRGBu8::itkPixel(134);
 	p2 = ImageRGBu8::itkPixel(128,128,128);
 
@@ -71,20 +75,28 @@ int main()
 
 	using DoublePix = ImageRGBu8::DoublePixelEigen;
 
-	// easy type conversion to any compatible type:
-
+	// easy type conversion:
 	p3 = ImageRGBu8::itkPixel((ImageRGBu8::eigenPixel(p1)+ImageRGBu8::eigenPixel(p2))/2);
 
-	std::cout<< p1 << " + "<< p2 << " /2 (compute uint16) = " << p3 << std::endl;
+	std::cout<< p1 << " + "<< p2 << " /2 (compute eigen) = " << p3 << std::endl;
+
+	image.pixelEigenAbsoluteWrite(1,1) = (image.pixelEigenAbsolute(0, 0) + image.pixelEigenAbsolute(1, 0) + image.pixelEigenAbsolute(2, 0))/3 ;
+	std::cout<< image.pixelAbsolute(0,0) << " + "<< image.pixelAbsolute(1,0) << " + "<< image.pixelAbsolute(2,0) << " /3 = " << image.pixelAbsolute(1,1) << std::endl;
 
 
-	DoublePix ep1 = image.pixelEigenAbsolute(0,0);
-	DoublePix ep2 = image.pixelEigenAbsolute(1,0);
-	DoublePix ep3 = image.pixelEigenAbsolute(2,0);
+	// easy on the fly conversion to 0-1
 
-	image.pixelEigenAbsolute(1,1) = (ep1+ep2+ep3)/3 ;
+	std::cout << image.pixelNormEigenAbsolute(0, 0).transpose() << " + " << image.pixelNormEigenAbsolute(1, 0).transpose() << " + " << image.pixelNormEigenAbsolute(2, 0).transpose() << " /3 = " << image.pixelNormEigenAbsolute(1, 1).transpose() << std::endl;
 
-	std::cout<< image.pixelAbsolute(0,0) << " + "<< image.pixelAbsolute(1,0) << " + "<< image.pixelAbsolute(2,0) << " /3 = " << " + "<< image.pixelAbsolute(1,1) << std::endl;
+	image.pixelNormEigenAbsoluteWrite(2, 2) = image.pixelNormEigenAbsolute(0, 0)/2;
+	std::cout << image.pixelNormEigenAbsolute(2, 2).transpose() << " -> " << image.pixelAbsolute(2, 2) << std::endl;
+
+	// work with all type of image
+	ImageRGBd imaged(4, 4);
+	imaged.pixelEigenAbsoluteWrite(1, 1) = (imaged.pixelEigenAbsolute(0, 0) + imaged.pixelEigenAbsolute(1, 0) + imaged.pixelEigenAbsolute(2, 0)) / 3;
+
+	// but with double image no conversion or copy
+	std::cout <<" with double same address ? "<< std::hex << &(imaged.pixelEigenAbsolute(0, 0)) << " == " << &(imaged.pixelEigenAbsoluteWrite(0, 0)) << " == " << &(imaged.pixelAbsolute(0, 0)) << std::endl;
 
 
 	return EXIT_SUCCESS;

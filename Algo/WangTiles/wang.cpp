@@ -192,7 +192,7 @@ public:
 				DPIX s = rot_img_.pixelEigenAbsolute(x,y+1);
 				DPIX w = rot_img_.pixelEigenAbsolute(x-1,y);
 				DPIX e = rot_img_.pixelEigenAbsolute(x+1,y);
-				rot_img_.pixelEigenAbsolute(x, y) = (n + s + w + e) / 4;
+				rot_img_.pixelEigenAbsoluteWrite(x, y) = (n + s + w + e) / 4;
 			}
 		}
 		return rot_img_;
