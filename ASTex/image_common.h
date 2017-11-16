@@ -455,10 +455,20 @@ public:
 		return EigenProxy(this->itk_img_->GetPixel({{i,j}}));
 	}
 
-	DoublePixelEigen pixelEigenAbsolute(int i, int j) const
+
+	template <bool PIPOBOOL=true>
+	auto pixelEigenAbsolute(int i, int j) const -> typename std::enable_if<!std::is_same<DataType,double>::value && PIPOBOOL, DoublePixelEigen>::type
 	{
 		return INHERIT::eigenPixel(this->itk_img_->GetPixel({{i,j}}));
 	}
+
+	template <bool PIPOBOOL=true>
+	auto pixelEigenAbsolute(int i, int j) const -> typename std::enable_if<std::is_same<DataType,double>::value && PIPOBOOL,const DoublePixelEigen&>::type
+	{
+		return *(reinterpret_cast<DoublePixelEigen*>(&(this->itk_img_->GetPixel({{i,j}}))));
+	}
+
+
 
 
 	NOT_CONST auto pixelRelative( int i, int j) -> RETURNED_TYPE(PixelType&)
