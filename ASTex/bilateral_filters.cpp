@@ -199,7 +199,7 @@ void ASTEX_API frequency_bilateral_filter(const ImageRGBd& input, ImageRGBd& out
 			}
 		}
 		sum_col /=sumWeight;
-		output.pixelEigenAbsolute(i,j) = sum_col;
+		output.pixelEigenAbsoluteWrite(i,j) = sum_col;
 	});
 
 }

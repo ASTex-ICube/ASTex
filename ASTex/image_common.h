@@ -103,6 +103,7 @@ inline Index operator +(const Index& iA, const Index& iB)
 class ImageBase
 {};
 
+
 //template <typename T, bool CST>
 //struct CstDcl
 //{};
@@ -131,7 +132,7 @@ class ImageCommon: public INHERIT
 // 2 macros for more readable code
 #define NOT_CONST template <bool PIPOBOOL=true>
 #define RETURNED_TYPE(TYPE_T) typename std::enable_if<PIPOBOOL && !CST,TYPE_T>::type
-
+#define EIGENPROX_RETURNED_TYPE typename std::enable_if<PIPOBOOL && !std::is_same<DataType,double>::value && !CST,EigenProxy>::type
 public:
 
 	typedef typename INHERIT::ItkImg               ItkImg;
@@ -148,23 +149,58 @@ public:
 
 	using Self = ImageCommon<INHERIT, CST>;
 
-	class EigenProxy
+
+	inline static double normalized_value(DataType v)
 	{
-		PixelType& pix_;
-	public:
-		EigenProxy(PixelType& p): pix_(p) {}
+		if (std::is_floating_point<DataType>::value) //compile time resolved
+			return double(v);
 
-		operator DoublePixelEigen() const
-		{
-			return INHERIT::eigenPixel(pix_);
-		}
+		if (std::is_unsigned<DataType>::value) //compile time resolved
+					return double(v) / double(std::numeric_limits<DataType>::max());
 
-		void operator = (const DoublePixelEigen& p)
-		{
-			pix_ = INHERIT::itkPixel(p);
-		}
-	};
+		return double(v - std::numeric_limits<DataType>::lowest()) / (double(std::numeric_limits<DataType>::max()) - double(std::numeric_limits<DataType>::lowest()));
+	}
 
+	inline static DataType unnormalized_value(double v)
+	{
+		if (std::is_floating_point<DataType>::value) //compile time resolved
+			return DataType(v);
+
+		if (std::is_unsigned<DataType>::value) //compile time resolved
+			return DataType(v * std::numeric_limits<DataType>::max());
+
+		return DataType(v*(double(std::numeric_limits<DataType>::max()) - double(std::numeric_limits<DataType>::lowest())) + std::numeric_limits<DataType>::lowest());
+	}
+
+	template <bool B=true>
+	auto normalized_pixel(const PixelType& p) -> typename std::enable_if<B && std::is_arithmetic<PixelType>::value, DoublePixelEigen>::type
+	{
+		return normalized_value(p);
+	}
+
+	template <bool B = true>
+	auto normalized_pixel(const PixelType& p) -> typename std::enable_if<B && !std::is_arithmetic<PixelType>::value, DoublePixelEigen>::type
+	{
+		DoublePixelEigen q;
+		for (uint32_t i = 0; i<INHERIT::NB_CHANNELS; ++i)
+			q[i] = Self::normalized_value(p[i]);
+		return q;
+	}
+
+	template <bool B = true>
+	auto unnormalized_pixel(const DoublePixelEigen& p) -> typename std::enable_if<B && std::is_arithmetic<PixelType>::value, PixelType>::type
+	{
+		return unnormalized_value(p);
+	}
+
+	template <bool B = true>
+	auto unnormalized_pixel(const DoublePixelEigen& p) -> typename std::enable_if<B && !std::is_arithmetic<PixelType>::value, PixelType>::type
+	{
+		PixelType q;
+		for (uint32_t i = 0; i<INHERIT::NB_CHANNELS; ++i)
+			q[i] = Self::unnormalized_value(p[i]);
+		return q;
+	}
 
 	template <bool B=true>
 	inline static auto channel(const PixelType& p, uint32_t i)-> typename std::enable_if<!B || std::is_arithmetic<PixelType>::value , DataType>::type
@@ -180,6 +216,43 @@ public:
 		assert(i<NB_CHANNELS);
 		return p[i];
 	}
+
+
+	class EigenProxy
+	{
+		PixelType& pix_;
+	public:
+		using DPE = DoublePixelEigen;
+		EigenProxy(PixelType& p): pix_(p) {}
+
+		operator DoublePixelEigen() const
+		{
+			return INHERIT::eigenPixel(pix_);
+		}
+
+		void operator = (const DoublePixelEigen& p)
+		{
+			pix_ = INHERIT::itkPixel(p);
+		}
+	};
+
+
+	class NormalizedEigenProxy
+	{
+		PixelType& pix_;
+	public:
+		NormalizedEigenProxy(PixelType& p): pix_(p) {}
+
+		operator DoublePixelEigen() const
+		{
+			return normalized_pixel(pix_);
+		}
+
+		void operator = (const DoublePixelEigen& p)
+		{
+			pix_ = unnormalized_pixel(p);
+		}
+	};
 
 
 protected:
@@ -354,10 +427,18 @@ public:
 		return this->itk_img_->GetPixel(pos);
 	}
 
+
+	NOT_CONST auto pixelEigenAbsoluteWrite(const Index& pos) -> EigenProxy
+	{
+		return EigenProxy(this->itk_img_->GetPixel(pos));
+	}
+
 	DoublePixelEigen pixelEigenAbsolute(const Index& pos) const
 	{
 		return INHERIT::eigenPixel(this->itk_img_->GetPixel(pos));
 	}
+
+
 
 	NOT_CONST auto pixelAbsolute( int i, int j) -> RETURNED_TYPE(PixelType&)
 	{
@@ -369,10 +450,41 @@ public:
 		return this->itk_img_->GetPixel({{i,j}});
 	}
 
+	NOT_CONST auto pixelEigenAbsoluteWrite(int i, int j) ->RETURNED_TYPE(EigenProxy)
+	{
+		return EigenProxy(this->itk_img_->GetPixel({{i,j}}));
+	}
+
 	DoublePixelEigen pixelEigenAbsolute(int i, int j) const
 	{
 		return INHERIT::eigenPixel(this->itk_img_->GetPixel({{i,j}}));
 	}
+
+
+	NOT_CONST auto pixelRelative( int i, int j) -> RETURNED_TYPE(PixelType&)
+	{
+		Index pixelIndex = {{ i+center_[0] ,j+center_[1] }};
+		return this->itk_img_->GetPixel(pixelIndex);
+	}
+
+	const PixelType& pixelRelative(int i, int j) const
+	{
+		Index pixelIndex = {{ i+center_[0] ,j+center_[1] }};
+		return  this->itk_img_->GetPixel(pixelIndex);
+	}
+
+	NOT_CONST auto pixelEigenRelativeWrite(int i, int j) -> RETURNED_TYPE(EigenProxy)
+	{
+		Index pixelIndex = {{ i+center_[0] ,j+center_[1] }};
+		return EigenProxy(this->itk_img_->GetPixel(pixelIndex));
+	}
+
+	auto pixelEigenRelative(int i, int j) const -> DoublePixelEigen
+	{
+		Index pixelIndex = {{ i+center_[0] ,j+center_[1] }};
+		return INHERIT::eigenPixel(this->itk_img_->GetPixel(pixelIndex));
+	}
+
 
 	NOT_CONST auto pixelRegion( int i, int j) -> RETURNED_TYPE(PixelType&)
 	{
@@ -390,31 +502,6 @@ public:
 		return this->itk_img_->GetPixel(pixelIndex);
 	}
 
-	DoublePixelEigen pixelEigenRegion(int i, int j) const
-	{
-		const Index& imgIdx = this->itk_img_->GetLargestPossibleRegion().GetIndex();
-		Index pixelIndex = {{ i+imgIdx[0] ,j+imgIdx[1] }};
-		return INHERIT::eigenPixel(this->itk_img_->GetPixel(pixelIndex));
-	}
-
-
-	NOT_CONST auto pixelRelative( int i, int j) -> RETURNED_TYPE(PixelType&)
-	{
-		Index pixelIndex = {{ i+center_[0] ,j+center_[1] }};
-		return this->itk_img_->GetPixel(pixelIndex);
-	}
-
-	const PixelType& pixelRelative(int i, int j) const
-	{
-		Index pixelIndex = {{ i+center_[0] ,j+center_[1] }};
-		return  this->itk_img_->GetPixel(pixelIndex);
-	}
-
-	DoublePixelEigen pixelEigenRelative(int i, int j) const
-	{
-		Index pixelIndex = {{ i+center_[0] ,j+center_[1] }};
-		return INHERIT::eigenPixel(this->itk_img_->GetPixel(pixelIndex));
-	}
 
 	const PixelType& pixelChecked(int i, int j) const
 	{

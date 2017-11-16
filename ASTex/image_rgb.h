@@ -206,6 +206,7 @@ using ConstImageRGB64  = ConstImageRGB< int64_t >;
 using ConstImageRGBf   = ConstImageRGB< float >;
 using ConstImageRGBd   = ConstImageRGB< double >;
 
+
 }
 
 #endif

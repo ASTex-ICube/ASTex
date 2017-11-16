@@ -31,7 +31,7 @@
 #include <ASTex/special_io.h>
 #include <ASTex/easy_io.h>
 
-#include <ASTex/image_merging.h>
+//#include <ASTex/image_merging.h>
 
 using namespace ASTex;
 
@@ -44,19 +44,34 @@ int main()
 	if (!ok)
 		return 1;
 
-	ImageRGBu8 imx;
 
-	auto hm = Assembler1D::into(imx);
-	hm <<image << 3 << image << gen_region(50,50,150,150) << Assembler1D::HorizontalFlush;
-	imx.save(TEMPO_PATH+"h2simple.png");
+	image.pixelAbsolute(0,0) = itkRGBPixel(255,127,52);
+	image.pixelAbsolute(1,0) = itkRGBPixel(20,104,51);
 
-	Assembler1D::into(imx) <<image << 3 << image << gen_region(50,50,200,200) << 2 << image << gen_region(0,0,150,150) << Assembler1D::VerticalFlush;
-	imx.save(TEMPO_PATH+"v3simple.png");
+	//ImageRGBu8::DoublePixelEigen dp1 = image.pixelEigenAbsolute(0,0);
+	//ImageRGBu8::DoublePixelEigen dp2 = image.pixelEigenAbsolute(1,0);
+//	ImageRGBu8::DoublePixelEigen dp = (image.pixelEigenAbsolute(0, 0) + image.pixelEigenAbsolute(1, 0))/2;
 
-	Assembler2D::into(imx) <<image << 1 << image << Assembler2D::EndLine(2)<<image << 1 << image << Assembler2D::FinalFlush;
-	imx.save(TEMPO_PATH+"4simple.png");
+	image.pixelEigenAbsoluteWrite(0, 1) = (image.pixelEigenAbsolute(0, 0) + image.pixelEigenAbsolute(1, 0)) / 2;
 
 
+	std::cout << image.pixelAbsolute(0,1) << std::endl;
+
+	return 0;
+
+
+
+//	ImageRGBu8 imx;
+
+//	auto hm = Assembler1D::into(imx);
+//	hm <<image << 3 << image << gen_region(50,50,150,150) << Assembler1D::HorizontalFlush;
+//	imx.save(TEMPO_PATH+"h2simple.png");
+
+//	Assembler1D::into(imx) <<image << 3 << image << gen_region(50,50,200,200) << 2 << image << gen_region(0,0,150,150) << Assembler1D::VerticalFlush;
+//	imx.save(TEMPO_PATH+"v3simple.png");
+
+//	Assembler2D::into(imx) <<image << 1 << image << Assembler2D::EndLine(2)<<image << 1 << image << Assembler2D::FinalFlush;
+//	imx.save(TEMPO_PATH+"4simple.png");
 
 	int W = image.width()/4;
 	int H = image.height()/4;
