@@ -101,6 +101,15 @@ public:
 		return v;
 	}
 
+	inline static DoublePixelEigen normalized_pixel(const PixelType& p)
+	{
+		return normalized(p);
+	}
+
+	inline static PixelType unnormalized_pixel(const DoublePixelEigen& p)
+	{
+		return unnormalized<DataType>(p);
+	}
 
 protected:
 

@@ -98,7 +98,6 @@ int main()
 	// but with double image no conversion or copy
 	std::cout <<" with double same address ? "<< std::hex << &(imaged.pixelEigenAbsolute(0, 0)) << " == " << &(imaged.pixelEigenAbsoluteWrite(0, 0)) << " == " << &(imaged.pixelAbsolute(0, 0)) << std::endl;
 
-
 	return EXIT_SUCCESS;
 }
 
