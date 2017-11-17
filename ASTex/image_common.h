@@ -155,14 +155,45 @@ struct is_eigen : public decltype(astex_check_eigen_type(std::declval<T*>()))
 {};
 
 template <typename T, typename std::enable_if<is_eigen<T>::value, bool>::type = true>
-struct is_eigen_vectord
+struct is_eigen_vector
 {
-	static const bool value = (Eigen::internal::traits<T>::ColumnsAtCompileTime == 1) && std::is_same<typename Eigen::internal::traits<T>::Scalar, double>::value;
+	static const bool value = Eigen::internal::traits<T>::ColumnsAtCompileTime == 1;
 };
 
 
 template <typename T>
-inline auto channel(const T& p, uint32_t i) -> typename std::enable_if<std::is_arithmetic<T>::value, T>::type
+inline auto channel(T& p, uint32_t i) -> typename std::enable_if<std::is_arithmetic<T>::value, T&>::type
+{
+	assert(i == 0);
+	std::ignore = i;
+	return p;
+}
+
+
+template <typename T>
+inline auto channel(T& p, uint32_t i) -> typename std::enable_if<is_eigen_vector<T>::value, typename Eigen::internal::traits<T>::Scalar&>::type
+{
+	assert(i<Eigen::internal::traits<T>::RowsAtCompileTime);
+	return p[i];
+}
+
+template <typename T>
+inline T& channel(itk::RGBPixel<T>& p, uint32_t i)
+{
+	assert(i<3);
+	return p[i];
+}
+
+template <typename T>
+inline T& channel(itk::RGBAPixel<T>& p, uint32_t i)
+{
+	assert(i<4);
+	return p[i];
+}
+
+
+template <typename T>
+inline auto channel(const T& p, uint32_t i) -> typename std::enable_if<std::is_arithmetic<T>::value, const T&>::type
 {
 	assert(i == 0);
 	std::ignore = i;
@@ -170,25 +201,50 @@ inline auto channel(const T& p, uint32_t i) -> typename std::enable_if<std::is_a
 }
 
 template <typename T>
-inline auto channel(const T& p, uint32_t i) -> typename std::enable_if<is_eigen_vectord<T>::value, double>::type
+inline auto channel(const T& p, uint32_t i) -> typename std::enable_if<is_eigen_vector<T>::value, const typename Eigen::internal::traits<T>::Scalar&>::type
 {
 	assert(i<Eigen::internal::traits<T>::RowsAtCompileTime);
 	return p[i];
 }
 
 template <typename T>
-inline T channel(const itk::RGBPixel<T>& p, uint32_t i)
+inline const T& channel(const itk::RGBPixel<T>& p, uint32_t i)
 {
 	assert(i<3);
 	return p[i];
 }
 
 template <typename T>
-inline T channel(const itk::RGBAPixel<T>& p, uint32_t i)
+inline const T& channel(const itk::RGBAPixel<T>& p, uint32_t i)
 {
 	assert(i<4);
 	return p[i];
 }
+
+
+template <typename T>
+inline auto channel_long(const T& p, uint32_t i) -> typename std::enable_if<std::is_arithmetic<T>::value && !std::is_floating_point<T>::value, int64_t>::type
+{
+	assert(i == 0);
+	std::ignore = i;
+	return p;
+}
+
+template <typename T>
+inline auto channel_long(const itk::RGBPixel<T>& p, uint32_t i)  -> typename std::enable_if<std::is_arithmetic<T>::value && !std::is_floating_point<T>::value, int64_t>::type
+{
+	assert(i<3);
+	return p[i];
+}
+
+template <typename T>
+inline auto channel_long(const itk::RGBAPixel<T>& p, uint32_t i)  -> typename std::enable_if<std::is_arithmetic<T>::value && !std::is_floating_point<T>::value, int64_t>::type
+{
+	assert(i<4);
+	return p[i];
+}
+
+
 
 
 
