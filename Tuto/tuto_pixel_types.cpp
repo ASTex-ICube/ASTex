@@ -69,11 +69,9 @@ int main()
 	p1 = ImageRGBu8::itkPixel(134);
 	p2 = ImageRGBu8::itkPixel(128,128,128);
 
-	p3 = p1 + p2; // possible overflow !
+	p3 = (p1 + p2); // possible overflow !
 //	p3 /= 2; not possible with pixel type
 	std::cout<< p1 << " + "<< p2 << " (compute uint8) = " << p3 << std::endl;
-
-	using DoublePix = ImageRGBu8::DoublePixelEigen;
 
 	// easy type conversion:
 	p3 = ImageRGBu8::itkPixel((ImageRGBu8::eigenPixel(p1)+ImageRGBu8::eigenPixel(p2))/2);

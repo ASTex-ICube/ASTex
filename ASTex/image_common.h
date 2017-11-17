@@ -157,7 +157,7 @@ struct is_eigen : public decltype(astex_check_eigen_type(std::declval<T*>()))
 template <typename T, typename std::enable_if<is_eigen<T>::value, bool>::type = true>
 struct is_eigen_vectord
 {
-	static const bool value = (Eigen::internal::traits<T>::ColumnsAtCompileTime == 1) && std::is_same<typename Eigen::internal::traits<V>::Scalar, double>::value;
+	static const bool value = (Eigen::internal::traits<T>::ColumnsAtCompileTime == 1) && std::is_same<typename Eigen::internal::traits<T>::Scalar, double>::value;
 };
 
 
@@ -205,7 +205,7 @@ class ImageCommon: public INHERIT
 #define RETURNED_TYPE(TYPE_T) typename std::enable_if<B && !CST,TYPE_T>::type
 public:
 
-	using Self = ImageCommon<INHERIT, CST>;
+	using Self                 = ImageCommon<INHERIT, CST>;
 	using ItkImg               = typename INHERIT::ItkImg;
 	using IteratorIndexed      = typename INHERIT::IteratorIndexed;
 	using Iterator             = typename INHERIT::Iterator;
@@ -225,11 +225,6 @@ public:
 		using DPE = DoublePixelEigen;
 		EigenProxy(PixelType& p): pix_(p) {}
 
-		//operator DoublePixelEigen() const
-		//{
-		//	return INHERIT::eigenPixel(pix_);
-		//}
-
 		void operator = (const DoublePixelEigen& p)
 		{
 			pix_ = INHERIT::itkPixel(p);
@@ -243,14 +238,9 @@ public:
 	public:
 		NormalizedEigenProxy(PixelType& p): pix_(p) {}
 
-		//operator DoublePixelEigen() const
-		//{
-		//	return normalized_pixel(pix_);
-		//}
-
 		void operator = (const DoublePixelEigen& p)
 		{
-			pix_ = unnormalized_pixel(p);
+			pix_ = INHERIT::unnormalized(p);
 		}
 	};
 
@@ -461,7 +451,7 @@ public:
 	template <bool B = true>
 	auto pixelNormEigenAbsolute(const Index& pos) const -> typename std::enable_if<B && !std::is_same<DataType, double>::value, DoublePixelEigen>::type
 	{
-		return normalized_pixel(this->itk_img_->GetPixel(pos));
+		return INHERIT::normalized(this->itk_img_->GetPixel(pos));
 	}
 
 	template <bool B = true>

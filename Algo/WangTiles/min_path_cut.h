@@ -35,18 +35,24 @@ namespace ASTex
 template <typename IMG>
 inline double ssd_error_pixel(const IMG& imA, const Index& iA, const IMG& imB, const Index& iB)
 {
-	const typename IMG::PixelType& P = imA.pixelAbsolute(iA);
-	const typename IMG::PixelType& Q = imB.pixelAbsolute(iB);
-
-	double sum_err2 = 0.0;
-
-	for (uint32_t i=0; i<IMG::NB_CHANNELS; ++i)
-	{
-		double err = IMG::normalized_value(IMG::channel(P,i)) - IMG::normalized_value(IMG::channel(Q,i));
-		sum_err2 += err*err;
-	}
-	return sum_err2;
+	return (imA.pixelNormEigenAbsolute(iB) - imB.pixelNormEigenAbsolute(iA)).squaredNorm();
 }
+
+//template <typename IMG>
+//inline double ssd_error_pixel(const IMG& imA, const Index& iA, const IMG& imB, const Index& iB)
+//{
+//	const typename IMG::PixelType& P = imA.pixelAbsolute(iA);
+//	const typename IMG::PixelType& Q = imB.pixelAbsolute(iB);
+
+//	double sum_err2 = 0.0;
+
+//	for (uint32_t i=0; i<IMG::NB_CHANNELS; ++i)
+//	{
+//		double err = IMG::normalized_value(IMG::channel(P,i)) - IMG::normalized_value(IMG::channel(Q,i));
+//		sum_err2 += err*err;
+//	}
+//	return sum_err2;
+//}
 
 
 
@@ -238,6 +244,7 @@ public:
 				dst.pixelAbsolute(dir_index(i+pos[0],j+pos[1])) = imB_.pixelAbsolute(dir_index(i+posB[0],j+posB[1]));
 		}
 	}
+
 };
 
 

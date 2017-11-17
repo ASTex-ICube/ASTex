@@ -133,14 +133,14 @@ public:
 		return DoublePixelEigen(v,v,v,v);
 	}
 
-	inline static DoublePixelEigen normalized_pixel(const PixelType& p)
+	inline static DoublePixelEigen normalized(const PixelType& p)
 	{
-		return DoublePixelEigen(normalized(p[0]), normalized(p[1]), normalized(p[2]), normalized(p[3]));
+		return DoublePixelEigen(ASTex::normalized(p[0]), ASTex::normalized(p[1]), ASTex::normalized(p[2]), ASTex::normalized(p[3]));
 	}
 
-	inline static PixelType unnormalized_pixel(const DoublePixelEigen& p)
+	inline static PixelType unnormalized(const DoublePixelEigen& p)
 	{
-		return itkPixel(unnormalized<DataType>(p[0]), unnormalized<DataType>(p[1]), unnormalized<DataType>(p[2]), unnormalized<DataType>(p[2]));
+		return itkPixel(ASTex::unnormalized<DataType>(p[0]), ASTex::unnormalized<DataType>(p[1]), ASTex::unnormalized<DataType>(p[2]), ASTex::unnormalized<DataType>(p[2]));
 	}
 
 protected:
@@ -184,14 +184,14 @@ inline itk::RGBAPixel<CHANNEL_TYPE> itkRGBAPixel(CHANNEL_TYPE r)
 template<typename CHANNEL_TYPE>
 inline itk::RGBAPixel<CHANNEL_TYPE> itkRGBAPixel(const Eigen::Vector4d& v)
 {
-	return ImageRGBBAase<CHANNEL_TYPE>::itkPixel(v);
+	return ImageRGBABase<CHANNEL_TYPE>::itkPixel(v);
 }
 
 
 template<typename CHANNEL_TYPE>
 inline Eigen::Vector4d eigenRGBAPixel(const itk::RGBAPixel<CHANNEL_TYPE>& p)
 {
-	return ImageRGBBase<CHANNEL_TYPE>::eigenPixel(p);
+	return ImageRGBABase<CHANNEL_TYPE>::eigenPixel(p);
 }
 
 

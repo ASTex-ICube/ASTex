@@ -139,14 +139,14 @@ public:
 		return DoublePixelEigen(v,v,v);
 	}
 
-	inline static DoublePixelEigen normalized_pixel(const PixelType& p)
+	inline static DoublePixelEigen normalized(const PixelType& p)
 	{
-		return DoublePixelEigen(normalized(p[0]), normalized(p[1]), normalized(p[2]));
+		return DoublePixelEigen(ASTex::normalized(p[0]), ASTex::normalized(p[1]), ASTex::normalized(p[2]));
 	}
 
-	inline static PixelType unnormalized_pixel(const DoublePixelEigen& p)
+	inline static PixelType unnormalized(const DoublePixelEigen& p)
 	{
-		return itkPixel(unnormalized<DataType>(p[0]), unnormalized<DataType>(p[1]), unnormalized<DataType>(p[2]));;
+		return itkPixel(ASTex::unnormalized<DataType>(p[0]), ASTex::unnormalized<DataType>(p[1]), ASTex::unnormalized<DataType>(p[2]));;
 	}
 
 protected:

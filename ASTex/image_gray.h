@@ -101,14 +101,14 @@ public:
 		return v;
 	}
 
-	inline static DoublePixelEigen normalized_pixel(const PixelType& p)
+	inline static DoublePixelEigen normalized(const PixelType& p)
 	{
 		return normalized(p);
 	}
 
-	inline static PixelType unnormalized_pixel(const DoublePixelEigen& p)
+	inline static PixelType unnormalized(const DoublePixelEigen& p)
 	{
-		return unnormalized<DataType>(p);
+		return ASTex::unnormalized<DataType>(p);
 	}
 
 protected:

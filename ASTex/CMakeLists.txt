@@ -39,6 +39,7 @@ set (LIB_INCLUDE
 	pca.h
 	dll.h
 	thread_pool.h
+	store.h
 	slic.h
 	region_growing/connected_components.h
 	region_growing/neighborhood.h
