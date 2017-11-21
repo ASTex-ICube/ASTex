@@ -174,7 +174,6 @@ public:
 	}
 
 
-//	IMG Rot45(const IMG& im)
 	void rotate45()
 	{
 		using PIX = typename IMG::PixelType;
@@ -211,10 +210,9 @@ public:
 				rot_img_.pixelEigenAbsolute(x, y) = (n + s + w + e) / 4;
 			}
 		}
-//		return rot_img_;
 	}
 
-	IMG invRot45(/*const*/ IMG& im, int xt, int yt, int w)
+	IMG invRot45(const IMG& im, /*int xt, int yt,*/ int w)
 	{
 		IMG res;
 
@@ -222,21 +220,21 @@ public:
 		using T = typename IMG::DataType;
 		res.initItk(w,w,true);
 
-		int xb = xt + 1 - w;
-		int yb = yt - 1 + w;
+		int xb = im.width()/2 + 1 - w;
+		int yb = im.width()/2 /*yt - 1 + w*/;
 		res.for_all_pixels([&] (PIX& P, int x, int y)
 		{
 			int xx = xb+ x + y;
 			int yy = yb + y - x;
 			P = im.pixelAbsolute(xx, yy);
-			im.pixelAbsolute(xx, yy)[0] = 255;
+//			im.pixelAbsolute(xx, yy)[1] = 255;
 		});
 		return res;
 	}
 
 
 
-	void random_index_patches45(/*Size sz,*/ int nb)
+	void random_index_patches45(int nb)
 	{
 		Size sz = input_img_.size();
 
@@ -370,7 +368,6 @@ public:
 	IMG create_tile(const Index& nw, const Index& ne, const Index& se, const Index& sw)
 	{
 		IMG img(2*tw_-ov_,2*tw_-ov_,true);
-
 		MinCutBuffer<IMG,1> mcbh(rot_img_,rot_img_,tw_,ov_);
 		int ti_sz = tw_-ov_;
 
@@ -397,8 +394,8 @@ public:
 		MinCutBuffer<IMG,0> mcbv(buff_img_,buff_img_,2*tw_-ov_,ov_);
 		mcbv.fusion(gen_index(0,tw_),gen_index(0,tw_+ov_), img, gen_index(0,ti_sz));
 
-		//return img;
-		return invRot45(img,img.width()/2+1,0,img.width()/2);
+//		return img;
+		return invRot45(img,(img.width()-ov_)/2);
 	}
 
 
@@ -409,6 +406,8 @@ public:
 		for(uint32_t j=1; j<NBC; ++j)
 			best_matching_corner(A[0],A[j]);
 
+		random_index_patches45(2000);
+
 		// find the best B
 		double err = best_matching(A,B);
 		return err;
@@ -417,22 +416,11 @@ public:
 
 	std::vector<IMG> create_tiles()
 	{
-		random_index_patches45(500);
+		random_index_patches45(2000);
 
 		std::cout << "create_tiles" << std::endl;
-		std::array<Index,NBC> Am,Bm,A,B;
+		std::array<Index,NBC> A,B;
 		double err = choose_tiles_pos(A,B);
-
-		for (int i =1; i<2; ++i)
-		{
-			double err_i = choose_tiles_pos(Am,Bm);
-			if (err_i < err)
-			{
-				err = err_i;
-				A = Am;
-				B = Bm;
-			}
-		}
 
 		buff_img_.initItk(2*tw_,2*tw_,true);
 
@@ -445,10 +433,118 @@ public:
 					for(Index sw : B)
 						tiles.push_back(create_tile(nw,ne,se,sw));
 
+
 		return tiles;
 
 	}
 };
+
+template <uint32_t N>
+uint16_t nord(uint32_t v)
+{
+	return v/(N*N*N);
+}
+
+template <uint32_t N>
+uint16_t sud(uint32_t v)
+{
+	return (v/(N*N))%N;
+}
+
+template <uint32_t N>
+uint16_t east(uint32_t v)
+{
+	return (v/N)%N;
+}
+
+template <uint32_t N>
+uint16_t west(uint32_t v)
+{
+	return v%N;
+}
+
+
+template <uint32_t N>
+uint16_t rand_west(uint32_t e)
+{
+	uint32_t r;
+	do
+	{
+		r = (rand()%(N*N*N)) * N + east<N>(e);
+	} while (r == e);
+	return r;
+}
+
+template <uint32_t N>
+uint16_t rand_nord(uint32_t s)
+{
+	uint32_t r;
+	do
+	{
+		r = sud<N>(s)*N*N*N + rand()%(N*N*N);
+	} while (r == s);
+	return r;
+}
+
+template <uint32_t N>
+uint16_t rand_nw(uint32_t s, uint32_t e)
+{
+	uint32_t r;
+	do
+	{
+		r = sud<N>(s)*N*N*N + (rand()%(N*N))*N + east<N>(e);
+	} while ((r == s)||(r==e));
+	return r;
+}
+
+
+
+template <typename IMG, int NBC>
+IMG compose(const std::vector<IMG> tiles, int nbw, int nbh)
+{
+	std::vector<uint16_t> compo_idx(nbw*nbh);
+	auto f = [&compo_idx, nbw] (int i, int j) -> uint16_t& { return compo_idx[i+ j*nbw];};
+
+	int32_t nbc = rand()%tiles.size();
+
+	f(0,0) = rand()%(NBC*NBC*NBC*NBC);
+	for(int i=1;i<nbw;++i)
+		f(i,0) = rand_west<NBC>(f(i-1,0));
+
+	for(int j=1;j<nbh;++j)
+	{
+		f(0,j) = rand_nord<NBC>(f(0,j-1));
+		for(int i=1;i<nbw;++i)
+			f(i,j) = rand_nw<NBC>(f(i,j-1), f(i-1,j));
+	}
+
+	std::cout << "create compo" << std::endl;
+
+	int32_t w = tiles[0].width();
+	int32_t h = tiles[0].height();
+
+	IMG compo(w*nbw, h*nbh);
+	for(int j=0;j<nbh;++j)
+		for(int i=0;i<nbw;++i)
+		{
+			int32_t k = f(i,j);
+			if  (i==0)
+				std::cout << std::endl;
+			std::cout << k << "  ";
+			compo.copy_pixels(gen_index(i*w,j*h), tiles[k], gen_region(0,0,w,h));
+		}
+	return compo;
+//	IMG compo(w*4+4, h*4+4);
+//	for(int j=0;j<4;++j)
+//		for(int i=0;i<4;++i)
+//		{
+//			int k = i +j*4;
+//			compo.copy_pixels(gen_index(i*(w+1), j*(h+1)), tiles[k], gen_region(0,0,w,h));
+//		}
+//	return compo;
+
+}
+
 
 
 }
@@ -469,7 +565,9 @@ int main(int argc, char** argv)
 {
 //	std::string fn = "C:/Users/thery/Desktop/blue_rust.png";
 //	std::string fn = "/Users/thery/Desktop/blue_rust.png";
-	std::string fn = "/tmp/blue_rust.png";
+
+//	std::string fn = "/tmp/blue_rust.png";
+	std::string fn = "/tmp/ASTex_data/quilting_input8.png";
 
 	QApplication app(argc, argv);
 
@@ -478,22 +576,21 @@ int main(int argc, char** argv)
 
 	auto start_chrono = std::chrono::system_clock::now();
 
-	WangTilesAlgo<ImageRGBu8,2> wta(im,300,60);
+	WangTilesAlgo<ImageRGBu8,2> wta(im,120,20);
 	wta.rotate45();
 	std::vector<ImageRGBu8> tiles = wta.create_tiles();
 
 
-	for(auto& ti : tiles)
-	{
-		ImageViewer* imgv= new ImageViewer("tile", &app, 0);
-		imgv->set_rgb(ti.getDataPtr(), ti.width(),ti.height(),1);
-		imgv->show();
-
-	}
-
-
 	std::chrono::duration<double> elapsed_seconds = std::chrono::system_clock::now() - start_chrono;
 	std::cout << "wang : " << elapsed_seconds.count() << " s." << std::endl;
+
+
+	ImageRGBu8 gen = compose<ImageRGBu8,2>(tiles, 10, 8);
+
+	ImageViewer imgv("tiled", &app, 0);
+	imgv.set_rgb(gen.getDataPtr(), gen.width(),gen.height(),1);
+	imgv.show();
+
 
 	return app.exec();
 }

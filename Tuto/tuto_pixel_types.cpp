@@ -54,7 +54,7 @@ int main()
 	ImageGrayu8::PixelType pg;
 
 
-	auto Q1 =eigenPixel<double>(pg);
+//	auto Q1 =eigenPixel<double>(pg);
 
 	// iterator.Value() return (const) PixelType
 	IMG::ConstIterator it = image.beginConstIterator();
