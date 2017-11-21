@@ -86,8 +86,8 @@ protected:
 		// apply algo on region
 		img_out.for_all_pixels([&] (ImageGrayu8::PixelType& Q, int x, int y)
 		{
-			auto Pa = img_A.pixelEigenAbsolute(x,y);
-			auto Pb = img_B.pixelEigenAbsolute(x,y);
+			ConstImageRGBu8::DoublePixelEigen Pa = img_A.pixelEigenAbsolute(x,y);
+			ConstImageRGBu8::DoublePixelEigen Pb = img_B.pixelEigenAbsolute(x,y);
 			Pa /= 2;
 			Pb /= 2;
 			auto p = Pa+Pb;

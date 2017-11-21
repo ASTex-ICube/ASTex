@@ -32,6 +32,10 @@
 namespace ASTex
 {
 
+
+template<typename S>
+using EigenVec4 = Eigen::Matrix<S,4,1>;
+
 /**
  * @brief The RGBA image class
  * @tparam CHANNEL_TYPE (uchar/char/ushort/short/.../float/double)
@@ -47,7 +51,10 @@ public:
 	using ConstIteratorIndexed = itk::ImageRegionConstIteratorWithIndex<ItkImg> ;
 	using ConstIterator =        itk::ImageRegionConstIterator<ItkImg>;
 	using DoublePixelEigen =     Eigen::Vector4d;
+	using LongPixelEigen =       Eigen::Matrix<int64_t,4,1>;
 	using DataType =             CHANNEL_TYPE;
+	template<typename S>
+	using EigenVector =          Eigen::Matrix<S,4,1>;
 
 	static const uint32_t NB_CHANNELS = 4;
 
@@ -105,40 +112,59 @@ public:
 	}
 
 	/**
-	 * @brief eigenPixel
+	 * @brief eigenDoublePixel
 	 * @param p a itk::Pixel
 	 * @return an Eigen::Vector4d with same value
 	 */
-	inline static DoublePixelEigen eigenPixel(const PixelType& p)
+//	inline static DoublePixelEigen eigenDoublePixel(const PixelType& p)
+//	{
+//		if (std::is_same<CHANNEL_TYPE,typename Eigen::internal::traits<DoublePixelEigen>::Scalar>::value)
+//			return *(reinterpret_cast<const DoublePixelEigen*>(&p));
+//		return DoublePixelEigen(p[0],p[1],p[2],p[3]);
+//	}
+
+
+//	inline static LongPixelEigen eigenLongPixel(const PixelType& p)
+//	{
+//		if (std::is_same<CHANNEL_TYPE, typename Eigen::internal::traits<LongPixelEigen>::Scalar>::value)
+//			return *(reinterpret_cast<const LongPixelEigen*>(&p));
+//		return LongPixelEigen(p[0],p[1],p[2],p[3]);
+//	}
+
+	template<typename S>
+	inline static EigenVector<S> eigenPixel(const PixelType& p)
 	{
-		if (std::is_same<CHANNEL_TYPE,double>::value)
-			return *(reinterpret_cast<const DoublePixelEigen*>(&p));
-		return DoublePixelEigen(p[0],p[1],p[2],p[3]);
+		if (std::is_same<CHANNEL_TYPE, S>::value)
+			return *(reinterpret_cast<const EigenVector<S>*>(&p));
+		return EigenVector<S>(p[0],p[1],p[2],p[3]);
 	}
+
 
 	/**
 	 * @brief itkPixel
-	 * @param p an Eigen::Vector4d
+	 * @param p an Eigen::Vector3i
 	 * @return an itk::Pixel with same values of p
 	 */
-	inline static PixelType itkPixel(const DoublePixelEigen& p)
+	template <typename EP>
+	inline static auto itkPixel(const EP& p) -> typename std::enable_if<is_eigen_vector4<EP>::value, PixelType>::type
 	{
-		if (std::is_same<CHANNEL_TYPE,double>::value)
-			return *(reinterpret_cast<const PixelType*>(&p));
 		return itkPixel(CHANNEL_TYPE(p[0]),CHANNEL_TYPE(p[1]),CHANNEL_TYPE(p[2]),CHANNEL_TYPE(p[3]));
 	}
 
-	inline static DoublePixelEigen eigenPixel(double v)
+	template<typename S>
+	inline static EigenVector<S> eigenPixel(S v)
 	{
-		return DoublePixelEigen(v,v,v,v);
+		return EigenVector<S>(v,v,v,v);
 	}
 
-	inline static DoublePixelEigen normalized(const PixelType& p)
+	template<typename S>
+	inline static EigenVector<S> normalized(const PixelType& p)
 	{
-		return DoublePixelEigen(ASTex::normalized(p[0]), ASTex::normalized(p[1]), ASTex::normalized(p[2]), ASTex::normalized(p[3]));
+		return EigenVector<S>(ASTex::normalized(p[0]), ASTex::normalized(p[1]), ASTex::normalized(p[2]), ASTex::normalized(p[3]));
 	}
 
-	inline static PixelType unnormalized(const DoublePixelEigen& p)
+	template<typename S>
+	inline static PixelType unnormalized(const EigenVector<S>& p)
 	{
 		return itkPixel(ASTex::unnormalized<DataType>(p[0]), ASTex::unnormalized<DataType>(p[1]), ASTex::unnormalized<DataType>(p[2]), ASTex::unnormalized<DataType>(p[2]));
 	}
@@ -177,21 +203,25 @@ inline itk::RGBAPixel<CHANNEL_TYPE> itkRGBAPixel(CHANNEL_TYPE r, CHANNEL_TYPE g,
 template<typename CHANNEL_TYPE>
 inline itk::RGBAPixel<CHANNEL_TYPE> itkRGBAPixel(CHANNEL_TYPE r)
 {
-	return ImageRGBABase<CHANNEL_TYPE>::itkPixel(r);;
+	return ImageRGBABase<CHANNEL_TYPE>::itkPixel(r);
 }
 
-
 template<typename CHANNEL_TYPE>
-inline itk::RGBAPixel<CHANNEL_TYPE> itkRGBAPixel(const Eigen::Vector4d& v)
+inline itk::RGBAPixel<CHANNEL_TYPE> itkPixel(const Eigen::Vector4d& v)
 {
 	return ImageRGBABase<CHANNEL_TYPE>::itkPixel(v);
 }
 
-
 template<typename CHANNEL_TYPE>
-inline Eigen::Vector4d eigenRGBAPixel(const itk::RGBAPixel<CHANNEL_TYPE>& p)
+inline itk::RGBAPixel<CHANNEL_TYPE> itkPixel(const EigenVec4<int64_t>& v)
 {
-	return ImageRGBABase<CHANNEL_TYPE>::eigenPixel(p);
+	return ImageRGBABase<CHANNEL_TYPE>::itkPixel(v);
+}
+
+template<typename S, typename CHANNEL_TYPE>
+inline typename ImageRGBABase<CHANNEL_TYPE>::template EigenVector<S> eigenPixel(const itk::RGBAPixel<CHANNEL_TYPE>& p)
+{
+	return ImageRGBABase<CHANNEL_TYPE>::template eigenPixel<S>(p);
 }
 
 

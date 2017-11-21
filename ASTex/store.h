@@ -86,7 +86,7 @@ public:
 
 	void shrink_to_fit()
 	{
-		for (uint32_i= (size/CHUNK_SIZE)+1 ; i<table_data_.size(); ++i)
+		for (uint32_t i= (size_/CHUNK_SIZE)+1 ; i<table_data_.size(); ++i)
 				delete[] table_data_[i];
 	}
 

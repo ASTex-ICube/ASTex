@@ -48,11 +48,9 @@ int main()
 	image.pixelAbsolute(0,0) = itkRGBPixel(255,127,52);
 	image.pixelAbsolute(1,0) = itkRGBPixel(20,104,51);
 
-	//ImageRGBu8::DoublePixelEigen dp1 = image.pixelEigenAbsolute(0,0);
-	//ImageRGBu8::DoublePixelEigen dp2 = image.pixelEigenAbsolute(1,0);
-//	ImageRGBu8::DoublePixelEigen dp = (image.pixelEigenAbsolute(0, 0) + image.pixelEigenAbsolute(1, 0))/2;
-
-	image.pixelEigenAbsoluteWrite(0, 1) = (image.pixelEigenAbsolute(0, 0) + image.pixelEigenAbsolute(1, 0)) / 2;
+	ImageRGBu8::DoublePixelEigen dp1 = image.pixelEigenAbsolute(0,0);
+	ImageRGBu8::DoublePixelEigen dp2 = image.pixelEigenAbsolute(1,0);
+	image.pixelEigenAbsolute(0, 1) = (dp1 + dp2) / 2;
 
 
 	std::cout << image.pixelAbsolute(0,1) << std::endl;

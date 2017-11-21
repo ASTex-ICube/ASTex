@@ -35,31 +35,16 @@ namespace ASTex
 template <typename IMG>
 inline double ssd_error_pixel(const IMG& imA, const Index& iA, const IMG& imB, const Index& iB)
 {
-	return (imA.pixelNormEigenAbsolute(iB) - imB.pixelNormEigenAbsolute(iA)).squaredNorm();
+	typename IMG::DoublePixelEigen pA = imA.pixelNormEigenAbsolute(iA);
+	typename IMG::DoublePixelEigen pB = imB.pixelNormEigenAbsolute(iB);
+	return (pB-pA).squaredNorm();
 }
-
-//template <typename IMG>
-//inline double ssd_error_pixel(const IMG& imA, const Index& iA, const IMG& imB, const Index& iB)
-//{
-//	const typename IMG::PixelType& P = imA.pixelAbsolute(iA);
-//	const typename IMG::PixelType& Q = imB.pixelAbsolute(iB);
-
-//	double sum_err2 = 0.0;
-
-//	for (uint32_t i=0; i<IMG::NB_CHANNELS; ++i)
-//	{
-//		double err = IMG::normalized_value(IMG::channel(P,i)) - IMG::normalized_value(IMG::channel(Q,i));
-//		sum_err2 += err*err;
-//	}
-//	return sum_err2;
-//}
-
 
 
 /**
  *
- *  DIR: 0=Horizontal
- *       1=Vertical
+ *  DIR: 0=Horizontal  -
+ *       1=Vertical    |
  */
 template<typename IMG, int DIR>
 class MinCutBuffer
@@ -236,12 +221,15 @@ public:
 		{
 			int i=0;
 			for(; i< minPos_[j];++i)
-				dst.pixelAbsolute(dir_index(i+pos[0],j+pos[1])) = imA_.pixelAbsolute(dir_index(i+posA[0],j+posA[1]));
-			dst.pixelAbsolute(dir_index(i+pos[0],j+pos[1])) = IMG::itkPixelNorm(1,0,0);
-			//imA_.pixelAbsolute(dir_index(i+posA[0],j+posA[1]))*0.5 + imB_.pixelAbsolute(dir_index(i+posB[0],j+posB[1]))*0.5;
+				dst.pixelAbsolute(pos+dir_index(i,j)) = imA_.pixelAbsolute(posA+dir_index(i,j));
+
+			typename IMG::DoublePixelEigen p = imA_.pixelEigenAbsolute(posA+dir_index(i,j));
+			typename IMG::DoublePixelEigen q = imB_.pixelEigenAbsolute(posB+dir_index(i,j));
+			dst.pixelEigenAbsolute(pos+dir_index(i,j)) = (p+q)/2;
+
 			i++;
 			for(; i<overlay_;++i)
-				dst.pixelAbsolute(dir_index(i+pos[0],j+pos[1])) = imB_.pixelAbsolute(dir_index(i+posB[0],j+posB[1]));
+				dst.pixelAbsolute(pos+dir_index(i,j)) = imB_.pixelAbsolute(posB+dir_index(i,j));
 		}
 	}
 
