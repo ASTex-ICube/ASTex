@@ -192,16 +192,18 @@ public:
 	{
 		error_func_ = ef;
 	}
-
+	ImageGrayu8 choosen_img_;
 private:
 
-	static const int NB_RAND= 2000;
-	static const int NB_BEST= 5;
+	static const int NB_RAND= 4000;
+	static const int NB_BEST= 20;
 
 	using PIX = typename IMG::PixelType;
 	using T = typename IMG::DataType;
 
 	const IMG& input_img_;
+
+
 
 	/// rotated orginal image
 	IMG rot_img_;
@@ -308,23 +310,42 @@ private:
 		}
 	}
 
+	void update_choosen(Index ind)
+	{
+//		uint8_t mask[25]={1,1,1,1,1,
+//						  1,2,2,2,1,
+//						  1,2,3,2,1,
+//						  1,2,2,2,1,
+//						  1,1,1,1,1};
+//		uint8_t* ptr = mask;
+//		for(auto it = choosen_img_.beginIterator(gen_region(ind[0]/16,ind[1]/16,5,5));!it.IsAtEnd(); ++it)
+//			it.Value()=*ptr++;
+
+		Index center=gen_index(4+ind[0]/8, 4+ind[1]/8);
+		Region reg = gen_region(ind[0]/8,ind[1]/8,9,9);
+		choosen_img_.for_region_pixels(reg, [&] (uint8_t& p, int x, int y)
+		{
+			p = std::max(p, uint8_t(32u -((x-center[0])*(x-center[0])+(y-center[1])*(y-center[1]))));
+		});
+	}
+
+	inline uint8_t choosen_val(Index ind)
+	{
+		return choosen_img_.pixelAbsolute(4+ind[0]/8,4+ind[1]/8);
+	}
 
 	double best_matching_corner(const Index& A,  Index& Ax)
 	{
 		Region rAnw = gen_region(A[0],A[1],ov_,ov_);
 		Region rAse = gen_region(A[0]+tw_-ov_,A[1]+tw_-ov_,ov_,ov_);
 
-//		auto pix_err = [] (const PIX& P,const PIX& Q) {return (IMG::template normalized<double>(Q)-IMG::template normalized<double>(P)).squaredNorm();};
-
-		std::vector<double> errors(random_pos.size(),0.0);
+		std::vector<double> errors(random_pos.size());
 		for (std::size_t j=0; j<random_pos.size(); ++j)
 		{
 			const Index& X = random_pos[j];
 			Region rXnw = gen_region(X[0],X[1],ov_,ov_);
 			Region rXse = gen_region(X[0]+tw_-ov_,X[1]+tw_-ov_,ov_,ov_);
-
-						errors[j] += computeErrorOverlap(rot_img_, rAnw, rot_img_, rXse, error_func_);
-						errors[j] += computeErrorOverlap(rot_img_, rAse,rot_img_, rXnw, error_func_);
+			errors[j] = computeErrorOverlap(rot_img_, rAnw, rot_img_, rXse, error_func_) + computeErrorOverlap(rot_img_, rAse,rot_img_, rXnw, error_func_);
 		}
 
 		// find the NB_BEST min an place them first
@@ -339,13 +360,24 @@ private:
 			std::swap(errors[m_i],errors[j]);
 		}
 
+		// place further first
+		int imin = best[0];
+		for(uint32_t j=1; j<NB_BEST; ++j)
+		{
+			if (choosen_val(random_pos[best[j]])<  choosen_val(random_pos[imin]))
+				imin = best[j];
+		}
+
 		// place a random choice first
-			std::swap(best[0],best[std::rand()%best.size()]);
+//		std::swap(best[0],best[std::rand()%best.size()]);
+
+		update_choosen(random_pos[imin]);
 
 		// and create positions
-		Ax = random_pos[best[0]];
-		random_pos[best[0]] = random_pos.back();
+		Ax = random_pos[imin];
+		random_pos[imin] = random_pos.back();
 		random_pos.pop_back();
+
 
 		return errors[best[0]];
 	}
@@ -404,14 +436,27 @@ private:
 
 
 		// place a random choice first
+//		for(int i=0; i<NBC; ++i)
+//			std::swap(best[i],best[i+std::rand()%(best.size()-i)]);
+
+		// place further first
 		for(int i=0; i<NBC; ++i)
-			std::swap(best[i],best[i+std::rand()%(best.size()-i)]);
+		{
+			int jmin = i;
+			for(uint32_t j=i; j<nb_best; ++j)
+			{
+				if (choosen_val(random_pos[best[j]]) < choosen_val(random_pos[best[jmin]]))
+					jmin = j;
+			}
+			std::swap(best[i],best[jmin]);
+		}
 
 		double err = 0.0;
 		// and create positions
 		for (uint32_t i=0; i<NBC; ++i)
 		{
 			B[i] = random_pos[best[i]];
+			update_choosen(random_pos[best[i]]);
 			err += errors[i];
 		}
 
@@ -456,6 +501,8 @@ private:
 	{
 		A[0] = random_pos.back();
 		random_pos.pop_back();
+		update_choosen(A[0]);
+
 		for(uint32_t j=1; j<NBC; ++j)
 			best_matching_corner(A[0],A[j]);
 
@@ -472,6 +519,10 @@ private:
 	{
 		srand(time(nullptr));
 		random_index_patches45(NB_RAND);
+
+		int sz = (input_img_.width() + input_img_.height())/8+10;
+		choosen_img_.initItk(sz,sz,true);
+
 
 		std::array<Index,NBC> A,B;
 		choose_tiles_pos(A,B);

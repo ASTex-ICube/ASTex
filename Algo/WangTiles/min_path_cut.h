@@ -61,7 +61,7 @@ auto computeErrorOverlap(const IMG& imgA, const Region& rA, const IMG& imgB, con
 	int dy = rB.GetIndex()[1] - rA.GetIndex()[1];
 
 	// one error sum for each thread
-	std::vector<double> totals(nb_launched_threads(),0.0);
+//	std::vector<double> totals(nb_launched_threads(),0.0);
 
 //	imgA.parallel_for_region_pixels(rA, [&imgB, &totals, dx, dy, &error_func] (const typename IMG::PixelType& P,int x, int y, uint16_t t)
 //	{
@@ -92,21 +92,21 @@ auto computeErrorOverlap(const IMG& imgA, const Region& rA, const IMG& imgB, con
 	int dx = rB.GetIndex()[0] - rA.GetIndex()[0];
 	int dy = rB.GetIndex()[1] - rA.GetIndex()[1];
 
-//	std::vector<double> totals(nb_launched_threads(),0.0);
+	std::vector<double> totals(nb_launched_threads(),0.0);
 
-//	imgA.parallel_for_region_pixels(rA, [&] (int x, int y, uint16_t t)
-//	{
-//		totals[t] += error_func(imgA,gen_index(x,y),imgB,gen_index(x+dx,y+dy));
-//	});
-//	double total=0.0;
-//	for(double t: totals)
-//		total+= t;
-
-	double total=0.0;
-	imgA.for_region_pixels(rA, [&] (int x, int y)
+	imgA.parallel_for_region_pixels(rA, [&] (int x, int y, uint16_t t)
 	{
-		total += error_func(imgA,gen_index(x,y),imgB,gen_index(x+dx,y+dy));
+		totals[t] += error_func(imgA,gen_index(x,y),imgB,gen_index(x+dx,y+dy));
 	});
+	double total=0.0;
+	for(double t: totals)
+		total+= t;
+
+//	double total=0.0;
+//	imgA.for_region_pixels(rA, [&] (int x, int y)
+//	{
+//		total += error_func(imgA,gen_index(x,y),imgB,gen_index(x+dx,y+dy));
+//	});
 
 	return total/(rA.GetSize()[0]*rA.GetSize()[1]);
 }

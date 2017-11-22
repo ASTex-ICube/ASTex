@@ -209,14 +209,15 @@ using ConstImageGraycf  = ConstImageGray< std::complex<float> >;
 using ConstImageGraycd  = ConstImageGray< std::complex<double> >;
 
 
+using CompactIndex = std::array<int16_t,2>;
+
 class ImagePixelCompactIndex : public ImageGrayu32
 {
 public:
-	inline static uint32_t pos_to_ui32(const Index& p) { return p[0] | p[1]<<16;}
-	inline static  Index ui32_to_pos(uint32_t idx) { return gen_index(idx & 0xffff,idx >> 16);}
-	inline Index iget(int x, int y) { return ui32_to_pos(this->pixelAbsolute(x,y));	}
+
+	inline Index iget(int x, int y) { return ui32_to_index(this->pixelAbsolute(x,y));	}
 	inline void iset(int x, int y, int a, int b) {	this->pixelAbsolute(x,y) = a | b<<16;}
-	inline void iset(int x, int y, const Index& p)	{ this->pixelAbsolute(x,y) = pos_to_ui32(p);}
+	inline void iset(int x, int y, const Index& p)	{ this->pixelAbsolute(x,y) = index_to_ui32(p);}
 };
 
 }

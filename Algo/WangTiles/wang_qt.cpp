@@ -29,6 +29,8 @@
 
 #include "wang_tiles.h"
 
+#include "imageviewer.h"
+
 using namespace ASTex;
 
 void app_mouse_clicked(int /*button*/, int /*x*/, int /*y*/, int /*id*/) {}
@@ -36,6 +38,7 @@ void app_key_pressed(int /*code*/, char /*key*/, int /*id*/) {}
 
 int main(int argc, char** argv)
 {
+	QApplication app(argc, argv);
 	std::string fn = TEMPO_PATH+"quilting_input8.png";
 	int tw = 100;
 	int gen_sz = 1000;
@@ -63,10 +66,11 @@ int main(int argc, char** argv)
 
 
 	ImageRGBu8 ti = wang.all_tiles();
-	ti.save(TEMPO_PATH+"wang_tiles.png");
+	auto v1 = image_viewer(ti);
 
 	ImageRGBu8 gen = wang.compose(gen_sz/tw, gen_sz/tw);
-	gen.save(TEMPO_PATH+"wang_generated.png");
+	auto v2 = image_viewer(gen,"gen", &app);
 
-	return EXIT_SUCCESS;
+
+	return app.exec();
 }
