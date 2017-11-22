@@ -59,11 +59,18 @@ int main(int argc, char** argv)
 
 	auto start_chrono = std::chrono::system_clock::now();
 
-	auto wang = WangTilesGenerator<ImageRGBu8,3>::create(im,tw);
+//	auto wang = WangTilesGenerator<ImageRGBu8,3>::create(im,tw);
+
+	WangTilesGenerator<ImageRGBu8,3> wta(im, tw);
+	auto wang = wta.create();
+
 
 	std::chrono::duration<double> elapsed_seconds = std::chrono::system_clock::now() - start_chrono;
 	std::cout << "wang tile timing: " << elapsed_seconds.count() << " s." << std::endl;
 
+	ImageViewer v0("xx", &app);
+	v0.update(wta.choosen_img_,4);
+	v0.show();
 
 	ImageRGBu8 ti = wang.all_tiles();
 	auto v1 = image_viewer(ti);

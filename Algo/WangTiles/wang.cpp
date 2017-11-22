@@ -37,7 +37,7 @@ void app_key_pressed(int /*code*/, char /*key*/, int /*id*/) {}
 int main(int argc, char** argv)
 {
 	std::string fn = TEMPO_PATH+"quilting_input8.png";
-	int tw = 100;
+	int tw = 200;
 	int gen_sz = 1000;
 
 	if (argc>=4)
