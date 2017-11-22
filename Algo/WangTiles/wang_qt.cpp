@@ -42,12 +42,14 @@ int main(int argc, char** argv)
 	std::string fn = TEMPO_PATH+"quilting_input8.png";
 	int tw = 100;
 	int gen_sz = 1000;
+	int nbcol = 2;
 
-	if (argc>=4)
+	if (argc>4)
 	{
 		fn = std::string(argv[1]);
 		tw = atoi(argv[2]);
 		gen_sz = atoi(argv[3]);
+		nbcol = atoi(argv[4]);
 	}
 	else
 	{
@@ -59,9 +61,9 @@ int main(int argc, char** argv)
 
 	auto start_chrono = std::chrono::system_clock::now();
 
-//	auto wang = WangTilesGenerator<ImageRGBu8,3>::create(im,tw);
+//	auto wang = WangTilesGenerator<ImageRGBu8,3>::create(im,tw,nbcol);
 
-	WangTilesGenerator<ImageRGBu8,3> wta(im, tw);
+	WangTilesGenerator<ImageRGBu8> wta(im, tw,nbcol);
 	auto wang = wta.create();
 
 
