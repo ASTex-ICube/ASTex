@@ -45,12 +45,11 @@ class QScrollArea;
 class QScrollBar;
 QT_END_NAMESPACE
 
+#include<ASTex/image_common.h>
 
 // forward (must be define whehe .h included
-void app_open(const std::string& filename, int id);
 void app_mouse_clicked(int button, int x, int y,int id);
 void app_key_pressed(int code, char key, int);
-
 
 class ImageViewer : public QMainWindow
 {
@@ -60,71 +59,135 @@ public:
 	/**
 	 * @brief Constructor
 	 * @param name windows name
-	 * @param app  ppliction ptr
-	 * @param id 
+	 * @param app appliction ptr (for out with ESC)
+	 * @param id id of win (for use of app_mouse_clicked & app_key_pressed)
 	 */
-	ImageViewer(const std::string& name, QApplication* app, int id);
+	ImageViewer(const std::string& name, QApplication* app=nullptr, int id=0);
 	
-	/**
-	 * @brief set from Grayu8 image
-	 * @param ptr pointer on pixel data
-	 * @param w image width
-	 * @param h image height
-	 * @param zoom int zoom param
-	 */
-	void set_gray(const unsigned char* ptr,int w,int h, int zoom=1);
+	template <typename IMG>
+	inline auto update(const IMG& img, int zoom=1) -> typename std::enable_if<IMG::NB_CHANNELS==1>::type
+	{
+		using SCALAR = typename IMG::DataType;
 
-	/**
-	 * @brief set from RGBu8 image
-	 * @param ptr pointer on pixel data
-	 * @param w image width
-	 * @param h image height
-	 * @param zoom int zoom param
-	 */
-	void set_rgb(const unsigned char* ptr,int w,int h, int zoom=1);
+		const SCALAR* ptr = img.getDataPtr();
+		int w = img.width();
+		int h = img.height();
 
-	/**
-	 * @brief set from RGBAu8 image
-	 * @param ptr pointer on pixel data
-	 * @param w image width
-	 * @param h image height
-	 * @param zoom int zoom param
-	 */
-	void set_rgba(const unsigned char* ptr,int w,int h, int zoom=1);
+		auto conv = [&] (const SCALAR x) -> uint8_t
+		{
+			if (std::is_floating_point<SCALAR>::value)
+				return ASTex::unnormalized<uint8_t>(x);
+			return uint8_t(x);
+		};
 
-	/**
-	 * @brief set from Grayf/d image
-	 * @param ptr pointer on pixel data
-	 * @param w image width
-	 * @param h image height
-	 * @param zoom int zoom param
-	 */
-	template <typename REAL>
-	void set_gray01(const REAL* ptr,int w,int h, int zoom=1);
+		QImage im(w,h,QImage::Format_RGB888);
+		for(int i=0;i<h;++i)
+		{
+			uint8_t *optr = im.scanLine(i);
+			for(int j=0;j<w;++j)
+			{
+				*optr++ = conv(*ptr);
+				*optr++ = conv(*ptr);
+				*optr++ = conv(*ptr++);
+			}
+		}
 
-	/**
-	 * @brief set from Grayf/d image with conversion
-	 * @param ptr pointer on pixel data
-	 * @param w image width
-	 * @param h image height
-	 * @param converToRGB lambda (REAL in, uint8_t* out)->void
-	 * @param zoom int zoom param
-	 */
-	template <typename REAL, typename F>
-	auto set_gray01(const REAL* ptr,int w,int h, int zoom, const F& converToRGB)
-	->  typename std::enable_if<(ASTex::function_traits<F>::arity==2) &&
-			(std::is_same<typename ASTex::function_traits<F>::template arg<0>::type,REAL>::value) &&
-			(std::is_same<typename ASTex::function_traits<F>::template arg<1>::type,uint8_t*>::value)>::type;
+		if (zoom != 1)
+		{
+			QImage imz = im.scaledToWidth(w*zoom);
+			im.swap(imz);
+		}
 
-	/**
-	* @brief set from RGBd/f image
-	* @param ptr pointer on pixel data
-	* @param w image width
-	* @param h image height
-	* @param zoom int zoom param
-	*/
-	template <typename REAL>
-	inline void set_rgb01(const REAL* ptr, int w, int h, int zoom);
+		m_imageLabel->setPixmap(QPixmap::fromImage(im));
+		if ((w<=1024) && (h<=1024))
+			m_scrollArea->setMinimumSize(im.width()+2, im.height()+2);
+
+		m_scrollArea->setVisible(true);
+		m_imageLabel->adjustSize();
+	}
+
+	template <typename IMG>
+	inline auto update(const IMG& img, int zoom=1) -> typename std::enable_if<IMG::NB_CHANNELS==3>::type
+	{
+		using SCALAR = typename IMG::DataType;
+
+		const SCALAR* ptr = img.getDataPtr();
+		int w = img.width();
+		int h = img.height();
+
+		auto conv = [&] (const SCALAR x) -> uint8_t
+		{
+			if (std::is_floating_point<SCALAR>::value)
+				return ASTex::unnormalized<uint8_t>(x);
+			return uint8_t(x);
+		};
+
+		QImage im(w,h,QImage::Format_RGB888);
+		for(int i=0;i<h;++i)
+		{
+			uint8_t *optr = im.scanLine(i);
+			for(int j=0;j<w;++j)
+			{
+				*optr++ = conv(*ptr++);
+				*optr++ = conv(*ptr++);
+				*optr++ = conv(*ptr++);
+			}
+		}
+		if (zoom != 1)
+		{
+			QImage imz = im.scaledToWidth(w*zoom);
+			im.swap(imz);
+		}
+
+		m_imageLabel->setPixmap(QPixmap::fromImage(im));
+		if ((w<=1024) && (h<=1024))
+			m_scrollArea->setMinimumSize(im.width()+2, im.height()+2);
+
+		m_scrollArea->setVisible(true);
+		m_imageLabel->adjustSize();
+	}
+
+	template <typename IMG>
+	inline auto update(const IMG& img, int zoom=1) -> typename std::enable_if<IMG::NB_CHANNELS==4>::type
+	{
+		using SCALAR = typename IMG::DataType;
+
+		const SCALAR* ptr = img.getDataPtr();
+		int w = img.width();
+		int h = img.height();
+
+		auto conv = [&] (const SCALAR x) -> uint8_t
+		{
+			if (std::is_floating_point<SCALAR>::value)
+				return ASTex::unnormalized<uint8_t>(x);
+			return uint8_t(x);
+		};
+
+		QImage im(w,h,QImage::Format_RGB888);
+		for(int i=0;i<h;++i)
+		{
+			uint8_t *optr = im.scanLine(i);
+			for(int j=0;j<w;++j)
+			{
+				*optr++ = conv(*ptr++);
+				*optr++ = conv(*ptr++);
+				*optr++ = conv(*ptr++);
+				*optr++ = conv(*ptr++);
+			}
+		}
+		if (zoom != 1)
+		{
+			QImage imz = im.scaledToWidth(w*zoom);
+			im.swap(imz);
+		}
+
+		m_imageLabel->setPixmap(QPixmap::fromImage(im));
+		if ((w<=1024) && (h<=1024))
+			m_scrollArea->setMinimumSize(im.width()+2, im.height()+2);
+
+		m_scrollArea->setVisible(true);
+		m_imageLabel->adjustSize();
+	}
 
 	/**
 	 * get horizontal scroll bar for easy connect/syncro
@@ -143,10 +206,10 @@ private:
 
 	inline void mousePressEvent(QMouseEvent* event)
 	{
-//		app_mouse_clicked(event->button(),
-//		                  event->x()-m_scrollArea->x()+m_scrollArea->horizontalScrollBar()->value(),
-//		                  event->y()-m_scrollArea->y()+m_scrollArea->verticalScrollBar()->value(),
-//		                  m_id);
+		app_mouse_clicked(event->button(),
+						  event->x()-m_scrollArea->x()+m_scrollArea->horizontalScrollBar()->value(),
+						  event->y()-m_scrollArea->y()+m_scrollArea->verticalScrollBar()->value(),
+						  m_id);
 	}
 
 	inline void keyPressEvent(QKeyEvent* event)
@@ -166,7 +229,6 @@ signals:
 
 public slots:
 	inline void win_resize(QSize sz) { resize(sz); }
-	void open();
 };
 
 
@@ -180,192 +242,34 @@ inline ImageViewer::ImageViewer(const std::string& name, QApplication* app, int 
 	m_scrollArea->setWidget(m_imageLabel);
 	m_scrollArea->setVisible(false);
 	setCentralWidget(m_scrollArea);
-	QMenu* fileMenu = menuBar()->addMenu(tr("&File"));
 
-	QAction *openAct = fileMenu->addAction(tr("&Open"), this, SLOT(open()));
-	openAct->setShortcut(QKeySequence::Open);
-
-	QAction *exitAct = fileMenu->addAction(tr("E&xit"), app, SLOT(closeAllWindows()));
-	exitAct->setShortcut(tr("Esc"));
+	if (app != nullptr)
+	{
+		QMenu* fileMenu = menuBar()->addMenu(tr("&File"));
+		QAction *exitAct = fileMenu->addAction(tr("E&xit"), app, SLOT(closeAllWindows()));
+		exitAct->setShortcut(tr("Esc"));
+	}
 
 	setWindowTitle(QString(name.c_str()));
 }
 
 
-inline void ImageViewer::open()
+
+//template <typename IMG>
+//std::unique_ptr<ImageViewer> image_viewer(const IMG& img, const std::string& name="", QApplication* app=nullptr, int id=0)
+//{
+//	std::unique_ptr<ImageViewer> view(new ImageViewer(name,app,id));
+//	view->update(img);
+//	view->show();
+//}
+
+template <typename IMG>
+inline std::unique_ptr<ImageViewer> image_viewer(const IMG& img, const std::string& name="", QApplication* app=nullptr, int id=0)
 {
-//	QFileDialog dialog(this, tr("Open File"));
-//	dialog.selectMimeTypeFilter("image/jpeg");
-
-//	if (dialog.exec() == QDialog::Accepted )
-//		app_open(dialog.selectedFiles().first().toStdString(),m_id);
+	ImageViewer* view = new ImageViewer(name,app,id);
+	view->update(img);
+	view->show();
+	return std::unique_ptr<ImageViewer>(view);
 }
-
-
-inline void ImageViewer::set_gray(const unsigned char* ptr,int w,int h, int zoom)
-{
-	QImage im(w,h,QImage::Format_RGB888);
-	for(int i=0;i<h;++i)
-	{
-		unsigned char *optr = im.scanLine(i);
-		for(int j=0;j<w;++j)
-		{
-			*optr++ = *ptr;
-			*optr++ = *ptr;
-			*optr++ = *ptr++;
-		}
-	}
-
-	if (zoom != 1)
-	{
-		QImage imz = im.scaledToWidth(w*zoom);
-		im.swap(imz);
-	}
-
-	m_imageLabel->setPixmap(QPixmap::fromImage(im));
-	if ((w<=1024) && (h<=1024))
-		m_scrollArea->setMinimumSize(im.width()+2, im.height()+2);
- 
-	m_scrollArea->setVisible(true);
-	m_imageLabel->adjustSize();  
-}
-
-
-inline void ImageViewer::set_rgb(const unsigned char* ptr,int w,int h, int zoom)
-{
-	QImage im(w,h,QImage::Format_RGB888);
-	for(int i=0;i<h;++i)
-		std::memcpy(im.scanLine(i), ptr+3*w*i, 3*w);
-		
-	if (zoom != 1)
-	{
-		QImage imz = im.scaledToWidth(w*zoom);
-		im.swap(imz);
-	}
-
-	m_imageLabel->setPixmap(QPixmap::fromImage(im));
-	if ((w<=1024) && (h<=1024))
-		m_scrollArea->setMinimumSize(im.width()+2, im.height()+2);
- 
-	m_scrollArea->setVisible(true);
-	m_imageLabel->adjustSize();  
-}
-
-
-inline void ImageViewer::set_rgba(const unsigned char* ptr,int w,int h, int zoom)
-{
-	QImage im(w,h,QImage::Format_RGBA8888);
-	for(int i=0;i<h;++i)
-		std::memcpy(im.scanLine(i), ptr+3*w*i, 3*w);
-		
-	if (zoom != 1)
-	{
-		QImage imz = im.scaledToWidth(w*zoom);
-		im.swap(imz);
-	}
-
-	m_imageLabel->setPixmap(QPixmap::fromImage(im));
-	if ((w<=1024) && (h<=1024))
-		m_scrollArea->setMinimumSize(im.width()+2, im.height()+2);
- 
-	m_scrollArea->setVisible(true);
-	m_imageLabel->adjustSize();  
-}
-
-template <typename REAL>
-inline void ImageViewer::set_gray01(const REAL* ptr,int w,int h, int zoom)
-{
-	QImage im(w,h,QImage::Format_RGB888);
-	for(int i=0;i<h;++i)
-	{
-		unsigned char *optr = im.scanLine(i);
-		for(int j=0;j<w;++j)
-		{
-			uint8_t val = uint8_t( *ptr * REAL(255));
-			*optr++ = val;
-			*optr++ = val;
-			*optr++ = val;
-			ptr++;
-		}
-	}
-
-	if (zoom != 1)
-	{
-		QImage imz = im.scaledToWidth(w*zoom);
-		im.swap(imz);
-	}
-
-	m_imageLabel->setPixmap(QPixmap::fromImage(im));
-	if ((w<=1024) && (h<=1024))
-		m_scrollArea->setMinimumSize(im.width()+2, im.height()+2);
-
-	m_scrollArea->setVisible(true);
-	m_imageLabel->adjustSize();
-}
-
-
-template <typename REAL, typename F>
-inline auto ImageViewer:: set_gray01(const REAL* ptr,int w,int h, int zoom, const F& converToRGB)
-->  typename std::enable_if<(ASTex::function_traits<F>::arity==2) &&
-		(std::is_same<typename ASTex::function_traits<F>::template arg<0>::type,REAL>::value) &&
-		(std::is_same<typename ASTex::function_traits<F>::template arg<1>::type,uint8_t*>::value)>::type
-{
-	QImage im(w,h,QImage::Format_RGB888);
-	for(int i=0;i<h;++i)
-	{
-		unsigned char *optr = im.scanLine(i);
-		for(int j=0;j<w;++j)
-		{
-			converToRGB(*ptr,optr);
-			optr+= 3;
-			ptr++;
-		}
-	}
-
-	if (zoom != 1)
-	{
-		QImage imz = im.scaledToWidth(w*zoom);
-		im.swap(imz);
-	}
-	
-	m_imageLabel->setPixmap(QPixmap::fromImage(im));
-	if ((w<=1024) && (h<=1024))
-		m_scrollArea->setMinimumSize(im.width()+2, im.height()+2);
-
-	m_scrollArea->setVisible(true);
-	m_imageLabel->adjustSize();
-}
-
-
-template <typename REAL>
-inline void ImageViewer::set_rgb01(const REAL* ptr, int w, int h, int zoom)
-{
-	QImage im(w, h, QImage::Format_RGB888);
-	for (int i = 0; i<h; ++i)
-	{
-		unsigned char *optr = im.scanLine(i);
-		for (int j = 0; j<w; ++j)
-		{
-			*optr++ = uint8_t(*ptr + *REAL(255));
-			*optr++ = uint8_t(*ptr + *REAL(255));
-			*optr++ = uint8_t(*ptr + *REAL(255));
-		}
-	}
-
-	if (zoom != 1)
-	{
-		QImage imz = im.scaledToWidth(w*zoom);
-		im.swap(imz);
-	}
-
-	m_imageLabel->setPixmap(QPixmap::fromImage(im));
-	if ((w <= 1024) && (h <= 1024))
-		m_scrollArea->setMinimumSize(w + 2, h + 2);
-
-	m_scrollArea->setVisible(true);
-	m_imageLabel->adjustSize();
-}
-
-
 
 #endif	

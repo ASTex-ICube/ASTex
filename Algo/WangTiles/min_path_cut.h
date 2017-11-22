@@ -32,13 +32,85 @@ namespace ASTex
 
 
 
+//template <typename IMG>
+//inline double ssd_error_pixel(const IMG& imA, const Index& iA, const IMG& imB, const Index& iB)
+//{
+//	typename IMG::DoublePixelEigen pA = imA.pixelNormEigenAbsolute(iA);
+//	typename IMG::DoublePixelEigen pB = imB.pixelNormEigenAbsolute(iB);
+//	return (pB-pA).squaredNorm();
+//}
+
 template <typename IMG>
-inline double ssd_error_pixel(const IMG& imA, const Index& iA, const IMG& imB, const Index& iB)
+inline double ssd_error_pixel(const typename IMG::PixelType& A, const typename IMG::PixelType& B)
 {
-	typename IMG::DoublePixelEigen pA = imA.pixelNormEigenAbsolute(iA);
-	typename IMG::DoublePixelEigen pB = imB.pixelNormEigenAbsolute(iB);
+	auto pA = IMG::template normalized<double>(A);
+	auto pB = IMG::template normalized<double>(B);
 	return (pB-pA).squaredNorm();
 }
+
+
+
+template <typename IMG, typename EF>
+auto computeErrorOverlap(const IMG& imgA, const Region& rA, const IMG& imgB, const Region& rB, const EF& error_func)
+-> typename std::enable_if<(function_traits<EF>::arity==2), double>::type
+{
+	assert_msg(rA.GetSize() == rB.GetSize(),"computeErrorOverlap: regions must have same size");
+
+	// shift between rA & rB
+	int dx = rB.GetIndex()[0] - rA.GetIndex()[0];
+	int dy = rB.GetIndex()[1] - rA.GetIndex()[1];
+
+	// one error sum for each thread
+	std::vector<double> totals(nb_launched_threads(),0.0);
+
+//	imgA.parallel_for_region_pixels(rA, [&imgB, &totals, dx, dy, &error_func] (const typename IMG::PixelType& P,int x, int y, uint16_t t)
+//	{
+//		const auto& Q = imgB.pixelAbsolute(x+dx,y+dy);
+//		totals[t] += error_func(P,Q);
+//	});
+
+//	double total=0.0;
+//	for(double t: totals)
+//		total+= t;
+
+	double total=0.0;
+	imgA.for_region_pixels(rA, [&] (const typename IMG::PixelType& P,int x, int y)
+	{
+		const auto& Q = imgB.pixelAbsolute(x+dx,y+dy);
+		total += error_func(P,Q);
+	});
+
+	return total/(rA.GetSize()[0]*rA.GetSize()[1]);
+}
+
+template <typename IMG, typename EF>
+auto computeErrorOverlap(const IMG& imgA, const Region& rA, const IMG& imgB, const Region& rB, const EF& error_func)
+-> typename std::enable_if<(function_traits<EF>::arity==4), double>::type
+{
+	assert_msg(rA.GetSize() == rB.GetSize(),"computeErrorOverlap: regions must have same size");
+
+	int dx = rB.GetIndex()[0] - rA.GetIndex()[0];
+	int dy = rB.GetIndex()[1] - rA.GetIndex()[1];
+
+//	std::vector<double> totals(nb_launched_threads(),0.0);
+
+//	imgA.parallel_for_region_pixels(rA, [&] (int x, int y, uint16_t t)
+//	{
+//		totals[t] += error_func(imgA,gen_index(x,y),imgB,gen_index(x+dx,y+dy));
+//	});
+//	double total=0.0;
+//	for(double t: totals)
+//		total+= t;
+
+	double total=0.0;
+	imgA.for_region_pixels(rA, [&] (int x, int y)
+	{
+		total += error_func(imgA,gen_index(x,y),imgB,gen_index(x+dx,y+dy));
+	});
+
+	return total/(rA.GetSize()[0]*rA.GetSize()[1]);
+}
+
 
 
 /**
@@ -63,7 +135,7 @@ class MinCutBuffer
 
 	std::vector<int> minPos_;
 
-	std::function<double(const IMG&, const Index&, const IMG&, const Index&)> error_func_;
+	std::function<double(const PIX&, const PIX&)> error_func_;
 
 public:
 	/**
@@ -177,7 +249,7 @@ protected:
 			for (int i=0; i<overlay_; ++i)
 			{
 				Index inc = dir_index(i,j);
-				error_local(i,j) = error_func_(imA_,posA+inc ,imB_,posB+inc);
+				error_local(i,j) = error_func_(imA_.pixelAbsolute(posA+inc), imB_.pixelAbsolute(posB+inc));
 			}
 
 		// compute cumulative error
