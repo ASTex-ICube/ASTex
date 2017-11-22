@@ -23,59 +23,54 @@
 
 
 
-#ifndef __ASTEX_IMAGE_EASY_IO__
-#define __ASTEX_IMAGE_EASY_IO__
-
-#include <ASTex/image_gray.h>
 #include <ASTex/image_rgb.h>
-#include <ASTex/image_rgba.h>
+#include <ASTex/image_gray.h>
+#include <ASTex/easy_io.h>
 
-namespace ASTex
+#include "wang_tiles.h"
+
+#include "imageviewer.h"
+
+using namespace ASTex;
+
+void app_mouse_clicked(int /*button*/, int /*x*/, int /*y*/, int /*id*/) {}
+void app_key_pressed(int /*code*/, char /*key*/, int /*id*/) {}
+
+int main(int argc, char** argv)
 {
+	QApplication app(argc, argv);
+	std::string fn = TEMPO_PATH+"quilting_input8.png";
+	int tw = 100;
+	int gen_sz = 1000;
 
-template <typename PIX>
-inline auto NICE(const PIX& p) -> typename std::enable_if<pixel_traits<PIX>::dim ==4, typename Eigen::Matrix<double,1,pixel_traits<PIX>::dim>>::type
-{
-	return eigenPixel<double>(p).transpose();
+	if (argc>=4)
+	{
+		fn = std::string(argv[1]);
+		tw = atoi(argv[2]);
+		gen_sz = atoi(argv[3]);
+	}
+	else
+	{
+		std::cout << argv[0]<< " tile_width generated_width   using default"<< std::endl;
+	}
+
+	ImageRGBu8 im;
+	im.load(fn);
+
+	auto start_chrono = std::chrono::system_clock::now();
+
+	auto wang = WangTilesGenerator<ImageRGBu8,3>::create(im,tw);
+
+	std::chrono::duration<double> elapsed_seconds = std::chrono::system_clock::now() - start_chrono;
+	std::cout << "wang tile timing: " << elapsed_seconds.count() << " s." << std::endl;
+
+
+	ImageRGBu8 ti = wang.all_tiles();
+	auto v1 = image_viewer(ti);
+
+	ImageRGBu8 gen = wang.compose(gen_sz/tw, gen_sz/tw);
+	auto v2 = image_viewer(gen,"gen", &app);
+
+
+	return app.exec();
 }
-
-template <typename PIX>
-inline auto NICE(const PIX& p) -> typename std::enable_if<pixel_traits<PIX>::dim == 1, PIX>::type
-{
-  return double(p);
-}
-
-
-namespace IO
-{
-
-void ASTEX_API save01_in_u8(const ImageGrayd& img, const std::string& filename);
-
-void ASTEX_API save01_in_u8(const ImageGrayf& img, const std::string& filename);
-
-void ASTEX_API save01_in_u8(const ImageRGBd& img, const std::string& filename);
-
-void ASTEX_API save01_in_u8(const ImageRGBf& img, const std::string& filename);
-
-void ASTEX_API save01_in_u8(const ImageRGBAd& img, const std::string& filename);
-
-void ASTEX_API save01_in_u8(const ImageRGBAf& img, const std::string& filename);
-
-
-
-bool ASTEX_API loadu8_in_01(ImageGrayd& img, const std::string& filename);
-
-bool ASTEX_API loadu8_in_01(ImageGrayf& img, const std::string& filename);
-
-bool ASTEX_API loadu8_in_01(ImageRGBd& img, const std::string& filename);
-
-bool ASTEX_API loadu8_in_01(ImageRGBf& img, const std::string& filename);
-
-bool ASTEX_API loadu8_in_01(ImageRGBAd& img, const std::string& filename);
-
-bool ASTEX_API loadu8_in_01(ImageRGBAf& img, const std::string& filename);
-
-}
-}
-
-#endif

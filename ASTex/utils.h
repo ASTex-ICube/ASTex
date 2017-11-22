@@ -34,6 +34,10 @@
 #include<windows.h>
 #endif
 
+#include <ASTex/image_gray.h>
+#include <ASTex/image_rgb.h>
+#include <ASTex/image_rgba.h>
+
 namespace ASTex
 {
 
@@ -162,7 +166,7 @@ typename IMG::PixelType compute_mean(const IMG& img, const MASK& mask)
 
 	img.for_all_pixels([&] (const Pix& p)
 	{
-		mean += IMG::eigenPixel(p);
+		mean += eigenPixel<double>(p);
 		nbpix++;
 	}, mask);
 

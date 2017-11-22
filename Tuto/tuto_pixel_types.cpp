@@ -33,59 +33,81 @@
 using namespace ASTex;
 
 
+
 int main()
 {
 	// All following explanation could also apply to RGBA
 
-	ImageRGBu8 image(4,4);
-	// ImageRGBu8::PixelType => itk::RGBPixel<uint8>
+	using IMG = ImageRGBu8;
+	using PIX = IMG::PixelType;
+	using DPE = IMG::DoublePixelEigen;
+
+	IMG image(4,4);
+	// PIX => itk::RGBPixel<uint8>
 
 	// pixelAbsolute return ref or const-ref to PixelType
-	ImageRGBu8::PixelType& p1 = image.pixelAbsolute(0,0);
-	ImageRGBu8::PixelType& p2 = image.pixelAbsolute(1,0);
-	ImageRGBu8::PixelType& p3 = image.pixelAbsolute(2,0);
+	PIX& p1 = image.pixelAbsolute(0,0);
+	PIX& p2 = image.pixelAbsolute(1,0);
+	PIX& p3 = image.pixelAbsolute(2,0);
+	PIX& p4 = image.pixelAbsolute(3,0);
+
+	ImageGrayu8::PixelType pg;
+
+
+//	auto Q1 =eigenPixel<double>(pg);
 
 	// iterator.Value() return (const) PixelType
-	ImageRGBu8::ConstIterator it = image.beginConstIterator();
-	const ImageRGBu8::PixelType& v=it.Value();
+	IMG::ConstIterator it = image.beginConstIterator();
+	const PIX& v=it.Value();
 	std::cout << v << std::endl;
 
 	// for_all traversal fonction lambda take PixelType parameter for reference (const)
-	image.for_all_pixels([] (ImageRGBu8::PixelType& p)
+
+	auto pi = IMG::itkPixel(65, 55, 45);
+	image.for_all_pixels([&] (PIX& p)
 	{
-		p[0]=65;
+		p = pi;
+		pi[0] += 5;
+		pi[1] += 15;
+		pi[2] += 25;
 	});
 
+	// Examples of function-constructors
+	p1 = IMG::itkPixel(134);
+	p2 = IMG::itkPixel(128,128,128);
 
-	// Why using DoublePixelEigen:
-	// - more nice constructor
-	// - more nices operators (*/)
+	// Why using DoublePixelEigen / LongPixelEigen type
 
-	// Examples of constructors
-	p1 = ImageRGBu8::itkPixel(134);
-	p2 = ImageRGBu8::itkPixel(128,128,128);
-
-	p3 = p1 + p2; // possible overflow !
-//	p3 /= 2; not possible with pixel type
+	p3 = (p1 + p2); // possible overflow !
+//	p3 /= 2; not possible with itk pixel type
 	std::cout<< p1 << " + "<< p2 << " (compute uint8) = " << p3 << std::endl;
 
-	using DoublePix = ImageRGBu8::DoublePixelEigen;
+	// easy type conversion:
+	p3 = IMG::itkPixel((eigenPixel<int64_t>(p1)+eigenPixel<int64_t>(p2))/2);
+	p4 = IMG::itkPixel((eigenPixel<double>(p1)+eigenPixel<double>(p2))/2);
 
-	// easy type conversion to any compatible type:
+	std::cout<< p1 << " + "<< p2 << " /2 (compute eigen) = " << p3 << " / " << p4 << std::endl;
 
-	p3 = ImageRGBu8::itkPixel((ImageRGBu8::eigenPixel(p1)+ImageRGBu8::eigenPixel(p2))/2);
+	// easy direct access with on the fly conversion
+	DPE dp1 = image.pixelEigenAbsolute(0,0);
+	DPE dp2 = image.pixelEigenAbsolute(1,0); // must be cast or affected before used (proxy)
+	DPE dp3 = image.pixelEigenAbsolute(2,0);
+	image.pixelEigenAbsolute(1,1) = (dp1+dp2+dp3)/3;
+	std::cout<< image.pixelAbsolute(0,0) << " + "<< image.pixelAbsolute(1,0) << " + "<< image.pixelAbsolute(2,0) << " /3 = " << image.pixelAbsolute(1,1) << std::endl;
 
-	std::cout<< p1 << " + "<< p2 << " /2 (compute uint16) = " << p3 << std::endl;
 
+	auto readEigen = [&image] (int i,int j)	{return DPE(image.pixelEigenAbsolute(i,j));};
+	auto read01Eigen = [&image] (int i,int j){return DPE(image.pixelNormEigenAbsolute(i,j));};
 
-	DoublePix ep1 = image.pixelEigenAbsolute(0,0);
-	DoublePix ep2 = image.pixelEigenAbsolute(1,0);
-	DoublePix ep3 = image.pixelEigenAbsolute(2,0);
+	// easy on the fly conversion to 0-1 (use transpose for horizontal output)
+	std::cout << read01Eigen(0, 0).transpose() << " + " << read01Eigen(1, 0).transpose() << " + " << read01Eigen(2, 0).transpose() << " /3 = " << read01Eigen(1, 1).transpose() << std::endl;
 
-	image.pixelEigenAbsolute(1,1) = (ep1+ep2+ep3)/3 ;
+	image.pixelNormEigenAbsolute(2, 2) = DPE(read01Eigen(0, 0)/2.0);
+	std::cout << read01Eigen(2, 2).transpose() << " -> " << image.pixelAbsolute(2, 2) << std::endl;
 
-	std::cout<< image.pixelAbsolute(0,0) << " + "<< image.pixelAbsolute(1,0) << " + "<< image.pixelAbsolute(2,0) << " /3 = " << " + "<< image.pixelAbsolute(1,1) << std::endl;
-
+	// work with all type of image
+	ImageRGBd imaged(4, 4);
+	imaged.pixelEigenAbsolute(1, 1) = (readEigen(0, 0) + readEigen(1, 0) + readEigen(2, 0)) / 3;
 
 	return EXIT_SUCCESS;
 }

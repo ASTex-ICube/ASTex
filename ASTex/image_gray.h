@@ -43,7 +43,10 @@ public:
 	using ConstIteratorIndexed = itk::ImageRegionConstIteratorWithIndex<ItkImg> ;
 	using ConstIterator =        itk::ImageRegionConstIterator<ItkImg>;
 	using DoublePixelEigen =     double;
+	using LongPixelEigen =       int64_t;
 	using DataType =             CHANNEL_TYPE;
+	template<typename S>
+	using EigenVector =          S;
 
 	static const uint32_t NB_CHANNELS = 1;
 
@@ -87,20 +90,39 @@ public:
 	}
 
 	/**
-	 * @brief eigenPixel
+	 * @brief eigenDoublePixel
 	 * @param p a itk::Pixel
 	 * @return a double with same value
 	 */
-	inline static DoublePixelEigen eigenPixel(const PixelType& p)
+	inline static DoublePixelEigen eigenDoublePixel(const PixelType& p)
 	{
 		return DoublePixelEigen(p);
 	}
 
-	inline static DoublePixelEigen eigenPixel(double v)
+	inline static LongPixelEigen eigenLongPixel(const PixelType& p)
 	{
-		return v;
+		return LongPixelEigen(p);
 	}
 
+	template<typename S>
+	inline static S eigenPixel(const PixelType& p)
+	{
+		if (std::is_same<PixelType,S>::value)
+			return *(reinterpret_cast<const S*>(&p));
+		return S(p);
+	}
+
+
+
+	inline static DoublePixelEigen normalized(const PixelType& p)
+	{
+		return normalized(p);
+	}
+
+	inline static PixelType unnormalized(const DoublePixelEigen& p)
+	{
+		return ASTex::unnormalized<DataType>(p);
+	}
 
 protected:
 
@@ -124,6 +146,34 @@ protected:
 		return getPixelsPtr();
 	}
 };
+
+template<typename CHANNEL_TYPE>
+inline CHANNEL_TYPE itkPixel(const double& v)
+{
+	return CHANNEL_TYPE(v);
+}
+
+
+template<typename S, typename CHANNEL_TYPE>
+inline typename ImageGrayBase<CHANNEL_TYPE>::template EigenVector<S> eigenPixel(const CHANNEL_TYPE& p)
+{
+	return ImageGrayBase<CHANNEL_TYPE>::template eigenPixel<S>(p);
+}
+
+
+
+//template<typename CHANNEL_TYPE>
+//inline double eigenDoublePixel(const CHANNEL_TYPE& p)
+//{
+//	return doubl(p);
+//}
+
+//template<typename CHANNEL_TYPE>
+//inline auto eigenLongPixel(const CHANNEL_TYPE& p) -> typename std::enable_if<!std::is_floating_point<CHANNEL_TYPE>::value,int64_t>::type
+//{
+//	return int64_t(p);
+//}
+
 
 
 template <class T> using ImageGray = ImageCommon< ImageGrayBase< T >, false >;
@@ -159,14 +209,15 @@ using ConstImageGraycf  = ConstImageGray< std::complex<float> >;
 using ConstImageGraycd  = ConstImageGray< std::complex<double> >;
 
 
+using CompactIndex = std::array<int16_t,2>;
+
 class ImagePixelCompactIndex : public ImageGrayu32
 {
 public:
-	inline static uint32_t pos_to_ui32(const Index& p) { return p[0] | p[1]<<16;}
-	inline static  Index ui32_to_pos(uint32_t idx) { return gen_index(idx & 0xffff,idx >> 16);}
-	inline Index iget(int x, int y) { return ui32_to_pos(this->pixelAbsolute(x,y));	}
+
+	inline Index iget(int x, int y) { return ui32_to_index(this->pixelAbsolute(x,y));	}
 	inline void iset(int x, int y, int a, int b) {	this->pixelAbsolute(x,y) = a | b<<16;}
-	inline void iset(int x, int y, const Index& p)	{ this->pixelAbsolute(x,y) = pos_to_ui32(p);}
+	inline void iset(int x, int y, const Index& p)	{ this->pixelAbsolute(x,y) = index_to_ui32(p);}
 };
 
 }

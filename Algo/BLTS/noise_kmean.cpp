@@ -22,165 +22,57 @@
 *******************************************************************************/
 
 
-
-#include <cmath>
-#include <ASTex/special_io.h>
-#include <ASTex/fourier.h>
-#include <ASTex/local_spectrum.h>
-#include <ASTex/utils.h>
-#include <ASTex/distances_maps.h>
+#include "noise_kmean.h"
 
 namespace ASTex
 {
 
 
-void distance_invert_expo (const ImageGrayd& s, ImageGrayd& d, double dev)
+class SpectralSeeds
 {
-	for_all_pixels(s,d,[dev](double P, double& Q)
+public:
+	using InputType = ImageGrayd;
+	using Type = ImageSpectrald;
+
+
+	SpectralSeeds(const InputType& input, const int nb_clusters, const int welchsize, const int welchstep, const int fft_size):
+		nbc(nb_clusters)
 	{
-		Q = std::exp(-P/dev);
-	});
-}
+		lsp = new Fourier::LocalSpectrum(input,fft_size,'p');
+		lsp->welch_post_loading(welchsize, welchstep);
+		seeds.resize(nbc);
+		clusters_size.resize(nbc);
 
-void Image_log (const ImageGrayd& s, ImageGrayd& d, double ratio)
-{
-	for_all_pixels(s,d,[ratio](double P, double& Q)
-	{
-		Q = std::sqrt(P*ratio);
-	});
-}
+		im_w = input.width();
+		im_h = input.height();
 
-void Image_expo (const ImageGrayd& s, ImageGrayd& d, double dev)
-{
-	for_all_pixels(s,d,[dev](double P, double& Q)
-	{
-		Q = 1.0 - std::exp(-P/dev);
-	});
-}
-
-double get_average(const ImageGrayd& s)
-{
-	double sum=0;
-
-	s.for_all_pixels([&sum] (double p)
-	{
-		sum += p;
-	});
-
-	return sum/double(s.width()*s.height());
-
-}
-
-double get_max(const ImageGrayd& s)
-{
-	double max=s.pixelAbsolute(0,0);
-
-	s.for_all_pixels([&max] (double p)
-	{
-		if (max < p) max = p;
-	});
-	return max;
-}
-
-
-
-int kmean(const ImageGrayd& input, std::vector<ImageGrayd>& output_dists, std::vector<ImageGrayd>& output_bin ,
-		  const int nb_clusters, const int welchsize, const int welchstep, const int fft_size)
-{
-	srand(time(NULL));
-	const int im_w = input.width();
-	const int im_h = input.height();
-
-	for (int c=0; c<nb_clusters; ++c)
-	{
-		output_dists[c].initItk(im_w,im_h,true);
-        output_bin[c].initItk(im_w,im_h,true);
-//		masks_spectrum_visu[c].initItk(fft_size,fft_size,true);
-//		masks_spectrum_save[c].initItk(fft_size,fft_size,true);
-
-	}
-
-	Fourier::LocalSpectrum lsp (input,fft_size,'p');
-	lsp.welch_post_loading(welchsize, welchstep);
-
-	ImageGray16 clusters(im_w, im_h, true);
-
-	std::vector< ImageSpectrald > seeds; // seeds = spectra
-	seeds.resize(nb_clusters);
-
-	std::vector<int> clusters_size; // nb elements in each cluster
-	clusters_size.resize(nb_clusters);
-
-	std::vector< ImageGrayd > seeds_distance_maps; 	// allocate distance maps
-	seeds_distance_maps.resize(nb_clusters);
-
-	std::vector< std::vector<double> > distance_inter_seed; 	//
-	distance_inter_seed.resize( nb_clusters , std::vector<double>( nb_clusters ) );
-
-	std::vector< double > distance_intra_classe; 	//
-	distance_intra_classe.resize(nb_clusters);
-
-	std::vector< double > average_dist_intra_class;
-	average_dist_intra_class.resize(nb_clusters);
-
-//	ImageSpectrald sp_tmp(fft_size,fft_size,true);
-
-	for (int c = 0; c < nb_clusters; ++c)
-	{
-		seeds[c].initItk(fft_size,fft_size,true); // ?true?
-		clusters_size[c] = -1;
-		seeds_distance_maps[c].initItk(im_w,im_h,true);
-	}
-
-	// random seed init
-	for (int c = 0; c < nb_clusters; ++c)
-	{
-		int x = rand()% im_w;
-		int y = rand()% im_h;
-		seeds[c].copy_pixels(lsp.spectrum(x,y));
-	}
-
-	// iterate
-
-	int iter = 0;
-	const int max_iter = 20;
-	int nb_changes = 1;
-
-	while (iter < max_iter && nb_changes > 0)
-	{
-		++iter;
-		nb_changes = 0;
-
-		// compute distance maps
-		for (int c = 0; c < nb_clusters; ++c)
-			lsp.distance_map_to_spectum_uniform_weights(seeds_distance_maps[c],seeds[c]);
-
-		// compute clusters
-		for (int y=0; y<im_h; ++y)
+		for (int c = 0; c < nbc; ++c)
 		{
-			for (int x=0; x<im_w; ++x)
-			{
-				int c_min = 0;
-				double dist_min = seeds_distance_maps[0].pixelAbsolute(x,y);
-				for (int c = 1; c < nb_clusters; ++c)
-				{
-					double dist = seeds_distance_maps[c].pixelAbsolute(x,y);
-					if (dist < dist_min)
-					{
-						c_min = c;
-						dist_min = dist;
-					}
-				}
-				if (clusters.pixelAbsolute(x,y) != c_min)
-				{
-					nb_changes++;
-				}
-				clusters.pixelAbsolute(x,y) = c_min;
-			}
+			seeds[c].initItk(fft_size,fft_size,true); // ?true?
+			int x = rand()% im_w;
+			int y = rand()% im_h;
+			seeds[c].copy_pixels(lsp->spectrum(x,y));
+			clusters_size[c] = -1;
 		}
 
+	}
+
+	~SpectralSeeds()
+	{
+		delete lsp;
+	}
+
+	void compute(std::vector< ImageGrayd >& seeds_distance_maps)
+	{
+		for (int c = 0; c < nbc; ++c)
+			lsp->distance_map_to_spectum_uniform_weights(seeds_distance_maps[c],seeds[c]);
+
+	}
+
+	void average(ImageGray16& clusters)
+	{
 		// update seeds
-		for (int c = 0; c < nb_clusters; ++c)
+		for (int c = 0; c < nbc; ++c)
 		{
 			seeds[c].zero();
 			clusters_size[c] = 0;
@@ -191,12 +83,12 @@ int kmean(const ImageGrayd& input, std::vector<ImageGrayd>& output_dists, std::v
 			for (int x=0; x<im_w; ++x)
 			{
 				const int c = clusters.pixelAbsolute(x,y);
-				seeds[c] += lsp.spectrum(x,y);
+				seeds[c] += lsp->spectrum(x,y);
 				clusters_size[c] ++;
 			}
 		}
 
-		for (int c = 0; c < nb_clusters; ++c)
+		for (int c = 0; c < nbc; ++c)
 		{
 			if (clusters_size[c] != 0)
 			{
@@ -204,58 +96,21 @@ int kmean(const ImageGrayd& input, std::vector<ImageGrayd>& output_dists, std::v
 			}
 		}
 	}
-	// KMEAN TERMINE
-	
-	double average= 0;
-	double max_spec = 0;
 
-	// PRINT DISTANCE ET SPECTRE
-	for (int c = 0; c < nb_clusters; ++c)
-	{
-		average += get_average(seeds_distance_maps[c]);
-		max_spec = std::max(max_spec,get_max(seeds[c]));
-	}
-	average/=nb_clusters;
-	
-	for (int c = 0; c < nb_clusters; ++c)
-	{
-		output_dists[c].initItk(im_w,im_h,true);
-//		masks_spectrum_visu[c].initItk(fft_size,fft_size,true);
-//		masks_spectrum_save[c].initItk(fft_size,fft_size,true);
+protected:
+	std::vector< Type > seeds; // seeds = spectra
 
-////		distance_invert_expo(seeds_distance_maps[c],output_dists[c],average);
-//		Image_log(seeds[c],masks_spectrum_save[c],1/double(fft_size));
-//		Image_expo(seeds[c],masks_spectrum_visu[c],1/max_spec);
-	}
+	std::vector<int> clusters_size; // nb elements in each cluster
 
-	for (int y=0; y<im_h; ++y)
-	{
-		for (int x=0; x<im_w; ++x)
-		{
+	int nbc;
 
-			double sum_dist=0;
-			for (int c = 0; c < nb_clusters; ++c)
-				sum_dist += seeds_distance_maps[c].pixelAbsolute(x,y);
+	Fourier::LocalSpectrum* lsp;
 
-			for (int c = 0; c < nb_clusters; ++c)
-				output_dists[c].pixelAbsolute(x,y) = seeds_distance_maps[c].pixelAbsolute(x,y) / sum_dist;
+	int im_w;
+	int im_h;
 
-		}
-	}
+};
 
-
-
-
-    for (int y=0; y<im_h; ++y)
-    {
-        for (int x=0; x<im_w; ++x)
-        {
-             output_bin[clusters.pixelAbsolute(x,y)].pixelAbsolute(x,y)=1;
-        }
-    }
-
-	return 0;
-}
 
 
 
@@ -272,7 +127,7 @@ void KMnoise(const std::string& filename_source, const std::string& base_dir, co
 	std::vector<ImageGrayd> masks_bin(nb_clusters);
 
 	// TODO check param                              V                 V
-	kmean(input,masks_dist,masks_bin,nb_clusters,(fft_size*2)-1,4,fft_size );
+	kmean<SpectralSeeds>(input,masks_dist,masks_bin,nb_clusters,(fft_size*2)-1,4,fft_size );
 
 	for (int c=0; c<nb_clusters; ++c)
 	{
