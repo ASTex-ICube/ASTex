@@ -51,8 +51,6 @@ int main()
 	PIX& p3 = image.pixelAbsolute(2,0);
 	PIX& p4 = image.pixelAbsolute(3,0);
 
-	ImageGrayu8::PixelType pg;
-
 
 //	auto Q1 =eigenPixel<double>(pg);
 
