@@ -31,8 +31,6 @@
 
 using namespace ASTex;
 
-void app_mouse_clicked(int /*button*/, int /*x*/, int /*y*/, int /*id*/) {}
-void app_key_pressed(int /*code*/, char /*key*/, int /*id*/) {}
 
 int main(int argc, char** argv)
 {

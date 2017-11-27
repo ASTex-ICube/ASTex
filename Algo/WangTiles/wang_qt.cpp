@@ -33,15 +33,13 @@
 
 using namespace ASTex;
 
-void app_mouse_clicked(int /*button*/, int /*x*/, int /*y*/, int /*id*/) {}
-void app_key_pressed(int /*code*/, char /*key*/, int /*id*/) {}
 
 int main(int argc, char** argv)
 {
 	QApplication app(argc, argv);
 	std::string fn = TEMPO_PATH+"quilting_input8.png";
 	int tw = 100;
-	int gen_sz = 1000;
+	int gen_sz = 900;
 
 	if (argc>=4)
 	{
@@ -70,6 +68,18 @@ int main(int argc, char** argv)
 
 	ImageRGBu8 gen = wang.compose(gen_sz/tw, gen_sz/tw);
 	auto v2 = image_viewer(gen,"gen", &app);
+	auto v3 = image_viewer(gen,"copie", &app);
+
+	v2->set_mouse_cb([](int b, int x, int y)
+	{
+		std::cout << "mouse button "<< b << " at " << x << " , " << y <<std::endl;
+	});
+
+	v2->set_key_cb([&](int code, char c)
+	{
+		std::cout << "key "<< c << std::endl;
+	});
+
 
 
 	return app.exec();

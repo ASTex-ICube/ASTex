@@ -62,10 +62,33 @@ public:
 	 * @param app appliction ptr (for out with ESC)
 	 * @param id id of win (for use of app_mouse_clicked & app_key_pressed)
 	 */
-	ImageViewer(const std::string& name, QApplication* app=nullptr, int id=0);
-	
+
+	inline ImageViewer(const std::string& name = "", QApplication* app = nullptr) :
+		m_imageLabel(new QLabel), title_(name.c_str()), zoom_(1), scale_win_(1), x_(0), y_(0),
+		app_mouse_clicked_([](int, int, int) {}),
+		app_key_pressed_([](int, char) {})
+	{
+		m_imageLabel->setBackgroundRole(QPalette::Base);
+		m_imageLabel->setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Expanding);
+		m_imageLabel->setScaledContents(false);
+		setCentralWidget(m_imageLabel);
+		setWindowTitle(title_);
+	}
+
+	template <typename CB>
+	void set_mouse_cb(const CB& cb)
+	{
+		app_mouse_clicked_ = cb;
+	}
+
+	template <typename CB>
+	void set_key_cb(const CB& cb)
+	{
+		app_key_pressed_ = cb;
+	}
+
 	template <typename IMG>
-	inline auto update(const IMG& img, int zoom=1) -> typename std::enable_if<IMG::NB_CHANNELS==1>::type
+	inline auto update(const IMG& img) -> typename std::enable_if<IMG::NB_CHANNELS==1>::type
 	{
 		using SCALAR = typename IMG::DataType;
 
@@ -92,22 +115,17 @@ public:
 			}
 		}
 
-		if (zoom != 1)
-		{
-			QImage imz = im.scaledToWidth(w*zoom);
-			im.swap(imz);
-		}
-
-		m_imageLabel->setPixmap(QPixmap::fromImage(im));
-		if ((w<=1024) && (h<=1024))
-			m_scrollArea->setMinimumSize(im.width()+2, im.height()+2);
-
-		m_scrollArea->setVisible(true);
+		pixmap_ = QPixmap::fromImage(im);
+		m_imageLabel->setPixmap(pixmap_);
 		m_imageLabel->adjustSize();
+		scale_win_ = 1.0;
+		while (scale_win_*pixmap_.height() > 800)
+			scale_win_ /= 2;
+		scale_window();
 	}
 
 	template <typename IMG>
-	inline auto update(const IMG& img, int zoom=1) -> typename std::enable_if<IMG::NB_CHANNELS==3>::type
+	inline auto update(const IMG& img) -> typename std::enable_if<IMG::NB_CHANNELS==3>::type
 	{
 		using SCALAR = typename IMG::DataType;
 
@@ -133,22 +151,19 @@ public:
 				*optr++ = conv(*ptr++);
 			}
 		}
-		if (zoom != 1)
-		{
-			QImage imz = im.scaledToWidth(w*zoom);
-			im.swap(imz);
-		}
 
-		m_imageLabel->setPixmap(QPixmap::fromImage(im));
-		if ((w<=1024) && (h<=1024))
-			m_scrollArea->setMinimumSize(im.width()+2, im.height()+2);
-
-		m_scrollArea->setVisible(true);
+		pixmap_ = QPixmap::fromImage(im);
+		m_imageLabel->setPixmap(pixmap_);
 		m_imageLabel->adjustSize();
+		scale_win_ = 1.0;
+		while (scale_win_*pixmap_.height() > 800)
+			scale_win_ /= 2;
+		scale_window();
+
 	}
 
 	template <typename IMG>
-	inline auto update(const IMG& img, int zoom=1) -> typename std::enable_if<IMG::NB_CHANNELS==4>::type
+	inline auto update(const IMG& img) -> typename std::enable_if<IMG::NB_CHANNELS==4>::type
 	{
 		using SCALAR = typename IMG::DataType;
 
@@ -175,98 +190,148 @@ public:
 				*optr++ = conv(*ptr++);
 			}
 		}
-		if (zoom != 1)
-		{
-			QImage imz = im.scaledToWidth(w*zoom);
-			im.swap(imz);
-		}
-
-		m_imageLabel->setPixmap(QPixmap::fromImage(im));
-		if ((w<=1024) && (h<=1024))
-			m_scrollArea->setMinimumSize(im.width()+2, im.height()+2);
-
-		m_scrollArea->setVisible(true);
+		pixmap_ = QPixmap::fromImage(im);
+		m_imageLabel->setPixmap(pixmap_);
 		m_imageLabel->adjustSize();
+		scale_win_ = 1.0;
+		while (scale_win_*pixmap_.height() > 800)
+			scale_win_ /= 2;
+		scale_window();
 	}
 
-	/**
-	 * get horizontal scroll bar for easy connect/syncro
-	 */
-	inline const QScrollBar* hsb() const { return m_scrollArea->horizontalScrollBar(); }
-	
-	/**
-	 * get vertical scroll bar for easy connect/syncro
-	 */
-	inline const QScrollBar* vsb() const { return m_scrollArea->verticalScrollBar(); }
+	void zoom_update()
+	{
+		const QPixmap* lpm = m_imageLabel->pixmap();
+
+		int wd = pixmap_.width() / zoom_ * scale_win_;
+		int hd = pixmap_.height() / zoom_ * scale_win_;
+
+		real_zoom_x_ = float(pixmap_.width()) / (pixmap_.width() / zoom_);
+		real_zoom_y_ = float(pixmap_.width()) / (pixmap_.height() / zoom_);
+
+
+		x_ = std::max(x_, 0);
+		y_ = std::max(y_, 0);
+		x_ = std::min(x_, int(pixmap_.width() - wd));
+		y_ = std::min(y_, int(pixmap_.height() - hd));
+		
+		QPixmap npm = pixmap_.copy(x_, y_, wd, hd);
+		QPixmap spm = npm.scaled(lpm->width(), lpm->height(), Qt::IgnoreAspectRatio, Qt::FastTransformation);
+		m_imageLabel->setPixmap(spm);
+		setWindowTitle(title_+ " / zoom="+ QString::number(zoom_)+" x="+ QString::number(x_) + " y="+ QString::number(y_));
+		show();
+	}
+
+	void scale_window()
+	{
+		QSize ns = pixmap_.size()*scale_win_;
+		setMinimumSize(ns);
+		setMaximumSize(ns);
+		QPixmap npm(ns);
+		m_imageLabel->setPixmap(npm);
+		m_imageLabel->adjustSize();
+		resize(ns);
+		zoom_update();
+	}
+
 
 private:
+	QPixmap pixmap_;
 	QLabel* m_imageLabel;
-	QScrollArea* m_scrollArea;
-	int m_id;
+	QString title_;
+	int zoom_;
+	float scale_win_;
+	int x_;
+	int y_;
+	float real_zoom_x_;
+	float real_zoom_y_;
+	std::function<void(int, int, int)> app_mouse_clicked_;
+	std::function<void(int, char)> app_key_pressed_;
 
 	inline void mousePressEvent(QMouseEvent* event)
 	{
-		app_mouse_clicked(event->button(),
-						  event->x()-m_scrollArea->x()+m_scrollArea->horizontalScrollBar()->value(),
-						  event->y()-m_scrollArea->y()+m_scrollArea->verticalScrollBar()->value(),
-						  m_id);
+		app_mouse_clicked_(event->button(),
+			x_ + (event->x()) / real_zoom_x_,
+			y_ + (event->y() ) / real_zoom_y_);
 	}
 
 	inline void keyPressEvent(QKeyEvent* event)
 	{
-		app_key_pressed(event->key(),event->text().toStdString()[0],m_id);
+		switch (event->key())
+		{
+		case Qt::Key_PageUp:
+			scale_win_ *= 2;
+			zoom_ *= 2;
+			scale_window();
+			break;
+		case Qt::Key_PageDown:
+			if (scale_win_ >= 2)
+			{
+				scale_win_ /= 2;
+				zoom_ /= 2;
+				scale_window();
+			}
+			break;
+		case Qt::Key_Plus:
+			zoom_ *= 2;
+			x_ += m_imageLabel->pixmap()->width() / (2 * zoom_);
+			y_ += m_imageLabel->pixmap()->height() / (2 * zoom_);
+			zoom_update();
+			break;
+		case Qt::Key_Minus:
+			if (zoom_ > scale_win_)
+			{
+				x_ -= m_imageLabel->pixmap()->width() / (2 * zoom_);
+				y_ -= m_imageLabel->pixmap()->height() / (2 * zoom_);
+				zoom_ /= 2;
+				zoom_update();
+			}
+			break;
+		case Qt::Key_Right:
+				++x_;
+				zoom_update();
+			break;
+		case Qt::Key_Left:
+				--x_;
+				zoom_update();
+			break;
+		case Qt::Key_Up:
+				--y_;
+				zoom_update();
+				break;
+		case Qt::Key_Down:
+				++y_;
+				zoom_update();
+			break;
+		case Qt::Key_Escape:
+			QApplication::quit();
+			break;
+		default:
+			app_key_pressed_(event->key(), event->text().toStdString()[0]);
+		}
 	}
 
 
 	inline void resizeEvent(QResizeEvent* event)
 	{
-		QMainWindow::resizeEvent(event);
-		emit(win_resized(event->size()));
+
+//		emit(win_resized(event->size()));
 	}
 
-signals:
-   void win_resized(QSize sz);
-
-public slots:
-	inline void win_resize(QSize sz) { resize(sz); }
+//signals:
+//   void win_resized(QSize sz);
+//
+//public slots:
+//	inline void win_resize(QSize sz) { resize(sz); }
 };
 
 
-inline ImageViewer::ImageViewer(const std::string& name, QApplication* app, int id):
-	m_imageLabel(new QLabel), m_scrollArea(new QScrollArea),m_id(id)
-{
-	m_imageLabel->setBackgroundRole(QPalette::Base);
-	m_imageLabel->setSizePolicy(QSizePolicy::Ignored, QSizePolicy::Ignored);
-	m_imageLabel->setScaledContents(true);
-	m_scrollArea->setBackgroundRole(QPalette::Dark);
-	m_scrollArea->setWidget(m_imageLabel);
-	m_scrollArea->setVisible(false);
-	setCentralWidget(m_scrollArea);
 
-	if (app != nullptr)
-	{
-		QMenu* fileMenu = menuBar()->addMenu(tr("&File"));
-		QAction *exitAct = fileMenu->addAction(tr("E&xit"), app, SLOT(closeAllWindows()));
-		exitAct->setShortcut(tr("Esc"));
-	}
-
-	setWindowTitle(QString(name.c_str()));
-}
-
-
-
-//template <typename IMG>
-//std::unique_ptr<ImageViewer> image_viewer(const IMG& img, const std::string& name="", QApplication* app=nullptr, int id=0)
-//{
-//	std::unique_ptr<ImageViewer> view(new ImageViewer(name,app,id));
-//	view->update(img);
-//	view->show();
-//}
 
 template <typename IMG>
-inline std::unique_ptr<ImageViewer> image_viewer(const IMG& img, const std::string& name="", QApplication* app=nullptr, int id=0)
+inline std::unique_ptr<ImageViewer> image_viewer(const IMG& img, const std::string& name="", QApplication* app=nullptr)
 {
-	ImageViewer* view = new ImageViewer(name,app,id);
+	ImageViewer* view = new ImageViewer(name,app);
 	view->update(img);
 	view->show();
 	return std::unique_ptr<ImageViewer>(view);
