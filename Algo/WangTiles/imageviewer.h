@@ -119,7 +119,7 @@ public:
 		m_imageLabel->setPixmap(pixmap_);
 		m_imageLabel->adjustSize();
 		scale_win_ = 1.0;
-		while (scale_win_*pixmap_.height() > 800)
+		while (scale_win_ * pixmap_.height() > 800)
 			scale_win_ /= 2;
 		scale_window();
 	}
@@ -279,7 +279,7 @@ private:
 			zoom_update();
 			break;
 		case Qt::Key_Minus:
-			if (zoom_ > scale_win_)
+			if ((zoom_ >1)&&(zoom_ > scale_win_))
 			{
 				x_ -= m_imageLabel->pixmap()->width() / (2 * zoom_);
 				y_ -= m_imageLabel->pixmap()->height() / (2 * zoom_);

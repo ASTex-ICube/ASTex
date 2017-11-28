@@ -39,12 +39,8 @@ int main(int argc, char** argv)
 	QApplication app(argc, argv);
 	std::string fn = TEMPO_PATH+"quilting_input8.png";
 	int tw = 100;
-<<<<<<< HEAD
-	int gen_sz = 900;
-=======
 	int gen_sz = 1000;
 	int nbcol = 2;
->>>>>>> 6b149bac4c19eeb3995e8c3af3cd140ed0e8327b
 
 	if (argc>4)
 	{
@@ -73,7 +69,7 @@ int main(int argc, char** argv)
 	std::cout << "wang tile timing: " << elapsed_seconds.count() << " s." << std::endl;
 
 	ImageViewer v0("xx", &app);
-	v0.update(wta.choosen_img_,4);
+	v0.update(wta.choosen_img_);
 	v0.show();
 
 	ImageRGBu8 ti = wang.all_tiles();
@@ -81,7 +77,6 @@ int main(int argc, char** argv)
 
 	ImageRGBu8 gen = wang.compose(gen_sz/tw, gen_sz/tw);
 	auto v2 = image_viewer(gen,"gen", &app);
-	auto v3 = image_viewer(gen,"copie", &app);
 
 	v2->set_mouse_cb([](int b, int x, int y)
 	{
