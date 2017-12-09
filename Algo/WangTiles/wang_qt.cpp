@@ -29,11 +29,14 @@
 
 #include "wang_tiles.h"
 
+#include "imageviewer.h"
+
 using namespace ASTex;
 
 
 int main(int argc, char** argv)
 {
+	QApplication app(argc, argv);
 	std::string fn = TEMPO_PATH+"quilting_input8.png";
 	int tw = 100;
 	int gen_sz = 1000;
@@ -56,17 +59,36 @@ int main(int argc, char** argv)
 
 	auto start_chrono = std::chrono::system_clock::now();
 
-	auto wang = WangTilesGenerator<ImageRGBu8>::create(im,tw,nbcol);
+//	auto wang = WangTilesGenerator<ImageRGBu8,3>::create(im,tw,nbcol);
+
+	WangTilesGenerator<ImageRGBu8> wta(im, tw,nbcol);
+	auto wang = wta.create();
+
 
 	std::chrono::duration<double> elapsed_seconds = std::chrono::system_clock::now() - start_chrono;
 	std::cout << "wang tile timing: " << elapsed_seconds.count() << " s." << std::endl;
 
+	ImageViewer v0("xx", &app);
+	v0.update(wta.choosen_img_);
+	v0.show();
 
 	ImageRGBu8 ti = wang.all_tiles();
-	ti.save(TEMPO_PATH+"wang_tiles.png");
+	auto v1 = image_viewer(ti);
 
 	ImageRGBu8 gen = wang.compose(gen_sz/tw, gen_sz/tw);
-	gen.save(TEMPO_PATH+"wang_generated.png");
+	auto v2 = image_viewer(gen,"gen", &app);
 
-	return EXIT_SUCCESS;
+	v2->set_mouse_cb([](int b, int x, int y)
+	{
+		std::cout << "mouse button "<< b << " at " << x << " , " << y <<std::endl;
+	});
+
+	v2->set_key_cb([&](int code, char c)
+	{
+		std::cout << "key "<< c << std::endl;
+	});
+
+
+
+	return app.exec();
 }

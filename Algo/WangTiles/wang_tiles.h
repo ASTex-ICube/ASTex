@@ -35,29 +35,31 @@ namespace ASTex
 {
 
 
-template <typename IMG, int NBC>
+template <typename IMG>
 class WangTiles
 {
 	std::vector<IMG> tiles_;
 
+	int32_t nbcolors_;
+
 	uint16_t nord(uint32_t v)
 	{
-		return v/(NBC*NBC*NBC);
+		return v/(nbcolors_*nbcolors_*nbcolors_);
 	}
 
 	uint16_t sud(uint32_t v)
 	{
-		return (v/(NBC*NBC))%NBC;
+		return (v/(nbcolors_*nbcolors_))%nbcolors_;
 	}
 
 	uint16_t east(uint32_t v)
 	{
-		return (v/NBC)%NBC;
+		return (v/nbcolors_)%nbcolors_;
 	}
 
 	uint16_t west(uint32_t v)
 	{
-		return v%NBC;
+		return v%nbcolors_;
 	}
 
 
@@ -66,7 +68,7 @@ class WangTiles
 		uint32_t r;
 		do
 		{
-			r = (rand()%(NBC*NBC*NBC)) * NBC + east(e);
+			r = (rand()%(nbcolors_*nbcolors_*nbcolors_)) * nbcolors_ + east(e);
 		} while (r == e);
 		return r;
 	}
@@ -76,7 +78,7 @@ class WangTiles
 		uint32_t r;
 		do
 		{
-			r = sud(s)*NBC*NBC*NBC + rand()%(NBC*NBC*NBC);
+			r = sud(s)*nbcolors_*nbcolors_*nbcolors_ + rand()%(nbcolors_*nbcolors_*nbcolors_);
 		} while (r == s);
 		return r;
 	}
@@ -86,36 +88,36 @@ class WangTiles
 		uint32_t r;
 		do
 		{
-			r = sud(s)*NBC*NBC*NBC + (rand()%(NBC*NBC))*NBC + east(e);
+			r = sud(s)*nbcolors_*nbcolors_*nbcolors_ + (rand()%(nbcolors_*nbcolors_))*nbcolors_ + east(e);
 		} while ((r == s)||(r==e));
 		return r;
 	}
 
 public:
 
-	WangTiles(const std::vector<IMG>&& tiles):
-		tiles_(tiles)
+	WangTiles(const std::vector<IMG>& tiles, int32_t nb):
+		tiles_(tiles), nbcolors_(nb)
 	{}
 
-	WangTiles(std::vector<IMG>&& tiles):
-		tiles_(tiles)
+	WangTiles(std::vector<IMG>&& tiles, int32_t nb):
+		tiles_(tiles), nbcolors_(nb)
 	{}
 
-	IMG compose(int nbw, int nbh)
+	IMG compose(int32_t nbw, int32_t nbh)
 	{
 		std::vector<uint16_t> compo_idx(nbw*nbh,0);
-		auto idx = [&compo_idx, nbw] (int i, int j) -> uint16_t& { return compo_idx[i+ j*nbw];};
+		auto idx = [&compo_idx, nbw] (int32_t i, int32_t j) -> uint16_t& { return compo_idx[i+ j*nbw];};
 
-		if (NBC > 1)
+		if (nbcolors_ > 1)
 		{
-			idx(0,0) = rand()%(NBC*NBC*NBC*NBC);
-			for(int i=1;i<nbw;++i)
+			idx(0,0) = rand()%(nbcolors_*nbcolors_*nbcolors_*nbcolors_);
+			for(int32_t i=1;i<nbw;++i)
 				idx(i,0) = rand_west(idx(i-1,0));
 
-			for(int j=1;j<nbh;++j)
+			for(int32_t j=1;j<nbh;++j)
 			{
 				idx(0,j) = rand_nord(idx(0,j-1));
-				for(int i=1;i<nbw;++i)
+				for(int32_t i=1;i<nbw;++i)
 					idx(i,j) = rand_nw(idx(i,j-1), idx(i-1,j));
 			}
 		}
@@ -124,13 +126,10 @@ public:
 		int32_t h = tiles_[0].height();
 
 		IMG compo(w*nbw, h*nbh);
-		for(int j=0;j<nbh;++j)
-			for(int i=0;i<nbw;++i)
+		for(int32_t j=0;j<nbh;++j)
+			for(int32_t i=0;i<nbw;++i)
 			{
 				int32_t k = idx(i,j);
-//				if  (i==0)
-//					std::cout << std::endl;
-//				std::cout << k << "  ";
 				compo.copy_pixels(gen_index(i*w,j*h), tiles_[k], gen_region(0,0,w,h));
 			}
 		return compo;
@@ -141,12 +140,12 @@ public:
 		int32_t w = tiles_[0].width();
 		int32_t h = tiles_[0].height();
 
-		const int NB = NBC*NBC;
+		int32_t NB = nbcolors_*nbcolors_;
 
 		IMG compo((w+2)*NB, (h+2)*NB);
-		int k =0;
-		for(int j=0;j<NB;++j)
-			for(int i=0;i<NB;++i)
+		int32_t k =0;
+		for(int32_t j=0;j<NB;++j)
+			for(int32_t i=0;i<NB;++i)
 				compo.copy_pixels(gen_index(i*(w+2), j*(h+2)), tiles_[k++], gen_region(0,0,w,h));
 		return compo;
 	}
@@ -156,7 +155,7 @@ public:
 
 
 
-template<typename IMG, int NBC>
+template<typename IMG>
 class WangTilesGenerator
 {
 
@@ -168,23 +167,23 @@ public:
 	 * @param tw tile width
 	 * @param nbcol nb of color per edge (tile algo)
 	 */
-	WangTilesGenerator(const IMG& img, int tw):
-	input_img_(img),tw_(tw+tw/5),ov_(tw/5)
+	WangTilesGenerator(const IMG& img, int32_t tw, int32_t nb) :
+		input_img_(img), nbcolors_(nb), tw_(tw + tw / 5), ov_(tw / 5)
 	{
 		error_func_ = ssd_error_pixel<IMG>;
 	}
 
-	WangTiles<IMG,NBC> create()
+	WangTiles<IMG> create()
 	{
 		rotate45();
-		return WangTiles<IMG,NBC>(create_tiles());
+		return WangTiles<IMG>(create_tiles(),nbcolors_);
 	}
 
-	static WangTiles<IMG,NBC> create(const IMG& img, int tw)
+	static WangTiles<IMG> create(const IMG& img, int32_t tw, int32_t nb)
 	{
-		WangTilesGenerator wtg(img,tw);
+		WangTilesGenerator wtg(img,tw,nb);
 		wtg.rotate45();
-		return WangTiles<IMG,NBC>(wtg.create_tiles());
+		return WangTiles<IMG>(wtg.create_tiles(),nb);
 	}
 
 	template <typename ERROR_PIX>
@@ -192,16 +191,23 @@ public:
 	{
 		error_func_ = ef;
 	}
-
+	ImageGrayu8 choosen_img_;
 private:
 
-	static const int NB_RAND= 2000;
-	static const int NB_BEST= 5;
+	static const int32_t NB_RAND= 2000;
+	static const int32_t NB_BEST= 10;
 
 	using PIX = typename IMG::PixelType;
 	using T = typename IMG::DataType;
 
 	const IMG& input_img_;
+
+	/// nb color edge
+	int32_t nbcolors_;
+
+	int32_t tw_;
+
+	int32_t ov_;
 
 	/// rotated orginal image
 	IMG rot_img_;
@@ -211,22 +217,18 @@ private:
 
 	std::function<double(const PIX&, const PIX&)> error_func_;
 
-	int tw_;
-
-	int ov_;
-
 	std::vector<Index> random_pos;
 
-	static inline int random_int(int min, int max)
+	static inline int32_t random_int(int32_t min, int32_t max)
 	{
 		return  min + std::rand()%(max-min);
 	}
 
 	Index invRotPix(const Index& ind)
 	{
-		int yb = input_img_.width()-1;
-		int x = (ind[0]-ind[1]+1+yb)/2;
-		int y = (ind[1]+ind[0]+1-yb)/2;
+		int32_t yb = input_img_.width()-1;
+		int32_t x = (ind[0]-ind[1]+1+yb)/2;
+		int32_t y = (ind[1]+ind[0]+1-yb)/2;
 
 		return gen_index(x,y);
 	}
@@ -237,29 +239,23 @@ private:
 		using PIX = typename IMG::PixelType;
 		using DPIX = typename IMG::DoublePixelEigen;
 		using T = typename IMG::DataType;
-		int s = input_img_.width()+input_img_.height();
+		int32_t s = input_img_.width()+input_img_.height();
 		rot_img_.initItk(s,s,true);
 
-		rot_img_.for_all_pixels([&] (PIX& P)
+		int32_t yb = input_img_.width()-1;
+		input_img_.for_all_pixels([&] (const PIX& P, int32_t x, int32_t y)
 		{
-			P=PIX(T(0));
-		});
-
-
-		int yb = input_img_.width()-1;
-		input_img_.for_all_pixels([&] (const PIX& P, int x, int y)
-		{
-			int xx = x+y;
-			int yy = yb+y-x;
+			int32_t xx = x+y;
+			int32_t yy = yb+y-x;
 			rot_img_.pixelAbsolute(xx,yy) = P;
 		});
 
-		for (int j = 1; j < input_img_.height(); ++j)
+		for (int32_t j = 1; j < input_img_.height(); ++j)
 		{
-			for (int i = 1; i < input_img_.width(); ++i)
+			for (int32_t i = 1; i < input_img_.width(); ++i)
 			{
-				int x = i + j - 1;
-				int y = yb + j - i;
+				int32_t x = i + j - 1;
+				int32_t y = yb + j - i;
 
 				DPIX n = rot_img_.pixelEigenAbsolute(x,y-1);
 				DPIX s = rot_img_.pixelEigenAbsolute(x,y+1);
@@ -270,61 +266,79 @@ private:
 		}
 	}
 
-	IMG invRot45(const IMG& im, int w)
+	IMG invRot45(const IMG& im, int32_t w)
 	{
 		IMG res;
 		using PIX = typename IMG::PixelType;
 		res.initItk(w,w,true);
 
-		int xb = im.width()/2 + 1 - w; // ? +1 check
-		int yb = im.width()/2;
-		res.for_all_pixels([&] (PIX& P, int x, int y)
+		int32_t xb = im.width()/2 + 1 - w; // ? +1 check
+		int32_t yb = im.width()/2;
+		res.for_all_pixels([&] (PIX& P, int32_t x, int32_t y)
 		{
-			int xx = xb+ x + y;
-			int yy = yb + y - x;
+			int32_t xx = xb+ x + y;
+			int32_t yy = yb + y - x;
 			P = im.pixelAbsolute(xx, yy);
 		});
 		return res;
 	}
 
 
-	void random_index_patches45(int nb)
+	void random_index_patches45(int32_t nb)
 	{
 		Size sz = input_img_.size();
 
-		int wm = sz[0]-tw_;
-		int hm = sz[1]-tw_;
+		int32_t wm = sz[0]-tw_;
+		int32_t hm = sz[1]-tw_;
 
 		std::vector<Index>& vect = random_pos;
 		vect.clear();
 		vect.reserve(nb);
 
 
-		for (int i=0;i<nb;++i)
+		for (int32_t i=0;i<nb;++i)
 		{
-			int x = random_int(tw_-tw_/2,wm+tw_/2);
-			int y = random_int(0,hm);
+			int32_t x = random_int(tw_-tw_/2,wm+tw_/2);
+			int32_t y = random_int(0,hm);
 			vect.push_back(gen_index(x+y, sz[0]+y-x));
 		}
 	}
 
+	void update_choosen(Index ind)
+	{
+		int32_t RADIUS = 7;
+		int32_t cx = ind[0] / 8;
+		int32_t cy = ind[1] / 8;
+		int32_t x = std::max(cx - RADIUS, 0);
+		int32_t y = std::max(cy - RADIUS, 0);
+		int32_t w = std::min(choosen_img_.width() - x, RADIUS) + RADIUS;
+		int32_t h = std::min(choosen_img_.height() - y, RADIUS) + RADIUS;
+
+		Region reg = gen_region(x,y,w,h);
+		choosen_img_.for_region_pixels(reg, [&] (uint8_t& p, int32_t i, int32_t j)
+		{
+			p = std::max(p, uint8_t(std::max(RADIUS*RADIUS -((i-cx)*(i-cx)+(j-cy)*(j-cy)),0)));
+		});
+
+	}
+
+	inline uint8_t choosen_val(Index ind)
+	{
+		return choosen_img_.pixelAbsolute(ind[0]/8, ind[1]/8);
+	}
 
 	double best_matching_corner(const Index& A,  Index& Ax)
 	{
 		Region rAnw = gen_region(A[0],A[1],ov_,ov_);
 		Region rAse = gen_region(A[0]+tw_-ov_,A[1]+tw_-ov_,ov_,ov_);
 
-//		auto pix_err = [] (const PIX& P,const PIX& Q) {return (IMG::template normalized<double>(Q)-IMG::template normalized<double>(P)).squaredNorm();};
-
-		std::vector<double> errors(random_pos.size(),0.0);
+		std::vector<double> errors(random_pos.size());
 		for (std::size_t j=0; j<random_pos.size(); ++j)
 		{
 			const Index& X = random_pos[j];
 			Region rXnw = gen_region(X[0],X[1],ov_,ov_);
 			Region rXse = gen_region(X[0]+tw_-ov_,X[1]+tw_-ov_,ov_,ov_);
-
-						errors[j] += computeErrorOverlap(rot_img_, rAnw, rot_img_, rXse, error_func_);
-						errors[j] += computeErrorOverlap(rot_img_, rAse,rot_img_, rXnw, error_func_);
+			errors[j] = computeErrorOverlap(rot_img_, rAnw, rot_img_, rXse, error_func_) + computeErrorOverlap(rot_img_, rAse,rot_img_, rXnw, error_func_);
 		}
 
 		// find the NB_BEST min an place them first
@@ -339,28 +353,37 @@ private:
 			std::swap(errors[m_i],errors[j]);
 		}
 
-		// place a random choice first
-			std::swap(best[0],best[std::rand()%best.size()]);
+		// place further first
+		int32_t imin = best[0];
+		for(uint32_t j=1; j<NB_BEST; ++j)
+		{
+			if (choosen_val(random_pos[best[j]])<  choosen_val(random_pos[imin]))
+				imin = best[j];
+		}
+
+		update_choosen(random_pos[imin]);
 
 		// and create positions
-		Ax = random_pos[best[0]];
-		random_pos[best[0]] = random_pos.back();
+		Ax = random_pos[imin];
+		random_pos[imin] = random_pos.back();
 		random_pos.pop_back();
 
 		return errors[best[0]];
 	}
 
 
-	double best_matching(const std::array<Index,NBC>& A, std::array<Index,NBC>& B)
+	double best_matching(const std::vector<Index>& A, std::vector<Index>& B)
 	{
 		Size ho = gen_size(tw_,ov_);
 		Size vo = gen_size(ov_,tw_);
 
-		std::array<Region,NBC> rAn;
-		std::array<Region,NBC> rAs;
-		std::array<Region,NBC> rAw;
-		std::array<Region,NBC> rAe;
-		for (int i=0; i<NBC; ++i)
+		std::vector<Region> reg_buff(nbcolors_ * 4);
+		Region* rAn = reg_buff.data();
+		Region* rAs = rAn + nbcolors_;
+		Region* rAw = rAs + nbcolors_;
+		Region* rAe = rAw + nbcolors_;
+
+		for (int32_t i=0; i<nbcolors_; ++i)
 		{
 			const Index& iA = A[i];
 			rAn[i] = {iA,ho};
@@ -368,8 +391,6 @@ private:
 			rAw[i] = {iA,vo};
 			rAe[i] = {gen_index(iA[0]+tw_-ov_,iA[1]),vo};
 		}
-
-//		auto pix_err = [] (const PIX& P,const PIX& Q) {return (IMG::template normalized<double>(Q)-IMG::template normalized<double>(P)).squaredNorm();};
 
 		std::vector<double> errors(random_pos.size(),0.0);
 		for (std::size_t j=0; j<random_pos.size(); ++j)
@@ -380,17 +401,17 @@ private:
 			Region rBw = {iB,vo};
 			Region rBe = {gen_index(iB[0]+tw_-ov_,iB[1]),vo};
 
-			for (int i=0; i<NBC; ++i)
+			for (int32_t i=0; i<nbcolors_; ++i)
 			{
-								errors[j] += computeErrorOverlap(rot_img_, rAn[i], rot_img_, rBs, error_func_);
-								errors[j] += computeErrorOverlap(rot_img_, rAs[i],rot_img_, rBn, error_func_);
-								errors[j] += computeErrorOverlap(rot_img_, rAw[i],rot_img_, rBe, error_func_);
-								errors[j] += computeErrorOverlap(rot_img_, rAe[i],rot_img_, rBw, error_func_);
+				errors[j] += computeErrorOverlap(rot_img_, rAn[i], rot_img_, rBs, error_func_);
+				errors[j] += computeErrorOverlap(rot_img_, rAs[i],rot_img_, rBn, error_func_);
+				errors[j] += computeErrorOverlap(rot_img_, rAw[i],rot_img_, rBe, error_func_);
+				errors[j] += computeErrorOverlap(rot_img_, rAe[i],rot_img_, rBw, error_func_);
 			}
 		}
 
-		// find the NB_BEST*NBC min an place them first
-		const uint32_t nb_best = NB_BEST*NBC;
+		// find the NB_BEST*nbcolors_ min an place them first
+		const uint32_t nb_best = NB_BEST*nbcolors_;
 		std::vector<uint32_t> best(nb_best);
 		for(uint32_t j=0; j<nb_best; ++j)
 		{
@@ -403,13 +424,21 @@ private:
 		}
 
 
-		// place a random choice first
-		for(int i=0; i<NBC; ++i)
-			std::swap(best[i],best[i+std::rand()%(best.size()-i)]);
+		for(int32_t i=0; i<nbcolors_; ++i)
+		{
+			int32_t jmin = i;
+			for(uint32_t j=i; j<nb_best; ++j)
+			{
+				if (choosen_val(random_pos[best[j]]) < choosen_val(random_pos[best[jmin]]))
+					jmin = j;
+			}
+			std::swap(best[i],best[jmin]);
+			update_choosen(random_pos[best[i]]);
+		}
 
 		double err = 0.0;
 		// and create positions
-		for (uint32_t i=0; i<NBC; ++i)
+		for (int32_t i=0; i<nbcolors_; ++i)
 		{
 			B[i] = random_pos[best[i]];
 			err += errors[i];
@@ -423,7 +452,7 @@ private:
 	{
 		IMG img(2*tw_-ov_,2*tw_-ov_,true);
 		MinCutBuffer<IMG,1> mcbh(rot_img_,rot_img_,tw_,ov_);
-		int ti_sz = tw_-ov_;
+		int32_t ti_sz = tw_-ov_;
 
 		img.copy_pixels(gen_index(0,0),     rot_img_, gen_region(nw[0],nw[1],         ti_sz, ti_sz));
 		img.copy_pixels(gen_index(tw_,0),   rot_img_, gen_region(ne[0]+ov_,ne[1],     ti_sz, ti_sz));
@@ -452,11 +481,13 @@ private:
 	}
 
 
-	double choose_tiles_pos(std::array<Index,NBC>& A, std::array<Index,NBC>& B)
+	double choose_tiles_pos(std::vector<Index>& A, std::vector<Index>& B)
 	{
 		A[0] = random_pos.back();
 		random_pos.pop_back();
-		for(uint32_t j=1; j<NBC; ++j)
+		update_choosen(A[0]);
+
+		for(int32_t j=1; j<nbcolors_; ++j)
 			best_matching_corner(A[0],A[j]);
 
 		random_index_patches45(NB_RAND);
@@ -473,13 +504,17 @@ private:
 		srand(time(nullptr));
 		random_index_patches45(NB_RAND);
 
-		std::array<Index,NBC> A,B;
+		choosen_img_.initItk(rot_img_.width()/8, rot_img_.height()/8, true);
+
+		std::vector<Index> A(nbcolors_);
+		std::vector<Index> B(nbcolors_);
+
 		choose_tiles_pos(A,B);
 
 		buff_img_.initItk(2*tw_,2*tw_,true);
 
 		std::vector<IMG> tiles;
-		tiles.reserve(NBC*NBC*NBC*NBC);
+		tiles.reserve(nbcolors_*nbcolors_*nbcolors_*nbcolors_);
 
 		for(Index nw : A)
 			for(Index se : A)

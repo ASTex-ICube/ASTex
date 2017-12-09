@@ -67,6 +67,17 @@ inline Index gen_index(int x, int y)
 	return Index({{::itk::IndexValueType(x),::itk::IndexValueType(y)}});
 }
 
+
+inline uint32_t index_to_ui32(const Index& p)
+{
+	return p[0] | p[1]<<16;
+}
+
+inline Index ui32_to_index(uint32_t idx)
+{
+	return gen_index(idx & 0xffff, idx >> 16);
+}
+
 /**
  * @brief generate a Size
  * @param w
@@ -512,6 +523,9 @@ public:
 		region.SetSize(1,height);
 		this->itk_img_->SetRegions(region);
 		this->itk_img_->Allocate(init_to_zero);
+
+		for (auto it = this->beginIterator(); !it.IsAtEnd(); ++it)
+			it.Value() = INHERIT::itkPixel(0);
 	}
 
 	NOT_CONST auto initItkValue(int width, int height, const PixelType& value ) -> RETURNED_TYPE(void)
