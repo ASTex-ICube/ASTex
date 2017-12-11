@@ -137,6 +137,23 @@ public:
 
 	IMG all_tiles()
 	{
+		std::vector<typename IMG::PixelType> colors;
+		colors.push_back(IMG::itkPixelNorm(1,0,0));
+		colors.push_back(IMG::itkPixelNorm(0,1,0));
+		colors.push_back(IMG::itkPixelNorm(0,0,1));
+		colors.push_back(IMG::itkPixelNorm(1,1,0));
+		colors.push_back(IMG::itkPixelNorm(1,0,1));
+		colors.push_back(IMG::itkPixelNorm(0,1,1));
+		colors.push_back(IMG::itkPixelNorm(0.5,1,0));
+		colors.push_back(IMG::itkPixelNorm(0.5,0,1));
+		colors.push_back(IMG::itkPixelNorm(0,0.5,1));
+		colors.push_back(IMG::itkPixelNorm(1,0.5,0));
+		colors.push_back(IMG::itkPixelNorm(1,0,0.5));
+		colors.push_back(IMG::itkPixelNorm(0,1,0.5));
+		colors.push_back(IMG::itkPixelNorm(1,1,0.5));
+		colors.push_back(IMG::itkPixelNorm(1,0.5,1));
+		colors.push_back(IMG::itkPixelNorm(0.5,1,1));
+
 		int32_t w = tiles_[0].width();
 		int32_t h = tiles_[0].height();
 
@@ -146,7 +163,22 @@ public:
 		int32_t k =0;
 		for(int32_t j=0;j<NB;++j)
 			for(int32_t i=0;i<NB;++i)
-				compo.copy_pixels(gen_index(i*(w+2), j*(h+2)), tiles_[k++], gen_region(0,0,w,h));
+			{
+				int32_t c0 = j/nbcolors_;
+				int32_t c1 = j%nbcolors_;
+				int32_t c2 = i/nbcolors_;
+				int32_t c3 = i%nbcolors_;
+				compo.copy_pixels(gen_index(i*(w+2), j*(h+2)), tiles_[k], gen_region(0,0,w,h));
+				for (int32_t ll=0; ll<4; ++ll)
+				for (int32_t l=w/3+ll; l<(2*w)/3-ll; ++l)
+				{
+					compo.pixelAbsolute(i*(w+2)+l, j*(h+2)+ll) = colors[c0];
+					compo.pixelAbsolute(i*(w+2)+l, j*(h+2)+h-1-ll) = colors[c1];
+					compo.pixelAbsolute(i*(w+2)+ll, j*(h+2)+l) = colors[c2];
+					compo.pixelAbsolute(i*(w+2)+w-1-ll, j*(h+2)+l) = colors[c3];
+				}
+				k++;
+			}
 		return compo;
 	}
 };

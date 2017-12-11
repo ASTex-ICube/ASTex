@@ -36,7 +36,7 @@ int main(int argc, char** argv)
 {
 	std::string fn = TEMPO_PATH+"quilting_input8.png";
 	int tw = 100;
-	int gen_sz = 1000;
+	int gen_sz = 10;
 	int nbcol = 2;
 
 	if (argc>4)
@@ -48,7 +48,7 @@ int main(int argc, char** argv)
 	}
 	else
 	{
-		std::cout << argv[0]<< " tile_width generated_width   using default"<< std::endl;
+		std::cout << argv[0]<< "input tile_width generated_width nb_sides ...ssssss using default"<< std::endl;
 	}
 
 	ImageRGBu8 im;
@@ -65,7 +65,7 @@ int main(int argc, char** argv)
 	ImageRGBu8 ti = wang.all_tiles();
 	ti.save(TEMPO_PATH+"wang_tiles.png");
 
-	ImageRGBu8 gen = wang.compose(gen_sz/tw, gen_sz/tw);
+	ImageRGBu8 gen = wang.compose(gen_sz, gen_sz);
 	gen.save(TEMPO_PATH+"wang_generated.png");
 
 	return EXIT_SUCCESS;
