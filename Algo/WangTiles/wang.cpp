@@ -48,7 +48,7 @@ int main(int argc, char** argv)
 	}
 	else
 	{
-		std::cout << argv[0]<< "input tile_width generated_width nb_sides ...ssssss using default"<< std::endl;
+		std::cout << argv[0]<< "input tile_width generated_with_x_tw nb_sides ... using default"<< std::endl;
 	}
 
 	ImageRGBu8 im;
@@ -61,12 +61,12 @@ int main(int argc, char** argv)
 	std::chrono::duration<double> elapsed_seconds = std::chrono::system_clock::now() - start_chrono;
 	std::cout << "wang tile timing: " << elapsed_seconds.count() << " s." << std::endl;
 
-
+	std::string out_base = ASTex::IO::remove_ext(fn);
 	ImageRGBu8 ti = wang.all_tiles();
-	ti.save(TEMPO_PATH+"wang_tiles.png");
+	ti.save(out_base+"wang_tiles.png");
 
 	ImageRGBu8 gen = wang.compose(gen_sz, gen_sz);
-	gen.save(TEMPO_PATH+"wang_generated.png");
+	gen.save(out_base+"wang_generated.png");
 
 	return EXIT_SUCCESS;
 }

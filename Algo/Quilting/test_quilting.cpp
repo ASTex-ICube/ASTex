@@ -30,14 +30,17 @@ int main(int argc, char** argv)
 
 	Quilting q;
 
+	std::string fname;
 	if (argc == 2)
-		q.loadInput(std::string(argv[1]));
+		fname = std::string(argv[1]);
 	else
-		q.loadInput(TEMPO_PATH+"quilting_input.png");
+		fname = TEMPO_PATH+"quilting_input.png";
 
-	std::cout << "Compute fitting + cutting"<< std::endl;
+	q.loadInput(fname);
 	q.computeFittingTilesPathCut(2048,2048,64,16,5,4096);
-	q.saveOutput(TEMPO_PATH+"quilting_path_output.png");
+
+	std::string out_name = ASTex::IO::remove_ext(fname)+"quilting_out.png";
+	q.saveOutput(out_name);
 
 
   return EXIT_SUCCESS;

@@ -270,7 +270,6 @@ private:
 	{
 		using PIX = typename IMG::PixelType;
 		using DPIX = typename IMG::DoublePixelEigen;
-		using T = typename IMG::DataType;
 		int32_t s = input_img_.width()+input_img_.height();
 		rot_img_.initItk(s,s,true);
 

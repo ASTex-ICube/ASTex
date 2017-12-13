@@ -68,7 +68,7 @@ int main(int argc, char** argv)
 	std::chrono::duration<double> elapsed_seconds = std::chrono::system_clock::now() - start_chrono;
 	std::cout << "wang tile timing: " << elapsed_seconds.count() << " s." << std::endl;
 
-	ImageViewer v0("xx", &app);
+	ImageViewer v0("xx");
 	v0.update(wta.choosen_img_);
 	v0.show();
 
@@ -85,6 +85,7 @@ int main(int argc, char** argv)
 
 	v2->set_key_cb([&](int code, char c)
 	{
+		std::ignore = code; // for warning
 		std::cout << "key "<< c << std::endl;
 	});
 

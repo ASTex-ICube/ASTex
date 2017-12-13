@@ -63,7 +63,7 @@ public:
 	 * @param id id of win (for use of app_mouse_clicked & app_key_pressed)
 	 */
 
-	inline ImageViewer(const std::string& name = "", QApplication* app = nullptr) :
+	inline ImageViewer(const std::string& name = "") :
 		m_imageLabel(new QLabel), title_(name.c_str()), zoom_(1), scale_win_(1), x_(0), y_(0),
 		app_mouse_clicked_([](int, int, int) {}),
 		app_key_pressed_([](int, char) {})
@@ -312,7 +312,7 @@ private:
 	}
 
 
-	inline void resizeEvent(QResizeEvent* event)
+	inline void resizeEvent(QResizeEvent* /*event*/)
 	{
 
 //		emit(win_resized(event->size()));
@@ -331,7 +331,7 @@ private:
 template <typename IMG>
 inline std::unique_ptr<ImageViewer> image_viewer(const IMG& img, const std::string& name="", QApplication* app=nullptr)
 {
-	ImageViewer* view = new ImageViewer(name,app);
+	ImageViewer* view = new ImageViewer(name);
 	view->update(img);
 	view->show();
 	return std::unique_ptr<ImageViewer>(view);
