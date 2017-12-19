@@ -44,7 +44,12 @@ ImageRGBd BombingStamper::generate(int imageWidth, int imageHeight)
 }
 
 TextonStamper::TextonStamper(const std::vector<vec2> &pointArray, const ImageRGBd &tampon) :
-    Stamper(pointArray, tampon), m_ratioX(1.0), m_ratioY(1.0), m_periodicity(false), m_bilinearInterpolation(false)
+    Stamper(pointArray, tampon),
+    m_ratioX(1.0),
+    m_ratioY(1.0),
+    m_periodicity(false),
+    m_bilinearInterpolation(false),
+    m_useMargins(true)
 {}
 
 ImageRGBd TextonStamper::generate(int imageWidth, int imageHeight)
@@ -84,6 +89,8 @@ ImageRGBd TextonStamper::generate(int imageWidth, int imageHeight)
     double textonWidth = m_stamp.width();
     double textonHeight = m_stamp.height();
 
+    int nb_hit=0;
+
     for(std::vector<vec2>::const_iterator it=m_pointArray.begin(); it!=m_pointArray.end(); ++it)
     {
 //        int i = im_out.width() * (*it)[0]; //i & j: single point coordinates in im_out (double)
@@ -91,17 +98,16 @@ ImageRGBd TextonStamper::generate(int imageWidth, int imageHeight)
 
         double i, j;
 
-        if(m_periodicity)
+        if(m_periodicity || (!m_periodicity && !m_useMargins))
         {
             i = imageWidth * (*it)[0];
             j = imageHeight * (*it)[1];
         }
-
-        if(!m_periodicity)
+        else
         {
             //we need to introduce margins here, to shoot textons outside of the domain
-            i = (imageWidth + textonWidth * 2 ) * (*it)[0] - textonWidth;
-            j = (imageHeight + textonHeight * 2 ) * (*it)[1] - textonHeight;
+            i = (imageWidth + textonWidth ) * (*it)[0] - textonWidth/2.0;
+            j = (imageHeight + textonHeight ) * (*it)[1] - textonHeight/2.0;
         }
 
         int otx=int(i-textonWidth/2.0), oty=int(j-textonHeight/2.0); //texton origin in texture space (top left)
@@ -136,11 +142,13 @@ ImageRGBd TextonStamper::generate(int imageWidth, int imageHeight)
                         y+=im_out.height();
                     im_out.pixelAbsolute(x%imageWidth, y%imageHeight)[c] += interpolatedValue;
                 }
+
+                ++nb_hit;
             });
         else
             im_out.for_region_pixels(reg, [&] (ImageRGBd::PixelType& pix, int x, int y) //without periodicity
             {
-                if(x>0 && x<imageWidth && y>0 && y<imageHeight)
+                if(x>=0 && x<imageWidth && y>=0 && y<imageHeight)
                 {
                     int tx=x-otx; //texton coordinate
                     int ty=y-oty; //texton coordinate
@@ -148,36 +156,47 @@ ImageRGBd TextonStamper::generate(int imageWidth, int imageHeight)
                     for(int c=0; c<3; ++c) //c: channel
                     {
                         double interpolatedValue = 0.0;
-                        if(tx-1 > 0)
-                            if(ty-1 > 0)
-                                interpolatedValue += (dx*dy)*m_stamp.pixelAbsolute(tx-1, ty-1)[c];
-                            if(ty < textonHeight-1)
-                                interpolatedValue += (dx*(1-dy))*m_stamp.pixelAbsolute(tx-1, ty)[c];
-                        if(tx < textonWidth-1)
-                            if(ty-1 > 0)
-                                interpolatedValue += ((1-dx)*dy)*m_stamp.pixelAbsolute(tx-1, ty-1)[c];
-                            if(ty < textonHeight-1)
-                                interpolatedValue += ((1-dx)*(1-dy))*m_stamp.pixelAbsolute(tx, ty)[c];
+                        if(dx>0 || dy>0) //cond: speedup exploiting branch prediction, but not needed for correctness
+                        {
+                            if(tx-1 > 0)
+                                if(ty-1 > 0)
+                                    interpolatedValue += (dx*dy)*m_stamp.pixelAbsolute(tx-1, ty-1)[c];
+                                if(ty < textonHeight-1)
+                                    interpolatedValue += (dx*(1-dy))*m_stamp.pixelAbsolute(tx-1, ty)[c];
+                            if(tx < textonWidth-1)
+                                if(ty-1 > 0)
+                                    interpolatedValue += ((1-dx)*dy)*m_stamp.pixelAbsolute(tx-1, ty-1)[c];
+                                if(ty < textonHeight-1)
+                                    interpolatedValue += ((1-dx)*(1-dy))*m_stamp.pixelAbsolute(tx, ty)[c];
+                        }
+                        else
+                            interpolatedValue += m_stamp.pixelAbsolute(tx, ty)[c];
 
                         pix[c] += interpolatedValue;
 
                         //std::cout << interpolatedValue << std::endl;
                     }
+                    ++nb_hit;
                 }
             });
     }
 
-    int size2Normalize = m_periodicity ? imageWidth*imageHeight : (imageWidth+textonWidth * 2)*(imageHeight+textonHeight * 2);
+    float nb_hit_per_pixel = float(nb_hit)/(imageWidth*imageHeight);
 
-    float mean_nb_of_impacts = float(m_pointArray.size()) * (m_stamp.width() * m_stamp.height()) / size2Normalize;
-    float lambda = mean_nb_of_impacts/(m_stamp.width() * m_stamp.height());
+    //float unknownVariable = 1.4; //unknown variable is the total energy of the four corners of the margins (used to estimate)
+    float totalSize = imageWidth*imageHeight; /* : imageWidth*imageHeight + 1.5*(textonWidth*imageHeight + textonHeight*imageWidth) + unknownVariable*(textonHeight * textonWidth); //used to estimate */
+
+    float mean_nb_of_impacts = float(m_pointArray.size()) * (m_stamp.width() * m_stamp.height()) / totalSize; //only true for periodicity. Otherwise, have to be estimated
+    float lambda = float(nb_hit_per_pixel)/(m_stamp.width() * m_stamp.height());
+
+    std::cout << "Texton noise: number of impacts per pixel: " << std::to_string(nb_hit_per_pixel) << std::endl;
+    std::cout << "Mean number of impacts per pixel: " << std::to_string(mean_nb_of_impacts) << std::endl;
+    std::cout << "Normalization value chosen: " << std::to_string(totalSize) << std::endl;
+
 
     im_out.for_all_pixels([&] (ImageRGBd::PixelType &pix) {
         for(int i=0; i<3; ++i)
-        {
             pix[i] = 1.0/sqrt(lambda) * (pix[i] - lambda * sum[i]) + mean[i];
-            pix[i] = pix[i] > 1.0 ? 1.0 : (pix[i] < 0.0 ? 0.0 : pix[i]);
-        }
     });
 
     return im_out;

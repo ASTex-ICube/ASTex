@@ -586,13 +586,20 @@ void HistogramRGBBase<T>::compute(const ImageCommon<ImageRGBBase<T>, false>& ima
 template <typename T>
 void HistogramRGBBase<T>::updateStatistics()
 {
+    for(int i=0; i<3; ++i)
+        m_mean[i] = 0;
+    for(int i=0; i<6; ++i)
+        m_covariance[i] = 0;
+
     for(const auto& bin : *this)
     {
         for(int i=0; i<3; ++i)
         {
-            m_mean[i] += (real)bin.first[i]*bin.second / this->size();
+            m_mean[i] += (real)bin.first[i]*bin.second;
         }
     }
+    for(int i=0; i<3; ++i)
+        m_mean[i] /= this->size();
 
     //here we have a mean vector so we can compute the covariance
     for(const auto& bin : *this)

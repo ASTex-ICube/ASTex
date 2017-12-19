@@ -70,13 +70,14 @@ int main( int argc, char **argv )
 
         //Testing
 
-        PoissonSampling sampler;
-        std::vector<vec2> pointArray = sampler.Generate(80);
+        RandomSampling sampler;
+        std::vector<vec2> pointArray = sampler.Generate(2);
 
 
         TextonStamper tamponneur(pointArray, im_texton);
 
         tamponneur.setPeriodicity(false);
+        tamponneur.setUseMargins(true);
 
         int W=im_in.width(), H=im_in.height();
 
@@ -92,17 +93,11 @@ int main( int argc, char **argv )
             im_sample.pixelAbsolute(i, j)=1.0;
         }
 
-        //Saving sample
-        //Saving im_out
-
-        //IO::save01_in_u8(im_out, MY_PATH+out_path + name_noext + ".png");
-        //IO::save01_in_u8(im_in, std::string(MY_PATH) + "test_input.png");
-        IO::save01_in_u8(im_out, std::string(MY_PATH) + "test_textonNoise.png");
-        IO::save01_in_u8(im_sample, std::string(MY_PATH) + "test_sample.png");
-        IO::save01_in_u8(im_texton, std::string(MY_PATH) + "test_texton.png");
-
         HistogramRGBd histo_in(im_in);
         HistogramRGBd histo_out(im_out);
+
+        std::cout << "Variance of input is: (" << std::to_string(histo_in.covariance(0, 0)) << ", " << std::to_string(histo_in.covariance(1, 1)) << ", " << std::to_string(histo_in.covariance(2, 2)) << ")" << std::endl;
+        std::cout << "Variance of output is: (" << std::to_string(histo_out.covariance(0, 0)) << ", " << std::to_string(histo_out.covariance(1, 1)) << ", " << std::to_string(histo_out.covariance(2, 2)) << ")" << std::endl;
 
         double zero[3];
         double one[3];
@@ -114,7 +109,23 @@ int main( int argc, char **argv )
         quantizedHisto.saveHistogram(std::string(MY_PATH) + "in.csv", 24);
 
         quantizedHisto=histo_out.quantize(zero, one, 24);
-        quantizedHisto.saveHistogram(std::string(MY_PATH) + "out_" + input_noext + "_noperio_" + std::to_string(i-2) + ".csv", 24);
+        quantizedHisto.saveHistogram(std::string(MY_PATH) + "out_" + input_noext + "_noperio" + ".csv", 24);
+
+        im_out.for_all_pixels([&] (ImageRGBd::PixelType &pix) {
+            for(int i=0; i<3; ++i)
+            {
+                pix[i] = pix[i] > 1.0 ? 1.0 : (pix[i] < 0.0 ? 0.0 : pix[i]);
+            }
+        });
+
+        //Saving sample
+        //Saving im_out
+
+        //IO::save01_in_u8(im_out, MY_PATH+out_path + name_noext + ".png");
+        //IO::save01_in_u8(im_in, std::string(MY_PATH) + "test_input.png");
+        IO::save01_in_u8(im_out, std::string(MY_PATH) + "test_textonNoise.png");
+        IO::save01_in_u8(im_sample, std::string(MY_PATH) + "test_sample.png");
+        IO::save01_in_u8(im_texton, std::string(MY_PATH) + "test_texton.png");
     }
 
 

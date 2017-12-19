@@ -1,3 +1,4 @@
+
 #ifndef _TEXTON_CPU_H_
 #define _TEXTON_CPU_H_
 
@@ -394,6 +395,8 @@ public:
     double ratioY() {return m_ratioY;}
     bool periodicity() {return m_periodicity;}
     bool bilinearInterpolation() {return m_bilinearInterpolation;}
+    bool useMargins() {return m_useMargins;}
+
 
     //set
 
@@ -401,6 +404,7 @@ public:
     void setRatioY(double ratioY) {m_ratioY=ratioY; assert(ratioY>0 && "TextonStamper::setRatioY: ratioY must be > 0");}
     void setPeriodicity(bool periodicity) {m_periodicity = periodicity;}
     void setBilinearInterpolation(bool bi) {m_bilinearInterpolation = bi;}
+    void setUseMargins(bool use) {m_useMargins = use;}
 
 private:
 
@@ -410,6 +414,8 @@ private:
     bool m_periodicity; //< if the stamping process is periodic or not.
 
     bool m_bilinearInterpolation; //< if the stamping process is allowed to stamp in between pixels or not.
+
+    bool m_useMargins; //< if m_periodicity is true, defines if we don't extend the domain of the output with margins to improve the energy at the edges.
 };
 
 } //namespace ASTex
