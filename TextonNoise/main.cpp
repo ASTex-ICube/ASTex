@@ -3,6 +3,7 @@
 #include "ASTex/utils.h"
 #include "texton_cpu.h"
 #include "histogram.h"
+#include "rpn_utils.h"
 
 #define MY_PATH "/home/nlutz/img/texton/"
 
