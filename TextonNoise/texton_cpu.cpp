@@ -125,22 +125,23 @@ ImageRGBd TextonStamper::generate(int imageWidth, int imageHeight)
                 for(int c=0; c<3; ++c) //c: channel
                 {
                     double interpolatedValue = 0.0;
-                    if(tx-1 > 0)
-                        if(ty-1 > 0)
-                            interpolatedValue += (dx*dy)*m_stamp.pixelAbsolute(tx-1, ty-1)[c];
-                        if(ty < textonHeight-1)
-                            interpolatedValue += (dx*(1-dy))*m_stamp.pixelAbsolute(tx-1, ty)[c];
-                    if(tx < textonWidth-1)
-                        if(ty-1 > 0)
-                            interpolatedValue += ((1-dx)*dy)*m_stamp.pixelAbsolute(tx-1, ty-1)[c];
-                        if(ty < textonHeight-1)
-                            interpolatedValue += ((1-dx)*(1-dy))*m_stamp.pixelAbsolute(tx, ty)[c];
+                    if(dx>0 || dy>0) //cond: speedup exploiting branch prediction, but not needed for correctness
+                    {
+                        if(tx-1 > 0)
+                            if(ty-1 > 0)
+                                interpolatedValue += (dx*dy)*m_stamp.pixelAbsolute(tx-1, ty-1)[c];
+                            if(ty < textonHeight)
+                                interpolatedValue += (dx*(1-dy))*m_stamp.pixelAbsolute(tx-1, ty)[c];
+                        if(tx < textonWidth)
+                            if(ty-1 > 0)
+                                interpolatedValue += ((1-dx)*dy)*m_stamp.pixelAbsolute(tx-1, ty-1)[c];
+                            if(ty < textonHeight)
+                                interpolatedValue += ((1-dx)*(1-dy))*m_stamp.pixelAbsolute(tx, ty)[c];
+                    }
+                    else
+                        interpolatedValue += m_stamp.pixelAbsolute(tx, ty)[c];
 
-                    if(x<0)
-                        x+=im_out.width();
-                    if(y<0)
-                        y+=im_out.height();
-                    im_out.pixelAbsolute(x%imageWidth, y%imageHeight)[c] += interpolatedValue;
+                    im_out.pixelAbsolute((x+im_out.width())%imageWidth, (y+im_out.height())%imageHeight)[c] += interpolatedValue;
                 }
 
                 ++nb_hit;
@@ -161,12 +162,12 @@ ImageRGBd TextonStamper::generate(int imageWidth, int imageHeight)
                             if(tx-1 > 0)
                                 if(ty-1 > 0)
                                     interpolatedValue += (dx*dy)*m_stamp.pixelAbsolute(tx-1, ty-1)[c];
-                                if(ty < textonHeight-1)
+                                if(ty < textonHeight)
                                     interpolatedValue += (dx*(1-dy))*m_stamp.pixelAbsolute(tx-1, ty)[c];
-                            if(tx < textonWidth-1)
+                            if(tx < textonWidth)
                                 if(ty-1 > 0)
                                     interpolatedValue += ((1-dx)*dy)*m_stamp.pixelAbsolute(tx-1, ty-1)[c];
-                                if(ty < textonHeight-1)
+                                if(ty < textonHeight)
                                     interpolatedValue += ((1-dx)*(1-dy))*m_stamp.pixelAbsolute(tx, ty)[c];
                         }
                         else
