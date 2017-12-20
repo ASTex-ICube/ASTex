@@ -110,7 +110,7 @@ ImageRGBd TextonStamper::generate(int imageWidth, int imageHeight)
             j = (imageHeight + textonHeight ) * (*it)[1] - textonHeight/2.0;
         }
 
-        int otx=int(i-textonWidth/2.0), oty=int(j-textonHeight/2.0); //texton origin in texture space (top left)
+        int otx=std::floor(i-textonWidth/2.0), oty=std::floor(j-textonHeight/2.0); //texton origin in texture space (top left)
         double dx= m_bilinearInterpolation ? (i-textonWidth/2.0)-otx : 0; //gap between texton and image pixels
         double dy= m_bilinearInterpolation ? (j-textonHeight/2.0)-oty : 0; //0 if no bilinear interpolation : equivalent to clamping dx and dy
 
@@ -118,9 +118,10 @@ ImageRGBd TextonStamper::generate(int imageWidth, int imageHeight)
         if(m_periodicity)
             im_out.for_region_pixels(reg, [&] (ImageRGBd::PixelType& pix, int x, int y) //with periodicity
             {
-
                 int tx=x-otx; //texton coordinate in texton space
                 int ty=y-oty; //texton coordinate
+
+                std::cout << std::to_string(tx) << std::endl;
 
                 for(int c=0; c<3; ++c) //c: channel
                 {
@@ -143,42 +144,38 @@ ImageRGBd TextonStamper::generate(int imageWidth, int imageHeight)
 
                     im_out.pixelAbsolute((x+im_out.width())%imageWidth, (y+im_out.height())%imageHeight)[c] += interpolatedValue;
                 }
-
                 ++nb_hit;
             });
         else
             im_out.for_region_pixels(reg, [&] (ImageRGBd::PixelType& pix, int x, int y) //without periodicity
             {
-                if(x>=0 && x<imageWidth && y>=0 && y<imageHeight)
+                int tx=x-otx; //texton coordinate
+                int ty=y-oty; //texton coordinate
+
+                for(int c=0; c<3; ++c) //c: channel
                 {
-                    int tx=x-otx; //texton coordinate
-                    int ty=y-oty; //texton coordinate
-
-                    for(int c=0; c<3; ++c) //c: channel
+                    double interpolatedValue = 0.0;
+                    if(dx>0 || dy>0) //cond: speedup exploiting branch prediction, but not needed for correctness
                     {
-                        double interpolatedValue = 0.0;
-                        if(dx>0 || dy>0) //cond: speedup exploiting branch prediction, but not needed for correctness
-                        {
-                            if(tx-1 > 0)
-                                if(ty-1 > 0)
-                                    interpolatedValue += (dx*dy)*m_stamp.pixelAbsolute(tx-1, ty-1)[c];
-                                if(ty < textonHeight)
-                                    interpolatedValue += (dx*(1-dy))*m_stamp.pixelAbsolute(tx-1, ty)[c];
-                            if(tx < textonWidth)
-                                if(ty-1 > 0)
-                                    interpolatedValue += ((1-dx)*dy)*m_stamp.pixelAbsolute(tx-1, ty-1)[c];
-                                if(ty < textonHeight)
-                                    interpolatedValue += ((1-dx)*(1-dy))*m_stamp.pixelAbsolute(tx, ty)[c];
-                        }
-                        else
-                            interpolatedValue += m_stamp.pixelAbsolute(tx, ty)[c];
-
-                        pix[c] += interpolatedValue;
-
-                        //std::cout << interpolatedValue << std::endl;
+                        if(tx-1 > 0)
+                            if(ty-1 > 0)
+                                interpolatedValue += (dx*dy)*m_stamp.pixelAbsolute(tx-1, ty-1)[c];
+                            if(ty < textonHeight)
+                                interpolatedValue += (dx*(1-dy))*m_stamp.pixelAbsolute(tx-1, ty)[c];
+                        if(tx < textonWidth)
+                            if(ty-1 > 0)
+                                interpolatedValue += ((1-dx)*dy)*m_stamp.pixelAbsolute(tx-1, ty-1)[c];
+                            if(ty < textonHeight)
+                                interpolatedValue += ((1-dx)*(1-dy))*m_stamp.pixelAbsolute(tx, ty)[c];
                     }
-                    ++nb_hit;
+                    else
+                        interpolatedValue += m_stamp.pixelAbsolute(tx, ty)[c];
+
+                    pix[c] += interpolatedValue;
+
+                    //std::cout << interpolatedValue << std::endl;
                 }
+                ++nb_hit;
             });
     }
 
