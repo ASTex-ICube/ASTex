@@ -65,20 +65,21 @@ int main( int argc, char **argv )
         //Loading sample
         //Loading im_in
 
-        ImageRGBd im_in, im_out, im_sample, im_texton;
+        ImageRGBd im_in, im_out, im_rpn, im_sample, im_texton;
         IO::loadu8_in_01(im_in, std::string(MY_PATH)+argv[1]);
         IO::loadu8_in_01(im_texton, MY_PATH+filename_source);
 
         //Testing
 
         RandomSampling sampler;
-        std::vector<vec2> pointArray = sampler.Generate(2);
+        std::vector<vec2> pointArray = sampler.Generate(800);
 
 
         TextonStamper tamponneur(pointArray, im_texton);
 
         tamponneur.setPeriodicity(false);
         tamponneur.setUseMargins(true);
+        tamponneur.setBilinearInterpolation(true);
 
         int W=im_in.width(), H=im_in.height();
 
@@ -94,10 +95,20 @@ int main( int argc, char **argv )
             im_sample.pixelAbsolute(i, j)=1.0;
         }
 
+        colored_RPN(im_in, im_rpn, RGB_SPACE, NORMAL, 0, 0, false, true, false, 1.0);
+
         HistogramRGBd histo_in(im_in);
         HistogramRGBd histo_out(im_out);
+        HistogramRGBd histo_rpn(im_rpn);
+
+        std::cout << "Mean of input is: (" << std::to_string(histo_in.mean(0)) << ", " << std::to_string(histo_in.mean(1)) << ", " << std::to_string(histo_in.mean(2)) << ")" << std::endl;
+        std::cout << "Mean of rpn is: (" << std::to_string(histo_rpn.mean(0)) << ", " << std::to_string(histo_rpn.mean(1)) << ", " << std::to_string(histo_rpn.mean(2)) << ")" << std::endl;
+        std::cout << "Mean of output is: (" << std::to_string(histo_out.mean(0)) << ", " << std::to_string(histo_out.mean(1)) << ", " << std::to_string(histo_out.mean(2)) << ")" << std::endl;
+
+        std::cout << "==================" << std::endl;
 
         std::cout << "Variance of input is: (" << std::to_string(histo_in.covariance(0, 0)) << ", " << std::to_string(histo_in.covariance(1, 1)) << ", " << std::to_string(histo_in.covariance(2, 2)) << ")" << std::endl;
+        std::cout << "Variance of rpn is: (" << std::to_string(histo_rpn.covariance(0, 0)) << ", " << std::to_string(histo_rpn.covariance(1, 1)) << ", " << std::to_string(histo_rpn.covariance(2, 2)) << ")" << std::endl;
         std::cout << "Variance of output is: (" << std::to_string(histo_out.covariance(0, 0)) << ", " << std::to_string(histo_out.covariance(1, 1)) << ", " << std::to_string(histo_out.covariance(2, 2)) << ")" << std::endl;
 
         double zero[3];
@@ -107,12 +118,22 @@ int main( int argc, char **argv )
         HistogramRGBBase<int> quantizedHisto;
 
         quantizedHisto=histo_in.quantize(zero, one, 24);
-        quantizedHisto.saveHistogram(std::string(MY_PATH) + "in.csv", 24);
+        quantizedHisto.saveHistogram(std::string(MY_PATH) + "in_" + input_noext + ".csv", 24);
 
         quantizedHisto=histo_out.quantize(zero, one, 24);
-        quantizedHisto.saveHistogram(std::string(MY_PATH) + "out_" + input_noext + "_noperio" + ".csv", 24);
+        quantizedHisto.saveHistogram(std::string(MY_PATH) + "out_" + input_noext + "_tn" + ".csv", 24);
+
+        quantizedHisto=histo_rpn.quantize(zero, one, 24);
+        quantizedHisto.saveHistogram(std::string(MY_PATH) + "out_" + input_noext + "_rpn" + ".csv", 24);
 
         im_out.for_all_pixels([&] (ImageRGBd::PixelType &pix) {
+            for(int i=0; i<3; ++i)
+            {
+                pix[i] = pix[i] > 1.0 ? 1.0 : (pix[i] < 0.0 ? 0.0 : pix[i]);
+            }
+        });
+
+        im_rpn.for_all_pixels([&] (ImageRGBd::PixelType &pix) {
             for(int i=0; i<3; ++i)
             {
                 pix[i] = pix[i] > 1.0 ? 1.0 : (pix[i] < 0.0 ? 0.0 : pix[i]);
@@ -124,9 +145,9 @@ int main( int argc, char **argv )
 
         //IO::save01_in_u8(im_out, MY_PATH+out_path + name_noext + ".png");
         //IO::save01_in_u8(im_in, std::string(MY_PATH) + "test_input.png");
-        IO::save01_in_u8(im_out, std::string(MY_PATH) + "test_textonNoise.png");
-        IO::save01_in_u8(im_sample, std::string(MY_PATH) + "test_sample.png");
-        IO::save01_in_u8(im_texton, std::string(MY_PATH) + "test_texton.png");
+        IO::save01_in_u8(im_out, std::string(MY_PATH) + "out_" + input_noext + "_tn" + ".png");
+        IO::save01_in_u8(im_rpn, std::string(MY_PATH) + "out_" + input_noext + "_rpn" + ".png");
+        IO::save01_in_u8(im_sample, std::string(MY_PATH) + "out_sampling.png");
     }
 
 

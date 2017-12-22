@@ -89,7 +89,7 @@ ImageRGBd TextonStamper::generate(int imageWidth, int imageHeight)
     double textonWidth = m_stamp.width();
     double textonHeight = m_stamp.height();
 
-    int nb_hit=0;
+    double nb_hit=0;
 
     for(std::vector<vec2>::const_iterator it=m_pointArray.begin(); it!=m_pointArray.end(); ++it)
     {
@@ -114,72 +114,99 @@ ImageRGBd TextonStamper::generate(int imageWidth, int imageHeight)
         double dx= m_bilinearInterpolation ? (i-textonWidth/2.0)-otx : 0; //gap between texton and image pixels
         double dy= m_bilinearInterpolation ? (j-textonHeight/2.0)-oty : 0; //0 if no bilinear interpolation : equivalent to clamping dx and dy
 
-        Region reg = gen_region(otx, oty, textonWidth, textonHeight); //the region we stamp
+        Region reg = gen_region(otx, oty, m_bilinearInterpolation ? textonWidth+1 : textonWidth, m_bilinearInterpolation ? textonHeight+1 : textonHeight);
         if(m_periodicity)
+        {
             im_out.for_region_pixels(reg, [&] (ImageRGBd::PixelType& pix, int x, int y) //with periodicity
             {
                 int tx=x-otx; //texton coordinate in texton space
                 int ty=y-oty; //texton coordinate
 
-                std::cout << std::to_string(tx) << std::endl;
-
                 for(int c=0; c<3; ++c) //c: channel
                 {
                     double interpolatedValue = 0.0;
-                    if(dx>0 || dy>0) //cond: speedup exploiting branch prediction, but not needed for correctness
+                    if(m_bilinearInterpolation) //cond: speedup exploiting branch prediction, but not needed for correctness
                     {
-                        if(tx-1 > 0)
-                            if(ty-1 > 0)
+                        if(tx > 0)
+                            if(ty > 0)
                                 interpolatedValue += (dx*dy)*m_stamp.pixelAbsolute(tx-1, ty-1)[c];
                             if(ty < textonHeight)
                                 interpolatedValue += (dx*(1-dy))*m_stamp.pixelAbsolute(tx-1, ty)[c];
                         if(tx < textonWidth)
-                            if(ty-1 > 0)
-                                interpolatedValue += ((1-dx)*dy)*m_stamp.pixelAbsolute(tx-1, ty-1)[c];
+                            if(ty > 0)
+                                interpolatedValue += ((1-dx)*dy)*m_stamp.pixelAbsolute(tx, ty-1)[c];
                             if(ty < textonHeight)
                                 interpolatedValue += ((1-dx)*(1-dy))*m_stamp.pixelAbsolute(tx, ty)[c];
                     }
                     else
                         interpolatedValue += m_stamp.pixelAbsolute(tx, ty)[c];
+
 
                     im_out.pixelAbsolute((x+im_out.width())%imageWidth, (y+im_out.height())%imageHeight)[c] += interpolatedValue;
                 }
-                ++nb_hit;
             });
+            nb_hit=nb_hit + textonWidth*textonHeight; //with periodicity, the entire energy of the texton hits the texture all the time
+        }
         else
+        {
+            //the region we stamp : it is one pixel longer (per dim.) when the texton can stamped between pixels <=> when bilinear interpolation is activated
             im_out.for_region_pixels(reg, [&] (ImageRGBd::PixelType& pix, int x, int y) //without periodicity
             {
-                int tx=x-otx; //texton coordinate
-                int ty=y-oty; //texton coordinate
-
-                for(int c=0; c<3; ++c) //c: channel
+                if(x>=0 && y>=0 && x<imageWidth && y<imageHeight)
                 {
-                    double interpolatedValue = 0.0;
-                    if(dx>0 || dy>0) //cond: speedup exploiting branch prediction, but not needed for correctness
+                    int tx=x-otx; //texton coordinate
+                    int ty=y-oty; //texton coordinate
+
+                    double pHit3 = 0.0;
+
+                    for(int c=0; c<3; ++c) //c: channel
                     {
-                        if(tx-1 > 0)
-                            if(ty-1 > 0)
-                                interpolatedValue += (dx*dy)*m_stamp.pixelAbsolute(tx-1, ty-1)[c];
-                            if(ty < textonHeight)
-                                interpolatedValue += (dx*(1-dy))*m_stamp.pixelAbsolute(tx-1, ty)[c];
-                        if(tx < textonWidth)
-                            if(ty-1 > 0)
-                                interpolatedValue += ((1-dx)*dy)*m_stamp.pixelAbsolute(tx-1, ty-1)[c];
-                            if(ty < textonHeight)
-                                interpolatedValue += ((1-dx)*(1-dy))*m_stamp.pixelAbsolute(tx, ty)[c];
+                        double interpolatedValue = 0.0;
+                        if(m_bilinearInterpolation) //cond: speedup exploiting branch prediction, but not needed for correctness
+                        {
+                            if(tx > 0)
+                            {
+                                if(ty > 0)
+                                {
+                                    interpolatedValue += (dx*dy)*m_stamp.pixelAbsolute(tx-1, ty-1)[c];
+                                    pHit3 += (dx*dy);
+                                }
+                                if(ty < textonHeight)
+                                {
+                                    interpolatedValue += (dx*(1-dy))*m_stamp.pixelAbsolute(tx-1, ty)[c];
+                                    pHit3 += (dx*(1-dy));
+                                }
+                            }
+                            if(tx < textonWidth)
+                            {
+                                if(ty > 0)
+                                {
+                                    interpolatedValue += ((1-dx)*dy)*m_stamp.pixelAbsolute(tx, ty-1)[c];
+                                    pHit3 += ((1-dx)*dy);
+                                }
+                                if(ty < textonHeight)
+                                {
+                                    interpolatedValue += ((1-dx)*(1-dy))*m_stamp.pixelAbsolute(tx, ty)[c];
+                                    pHit3 += (1-dx)*(1-dy);
+                                }
+                            }
+                        }
+                        else
+                        {
+                            ++pHit3;
+                            interpolatedValue += m_stamp.pixelAbsolute(tx, ty)[c];
+                        }
+
+                        pix[c] += interpolatedValue;
                     }
-                    else
-                        interpolatedValue += m_stamp.pixelAbsolute(tx, ty)[c];
 
-                    pix[c] += interpolatedValue;
-
-                    //std::cout << interpolatedValue << std::endl;
+                    nb_hit += pHit3/3.0;
                 }
-                ++nb_hit;
             });
+        }
     }
 
-    float nb_hit_per_pixel = float(nb_hit)/(imageWidth*imageHeight);
+    float nb_hit_per_pixel = nb_hit/(imageWidth*imageHeight);
 
     //float unknownVariable = 1.4; //unknown variable is the total energy of the four corners of the margins (used to estimate)
     float totalSize = imageWidth*imageHeight; /* : imageWidth*imageHeight + 1.5*(textonWidth*imageHeight + textonHeight*imageWidth) + unknownVariable*(textonHeight * textonWidth); //used to estimate */
