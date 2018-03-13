@@ -73,8 +73,6 @@ REAL volumeSpectral(const CommonSpectral<ImageGrayBase<REAL>, false>& modulus)
 
 void saveFourierModulusPhaseGray(const std::string &out_path, const std::string& in_texture);
 
-void createColoredNoise(const std::string &out_path, unsigned int M, unsigned int N);
-
 void rpn_scalar(const ImageSpectrald& modulus, ImageSpectrald& phase, ImageGrayd& output);
 
 template <typename REAL, typename std::enable_if<std::is_floating_point<REAL>::value>::type* = nullptr >
@@ -370,7 +368,9 @@ void fourierModulus_color(const CommonSpectral<ImageGrayBase<REAL>, false>& modu
 
 void gray_RPN(const ImageGrayd& in, ImageGrayd& out, unsigned int extendX, unsigned int extendY,  bool crop=false, bool periodic_component=true, bool call_srand=true);
 
-void colored_RPN(const ImageRGBd& in, ImageRGBd& out, color_space_t colorSpace=RGB_SPACE, color_dephasing_mode_t mode=NORMAL, unsigned int extendX=0, unsigned int extendY=0, bool crop=false, bool periodic_component=true, bool call_srand=false, double scale_randomPhase=1.0);
+void colored_RPN(const ImageRGBd& in, ImageRGBd& out, color_space_t colorSpace=RGB_SPACE, color_dephasing_mode_t mode=NORMAL, unsigned int extendX=0, unsigned int extendY=0,
+                 bool crop=false, bool periodic_component=true, bool call_srand=false, double scale_randomPhase=1.0,
+                 const ImageSpectrald *phase=NULL);
 
 double compute_crossCorrelation_diff(const ImageRGBd& in1, const ImageRGBd& in2, int channel1, int channel2, ImageGrayd& diff);
 

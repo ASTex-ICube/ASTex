@@ -22,23 +22,6 @@ void saveFourierModulusPhaseGray(const std::string &out_path, const std::string&
     }
 }
 
-void createColoredNoise(const std::string &out_path, unsigned int M, unsigned int N)
-{
-    ImageRGBf image;
-    image.initItk(M,N, true);
-
-    image.for_all_pixels([] (ImageRGBf::PixelType& pix)
-    {
-        int c=rand()%3;
-        pix[c]=1.0;
-    });
-
-    create_directory(out_path);
-    IO::save01_in_u8(image, out_path+"/noise.png");
-
-    return;
-}
-
 void rpn_scalar(const ImageSpectrald& modulus, ImageSpectrald& phase, ImageGrayd& output)
 {
     phase.initItk(modulus.width(), modulus.height());
@@ -234,7 +217,7 @@ void gray_RPN(const ImageGrayd& in, ImageGrayd& out, unsigned int extendX, unsig
 }
 
 void colored_RPN(const ImageRGBd& in, ImageRGBd& out, color_space_t colorSpace, color_dephasing_mode_t mode,
-                 unsigned int extendX, unsigned int extendY, bool crop, bool periodic_component, bool call_srand, double scale_randomPhase)
+                 unsigned int extendX, unsigned int extendY, bool crop, bool periodic_component, bool call_srand, double scale_randomPhase, const ImageSpectrald *phase)
 {
     if(!in.is_initialized() || mode==LUMINANCE || mode==ALL)
         return;
@@ -242,6 +225,7 @@ void colored_RPN(const ImageRGBd& in, ImageRGBd& out, color_space_t colorSpace, 
     try
     {
         ImageRGBd pc;
+        pc.initItk(in.width(), in.height());
         if(periodic_component)
             image2periodicComponent(in, pc);
         else
@@ -303,7 +287,10 @@ void colored_RPN(const ImageRGBd& in, ImageRGBd& out, color_space_t colorSpace, 
         if(call_srand)
             srand(time(NULL));
 
-        Fourier::randomPhase(randomPhase, [](int,int){return true;}, false);
+        if(phase!=NULL)
+            randomPhase.copy_pixels(*phase);
+        else
+            Fourier::randomPhase(randomPhase, [](int,int){return true;}, false);
 
         if(scale_randomPhase!=1.0)
             randomPhase.for_all_pixels([&] (ImageSpectrald::PixelType &pix)

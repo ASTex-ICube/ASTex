@@ -1,13 +1,16 @@
-#include "texton_cpu.h"
+#include "stamper.h"
 
 namespace ASTex
 {
 
-Stamper::Stamper(const std::vector<vec2> &pointArray, const ImageRGBd &tampon) :
+namespace Stamping
+{
+
+Stamper::Stamper(const std::vector<Eigen::Vector2f> &pointArray, const ImageRGBd &tampon) :
     m_pointArray(pointArray), m_stamp(tampon)
 {}
 
-BombingStamper::BombingStamper(const std::vector<vec2> &pointArray, const ImageRGBd &tampon) :
+BombingStamper::BombingStamper(const std::vector<Eigen::Vector2f> &pointArray, const ImageRGBd &tampon) :
     Stamper(pointArray, tampon)
 {}
 
@@ -16,12 +19,12 @@ ImageRGBd BombingStamper::generate(int imageWidth, int imageHeight)
 {
     ImageRGBd im_out;
 
-//    std::vector<vec2> points;
+//    std::vector<Eigen::Vector2f> points;
 //    points = m_pointArray->Generate(nb_points);
 
     im_out.initItk(imageWidth, imageHeight, true);
 
-    for(std::vector<vec2>::const_iterator it=m_pointArray.begin(); it!=m_pointArray.end(); ++it)
+    for(std::vector<Eigen::Vector2f>::const_iterator it=m_pointArray.begin(); it!=m_pointArray.end(); ++it)
     {
         int i = im_out.width() * (*it)[0]; //i & j: single point coordinates in im_out
         int j = im_out.height() * (*it)[1];
@@ -43,7 +46,7 @@ ImageRGBd BombingStamper::generate(int imageWidth, int imageHeight)
     return im_out;
 }
 
-TextonStamper::TextonStamper(const std::vector<vec2> &pointArray, const ImageRGBd &tampon) :
+TextonStamper::TextonStamper(const std::vector<Eigen::Vector2f> &pointArray, const ImageRGBd &tampon) :
     Stamper(pointArray, tampon),
     m_ratioX(1.0),
     m_ratioY(1.0),
@@ -55,6 +58,10 @@ TextonStamper::TextonStamper(const std::vector<vec2> &pointArray, const ImageRGB
 ImageRGBd TextonStamper::generate(int imageWidth, int imageHeight)
 {
     ImageRGBd im_out;
+    double nbHit;
+    double nbHitFullDomain;
+    double textonWidth;
+    double textonHeight;
 
     ImageRGBd::PixelType mean, sum;
     for(int i=0; i<3; ++i)
@@ -81,17 +88,18 @@ ImageRGBd TextonStamper::generate(int imageWidth, int imageHeight)
         }
     });
 
-//    std::vector<vec2> points;
+//    std::vector<Eigen::Vector2f> points;
 //    points = m_pointArray->Generate(nb_points);
 
     im_out.initItk(imageWidth, imageHeight, true);
 
-    double textonWidth = m_stamp.width();
-    double textonHeight = m_stamp.height();
+    textonWidth = m_stamp.width();
+    textonHeight = m_stamp.height();
 
-    double nb_hit=0;
+    nbHit=0;
+    nbHitFullDomain = 0;
 
-    for(std::vector<vec2>::const_iterator it=m_pointArray.begin(); it!=m_pointArray.end(); ++it)
+    for(std::vector<Eigen::Vector2f>::const_iterator it=m_pointArray.begin(); it!=m_pointArray.end(); ++it)
     {
 //        int i = im_out.width() * (*it)[0]; //i & j: single point coordinates in im_out (double)
 //        int j = im_out.height() * (*it)[1];
@@ -145,7 +153,7 @@ ImageRGBd TextonStamper::generate(int imageWidth, int imageHeight)
                     im_out.pixelAbsolute((x+im_out.width())%imageWidth, (y+im_out.height())%imageHeight)[c] += interpolatedValue;
                 }
             });
-            nb_hit=nb_hit + textonWidth*textonHeight; //with periodicity, the entire energy of the texton hits the texture all the time
+            nbHit=nbHit + textonWidth*textonHeight; //with periodicity, the entire energy of the texton hits the texture all the time
         }
         else
         {
@@ -200,24 +208,17 @@ ImageRGBd TextonStamper::generate(int imageWidth, int imageHeight)
                         pix[c] += interpolatedValue;
                     }
 
-                    nb_hit += pHit3/3.0;
+                    nbHit += pHit3/3.0;
                 }
             });
+            nbHitFullDomain += textonWidth*textonHeight;
         }
     }
 
-    float nb_hit_per_pixel = nb_hit/(imageWidth*imageHeight);
+    float nbHitPerPixel = nbHit/(imageWidth*imageHeight);
+    float lambda = float(nbHitPerPixel)/(m_stamp.width() * m_stamp.height());
 
-    //float unknownVariable = 1.4; //unknown variable is the total energy of the four corners of the margins (used to estimate)
-    float totalSize = imageWidth*imageHeight; /* : imageWidth*imageHeight + 1.5*(textonWidth*imageHeight + textonHeight*imageWidth) + unknownVariable*(textonHeight * textonWidth); //used to estimate */
-
-    float mean_nb_of_impacts = float(m_pointArray.size()) * (m_stamp.width() * m_stamp.height()) / totalSize; //only true for periodicity. Otherwise, have to be estimated
-    float lambda = float(nb_hit_per_pixel)/(m_stamp.width() * m_stamp.height());
-
-    std::cout << "Texton noise: number of impacts per pixel: " << std::to_string(nb_hit_per_pixel) << std::endl;
-    std::cout << "Mean number of impacts per pixel: " << std::to_string(mean_nb_of_impacts) << std::endl;
-    std::cout << "Normalization value chosen: " << std::to_string(totalSize) << std::endl;
-
+    std::cout << "Texton noise: number of impacts per pixel: " << std::to_string(nbHitPerPixel) << std::endl;
 
     im_out.for_all_pixels([&] (ImageRGBd::PixelType &pix) {
         for(int i=0; i<3; ++i)
@@ -230,5 +231,7 @@ ImageRGBd TextonStamper::generate(int imageWidth, int imageHeight)
 //vérifier paramètres
 //le tampon s'échantillonne
 //mip-map => taille vs resolution
+
+} //namsepace Stamping
 
 } //namespace ASTex

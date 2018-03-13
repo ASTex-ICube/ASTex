@@ -642,7 +642,7 @@ HistogramRGBBase<int> HistogramRGBBase<T>::quantize(PixelType inf, PixelType sup
 
     if(nb_classes_per_dimension<=0)
     {
-        nb_classes_per_dimension=(int)std::ceil(std::log(this->size())+1.0); //Sturges formula
+        nb_classes_per_dimension=(int)std::ceil(std::log2(this->size())+1.0); //Sturges formula
     }
 
     //fill histogram

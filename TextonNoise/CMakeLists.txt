@@ -2,8 +2,12 @@ cmake_minimum_required(VERSION 2.8)
  
 project(TextonNoise LANGUAGES CXX)
 
+find_package(Qt5Widgets REQUIRED)
+set(CMAKE_INCLUDE_CURRENT_DIR ON)
+set(CMAKE_AUTOMOC ON)
+
 find_package(ASTex)
 
-add_executable(texton_cpu texton_cpu.h texton_cpu.cpp histogram.h rpn_utils.h rpn_utils.cpp main.cpp)
-target_link_libraries(texton_cpu ASTex)
-
+add_executable(texton_cpu Stamping/stamper.h Stamping/stamper.cpp Stamping/stamp.h Stamping/stamp.cpp Stamping/sampler.h Stamping/sampler.cpp mipmap.h histogram.h rpn_utils.h rpn_utils.cpp texton_io.h texton_io.cpp gaussian_process.h imageviewer.h main.cpp)
+#target_link_libraries(texton_cpu ASTex)
+target_link_libraries(texton_cpu ASTex Qt5::Widgets)
