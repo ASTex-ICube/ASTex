@@ -130,7 +130,7 @@ const I& Mipmap<I>::mipmap(int xPowReduction, int yPowReduction)
 
     //The wanted mipmap is in the vector which holds mipmaps with width reduced only if the reduction on x is higher than the one on y ;
     //for access, each line of the anisotropic vector holds images that are already scaled down on x and y.
-    //For instance, at line (7, 2), the image is actually scaled down by (7, 9), so we have to take that in account.
+    //For instance, at line (7, 2), the image is actually scaled down by (7, 9 (7+2)), so we have to take that in account.
     //also, the first column of any anisotropic mipmap vector was made to hold a first reduction (so, that's the -1 in the last index) ;
     //finally, the anisotropic mipmap vector holds lines of different y reductions for the Width one, and vice versa for the Height one, so the indexes may look a little weird.
     return xPowReduction > yPowReduction ? m_anisoMipmapsWidth[yPowReduction][xPowReduction-yPowReduction-1] : m_anisoMipmapsHeight[xPowReduction][yPowReduction-xPowReduction-1];
@@ -143,7 +143,7 @@ void Mipmap<I>::filterDivide2Width(const I& texture, I& result)
     result.initItk(texture.width()/2, texture.height());
     result.for_all_pixels([&] (typename I::PixelType &pix, int x, int y)
     {
-        pix=(texture.pixelAbsolute(2*x, y) + texture.pixelAbsolute(2*x + 1, y)) * (1.0/2.0);
+        pix=(texture.pixelAbsolute(2*x, y) + texture.pixelAbsolute(2*x + 1, y)) * 0.5;
     });
 }
 
@@ -153,7 +153,7 @@ void Mipmap<I>::filterDivide2Height(const I& texture, I& result)
     result.initItk(texture.width(), texture.height()/2);
     result.for_all_pixels([&] (typename I::PixelType &pix, int x, int y)
     {
-        pix=(texture.pixelAbsolute(x, 2*y) + texture.pixelAbsolute(x, 2*y + 1)) * (1.0/2.0);
+        pix=(texture.pixelAbsolute(x, 2*y) + texture.pixelAbsolute(x, 2*y + 1)) * 0.5;
     });
 }
 
@@ -163,7 +163,7 @@ void Mipmap<I>::filterDivide2Full(const I& texture, I& result)
     result.initItk(texture.width()/2, texture.height()/2);
     result.for_all_pixels([&] (typename I::PixelType &pix, int x, int y)
     {
-        pix=(texture.pixelAbsolute(2*x, 2*y) + texture.pixelAbsolute(2*x + 1, 2*y) + texture.pixelAbsolute(2*x, 2*y + 1) + texture.pixelAbsolute(2*x + 1, 2*y + 1)) * (1.0/4.0); //TODO: /4.0 doesn't work if I is ImageRGBd, but *(1.0/4.0) does.
+        pix=(texture.pixelAbsolute(2*x, 2*y) + texture.pixelAbsolute(2*x + 1, 2*y) + texture.pixelAbsolute(2*x, 2*y + 1) + texture.pixelAbsolute(2*x + 1, 2*y + 1)) * 0.25; //TODO: /4.0 doesn't work if I is ImageRGBd, but *0.25 does.
     });
 }
 
