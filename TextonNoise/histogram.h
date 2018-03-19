@@ -557,18 +557,17 @@ private:
 
     real      m_mean[3];
     real      m_covariance[6];
-    real      m_inverseCovariance[6];
 };
 
 template <typename T>
 HistogramRGBBase<T>::HistogramRGBBase() :
-    Histogram<ImageCommon<ImageRGBBase<T>, false>, CompareRGBPixels<T>>(), m_mean(), m_covariance(), m_inverseCovariance()
+    Histogram<ImageCommon<ImageRGBBase<T>, false>, CompareRGBPixels<T>>(), m_mean(), m_covariance()
 {
 }
 
 template <typename T>
 HistogramRGBBase<T>::HistogramRGBBase(const ImageCommon<ImageRGBBase<T>, false>& image) :
-    Histogram<ImageCommon<ImageRGBBase<T>, false>, CompareRGBPixels<T>>(image), m_mean(), m_covariance(), m_inverseCovariance()
+    Histogram<ImageCommon<ImageRGBBase<T>, false>, CompareRGBPixels<T>>(image), m_mean(), m_covariance()
 {
     compute(image);
 }
@@ -627,8 +626,6 @@ void HistogramRGBBase<T>::updateStatistics()
 
     for(int i=0; i<6; ++i)
         m_covariance[i] /= (this->size()-1);
-
-    //m_inverseCovariance=glm::inverse(m_covariance);
 
     return;
 }
