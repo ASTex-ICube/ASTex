@@ -17,7 +17,7 @@ using namespace ASTex;
  * If implementing this you should consider 1) see how you can use updateStatistics() on the fly efficiently,
  * 2) modifying the HistogramStruct such that you don't have to use bin.first for the value and bin.second for the frequency, which is painful
  * 3) correcting the chi2 or removing it
- * the rest is up to you
+ * the rest is up to me now I guess.
  */
 template <class I, class Compare = std::less<typename I::PixelType> >
 class Histogram
@@ -705,6 +705,8 @@ public:
     void saveHistogram(const std::string& out, int nb_classes_per_dimension=0) const;
     void saveFullHistogram(const std::string& out) const;
 
+    real            min() {return m_min;}
+    real            max() {return m_max;}
     real            mean() {return m_mean;}
     real            variance() {return m_variance;}
 
@@ -735,13 +737,19 @@ public:
 
 private:
 
+    real            m_min;
+    real            m_max;
     real            m_mean;
     real            m_variance;
 };
 
 template <typename T>
 HistogramGrayBase<T>::HistogramGrayBase() :
-    Histogram<ImageCommon<ImageGrayBase<T>, false>, std::less<T>>(), m_mean(0), m_variance(0)
+    Histogram<ImageCommon<ImageGrayBase<T>, false>, std::less<T>>(),
+    m_min(std::numeric_limits<int>::max()),
+    m_max(std::numeric_limits<int>::min()),
+    m_mean(0),
+    m_variance(0)
 {}
 
 template <typename T>
@@ -798,15 +806,18 @@ void HistogramGrayBase<T>::saveFullHistogram(const std::string& out) const
 template <typename T>
 void HistogramGrayBase<T>::updateStatistics()
 {
+    //reset
+    m_min=std::numeric_limits<int>::max();
+    m_max=std::numeric_limits<int>::min();
     m_mean=0;
     m_variance=0;
+    //mean, min and max
     for(const auto& bin : *this)
     {
+        m_min = std::min(m_min, bin);
+        m_max = std::max(m_max, bin);
         m_mean+=(real)bin.first*bin.second / this->size();
     }
-
-    //skewness[i] += invN * deviation * deviation * deviation; //< the variance except the pow is 3 instead of two
-    //kurtosis[i] += invN * deviation * deviation * deviation * deviation; //< the variance except the pow is 4 instead of two
 
     for(const auto& bin : *this)
     {
@@ -824,6 +835,8 @@ void HistogramGrayBase<T>::clear()
 
     m_mean=0;
     m_variance=0;
+    m_min=std::numeric_limits<int>::max();
+    m_max=std::numeric_limits<int>::min();
 
     return;
 }
@@ -831,6 +844,7 @@ void HistogramGrayBase<T>::clear()
 template <typename T>
 typename HistogramGrayBase<T>::PixelType HistogramGrayBase<T>::meanPixelType()
 {
+    //TODO: remember what this was for again?
     PixelType mean;
     mean=(PixelType)m_mean;
     return mean;
@@ -875,6 +889,7 @@ typename HistogramGrayBase<T>::real HistogramGrayBase<T>::fitsNormalChi2() const
 template <typename T>
 void HistogramGrayBase<T>::computeNormalizedAutoCovariance(const ImageCommon<ImageGrayBase<T>, true> &image, ImageCommon<ImageGrayBase<T>, false> &ac)
 {
+    //TODO: decide whether finishing it or removing it: exists in fourier.hpp
     if(!ac.is_initialized() || ac.width()!=image.width() || ac.height()!=image.height())
         ac.initItk(image.width(), image.height());
 
