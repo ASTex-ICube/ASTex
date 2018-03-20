@@ -48,7 +48,7 @@ std::vector<Eigen::Vector2f> PoissonSampler::generate()
     std::vector<Eigen::Vector2f> ProcessList;
 
     // create the grid
-    float CellSize = m_minDistance / sqrt( 2.0f );
+    float CellSize = minDistance / sqrt( 2.0f );
 
     int GridW = ( int )ceil( 1.0f / CellSize );
     int GridH = ( int )ceil( 1.0f / CellSize );
@@ -77,11 +77,11 @@ std::vector<Eigen::Vector2f> PoissonSampler::generate()
 
         for ( int i = 0; i < m_newPointsCount; i++ )
         {
-            Eigen::Vector2f NewPoint = GenerateRandomPointAround( Point, m_minDistance, m_generator );
+            Eigen::Vector2f NewPoint = GenerateRandomPointAround( Point, minDistance, m_generator );
 
             bool Fits = m_generateInCircle ? IsInCircle(NewPoint) : IsInRectangle(NewPoint);
 
-            if ( Fits && !Grid.IsInNeighbourhood( NewPoint, m_minDistance, CellSize ) )
+            if ( Fits && !Grid.IsInNeighbourhood( NewPoint, minDistance, CellSize ) )
             {
                 ProcessList.push_back( NewPoint );
                 SamplePoints.push_back( NewPoint );
