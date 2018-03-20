@@ -113,8 +113,7 @@ typename StampDiscrete<I>::PixelType StampDiscrete<I>::pixel(double x, double y)
     int dx, dy, tx, ty;
     PixelType pixel;
     double dimX, dimY;
-    assert(x>=0 && y>=0 && x<width() && y<height()
-           && "StampDiscrete::pixel(x, y): x and y must be within range of the stamp");
+
     dimX = x / m_dimensions.dimX;
     dimY = y / m_dimensions.dimY; //set x and y to scale;
     tx = (int) dimX;
@@ -122,17 +121,21 @@ typename StampDiscrete<I>::PixelType StampDiscrete<I>::pixel(double x, double y)
     dx = dimX - tx;
     dy = dimY - ty;
 
+    auto lmbd_is_in_range = [&] (int lx, int ly)
+    {
+        return lx >= 0 && lx < m_stamp.width() && ly >= 0 && ly < m_stamp.height();
+    };
+
     if(m_rule == SD_BILINEAR)
     {
-        pixel += m_stamp.pixelAbsolute(tx, ty) * ((1-dx)*(1-dy));
-        if(dimY < m_stamp.height()-1)
+        if(tx >= 0 && ty >= 0)
+            pixel += m_stamp.pixelAbsolute(tx, ty) * ((1-dx)*(1-dy));
+        if(tx >=0 && ty < m_stamp.height()-1)
             pixel += m_stamp.pixelAbsolute(tx, ty+1) * ((1-dx)*dy);
-        if(dimX < m_stamp.width()-1)
-        {
+        if(tx < m_stamp.width()-1 && ty >= 0)
             pixel += m_stamp.pixelAbsolute(tx+1, ty) * (dx*(1-dy));
-            if(dimY < m_stamp.height()-1)
-                pixel += m_stamp.pixelAbsolute(tx+1, ty+1) * (dx*dy);
-        }
+        if(tx < m_stamp.width()-1 && ty < m_stamp.height()-1)
+            pixel += m_stamp.pixelAbsolute(tx+1, ty+1) * (dx*dy);
     }
     else if(m_rule == SD_NEAREST)
     {
@@ -141,10 +144,10 @@ typename StampDiscrete<I>::PixelType StampDiscrete<I>::pixel(double x, double y)
         if(dy >= 0.5)
             ++ty;
 
-        pixel = m_stamp.pixelAbsolute(tx, ty);
+        pixel = lmbd_is_in_range(tx, ty) ? m_stamp.pixelAbsolute(tx, ty) : PixelType();
     }
     else //m_rule == SD_TRUNC
-        pixel = m_stamp.pixelAbsolute(tx, ty);
+        pixel = lmbd_is_in_range(tx, ty) ? m_stamp.pixelAbsolute(tx, ty) : PixelType();
 
     return pixel;
 }
