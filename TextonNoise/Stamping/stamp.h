@@ -30,7 +30,8 @@ template<typename I>
 class StampBase
 {
 public:
-    StampBase();
+    StampBase() {}
+    StampBase(const StampBase &other) : StampBase() {}
 
     typedef typename I::PixelType PixelType;
 
@@ -49,14 +50,16 @@ class StampDiscrete : public StampBase<I>
 {
 public:
     StampDiscrete();
-    StampDiscrete(const I &stamp);
+    StampDiscrete(const StampDiscrete &other);
+    StampDiscrete(const I &image);
 
     //types
 
     typedef typename StampBase<I>::PixelType PixelType;
     class Dimensions
     {
-        Dimensions(): dimX(1.0), dimY(1.0) {}
+    public:
+        Dimensions(double x=1.0, double y=1.0): dimX(x), dimY(y) {}
         double dimX;
         double dimY;
     };
@@ -64,14 +67,16 @@ public:
 
     //get
 
-    Size        size() const                        {return m_stamp.size();}
-    int         width() const                       {return m_stamp.width();}
-    int         height() const                      {return m_stamp.height();}
+    Size        size() const                        {return m_image.size();}
+    int         width() const                       {return m_image.width();}
+    int         height() const                      {return m_image.height();}
 
     Dimensions  dimensions() const                  {return m_dimensions;}
     double dimX() const                             {return m_dimensions.dimX;}
     double dimY() const                             {return m_dimensions.dimY;}
     interpolation_rule_t interpolationRule() const  {return m_rule;}
+
+    const I& image() const                          {return m_image;}
 
     PixelType   pixel(double x, double y) const;
 
@@ -82,9 +87,11 @@ public:
     void setDimX(double dimX);
     void setDimY(double dimY);
 
+    void setImage(const I& image); //TODO: might be sensitive, check for itk documentation
+
 private:
 
-    I                       m_stamp;
+    I                       m_image;
     interpolation_rule_t    m_rule;
     Dimensions              m_dimensions;
 };
@@ -95,14 +102,23 @@ private:
 
 template<typename I>
 StampDiscrete<I>::StampDiscrete() :
-    m_stamp(),
+    m_image(),
     m_rule(SD_BILINEAR),
     m_dimensions(Dimensions(1.0, 1.0))
 {}
 
 template<typename I>
-StampDiscrete<I>::StampDiscrete(const I &stamp) :
-    m_stamp(stamp), //TODO: copy pixels?
+StampDiscrete<I>::StampDiscrete(const StampDiscrete &other) :
+    m_image(other.image()), //warning!!!
+    m_rule(other.interpolationRule()),
+    m_dimensions(other.dimensions())
+{}
+
+
+template<typename I>
+StampDiscrete<I>::StampDiscrete(const I &image) :
+    StampBase<I>::StampBase(),
+    m_image(image), //TODO: copy pixels?
     m_rule(SD_BILINEAR),
     m_dimensions(Dimensions(1.0, 1.0))
 {}
@@ -121,21 +137,21 @@ typename StampDiscrete<I>::PixelType StampDiscrete<I>::pixel(double x, double y)
     dx = dimX - tx;
     dy = dimY - ty;
 
-    auto lmbd_is_in_range = [&] (int lx, int ly)
+    auto lmbd_is_in_range = [&] (int lx, int ly) -> bool
     {
-        return lx >= 0 && lx < m_stamp.width() && ly >= 0 && ly < m_stamp.height();
+        return lx >= 0 && lx < m_image.width() && ly >= 0 && ly < m_image.height();
     };
 
     if(m_rule == SD_BILINEAR)
     {
         if(tx >= 0 && ty >= 0)
-            pixel += m_stamp.pixelAbsolute(tx, ty) * ((1-dx)*(1-dy));
-        if(tx >=0 && ty < m_stamp.height()-1)
-            pixel += m_stamp.pixelAbsolute(tx, ty+1) * ((1-dx)*dy);
-        if(tx < m_stamp.width()-1 && ty >= 0)
-            pixel += m_stamp.pixelAbsolute(tx+1, ty) * (dx*(1-dy));
-        if(tx < m_stamp.width()-1 && ty < m_stamp.height()-1)
-            pixel += m_stamp.pixelAbsolute(tx+1, ty+1) * (dx*dy);
+            pixel += m_image.pixelAbsolute(tx, ty) * ((1-dx)*(1-dy));
+        if(tx >=0 && ty < m_image.height()-1)
+            pixel += m_image.pixelAbsolute(tx, ty+1) * ((1-dx)*dy);
+        if(tx < m_image.width()-1 && ty >= 0)
+            pixel += m_image.pixelAbsolute(tx+1, ty) * (dx*(1-dy));
+        if(tx < m_image.width()-1 && ty < m_image.height()-1)
+            pixel += m_image.pixelAbsolute(tx+1, ty+1) * (dx*dy);
     }
     else if(m_rule == SD_NEAREST)
     {
@@ -144,10 +160,10 @@ typename StampDiscrete<I>::PixelType StampDiscrete<I>::pixel(double x, double y)
         if(dy >= 0.5)
             ++ty;
 
-        pixel = lmbd_is_in_range(tx, ty) ? m_stamp.pixelAbsolute(tx, ty) : PixelType();
+        pixel = lmbd_is_in_range(tx, ty) ? m_image.pixelAbsolute(tx, ty) : PixelType();
     }
     else //m_rule == SD_TRUNC
-        pixel = lmbd_is_in_range(tx, ty) ? m_stamp.pixelAbsolute(tx, ty) : PixelType();
+        pixel = lmbd_is_in_range(tx, ty) ? m_image.pixelAbsolute(tx, ty) : PixelType();
 
     return pixel;
 }
@@ -182,6 +198,13 @@ void StampDiscrete<I>::setDimY(double dimY)
     assert(dimY>0
            && "setDimY: dimY must be > 0");
     m_dimensions.dimY = dimY;
+}
+
+template<typename I>
+void StampDiscrete<I>::setImage(const I& image)
+{
+    assert(image.isInitialized());
+    m_image = image;
 }
 
 } //namespace Stamping
