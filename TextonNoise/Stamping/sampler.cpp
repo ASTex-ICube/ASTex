@@ -38,9 +38,10 @@ std::vector<Eigen::Vector2f> UniformSampler::generate()
 
 std::vector<Eigen::Vector2f> PoissonSampler::generate()
 {
-    if ( m_minDistance < 0.0f )
+    double minDistance=m_minDistance;
+    if ( minDistance < 0.0f )
     {
-        m_minDistance = sqrt( float(m_nbPoints) ) / float(m_nbPoints);
+        minDistance = sqrt( float(m_nbPoints) ) / float(m_nbPoints);
     }
 
     std::vector<Eigen::Vector2f> SamplePoints;
