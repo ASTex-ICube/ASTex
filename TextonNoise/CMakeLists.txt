@@ -8,6 +8,6 @@ set(CMAKE_AUTOMOC ON)
 
 find_package(ASTex)
 
-add_executable(texton_cpu Stamping/stamper.h Stamping/stamper.cpp Stamping/stamp.h Stamping/stamp.cpp Stamping/sampler.h Stamping/sampler.cpp mipmap.h histogram.h rpn_utils.h rpn_utils.cpp texton_io.h texton_io.cpp gaussian_process.h imageviewer.h main.cpp)
+add_executable(texton_cpu Stamping/stamper.h Stamping/stamp.h Stamping/sampler.h Stamping/sampler.cpp mipmap.h histogram.h rpn_utils.h rpn_utils.cpp texton_io.h texton_io.cpp gaussian_process.h imageviewer.h main.cpp)
 #target_link_libraries(texton_cpu ASTex)
 target_link_libraries(texton_cpu ASTex Qt5::Widgets)
