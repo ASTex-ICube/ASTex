@@ -94,6 +94,8 @@ private:
     I                       m_image;
     interpolation_rule_t    m_rule;
     Dimensions              m_dimensions;
+
+    static PixelType ms_zero;
 };
 
 //Declaration of StampContinuous?
@@ -114,6 +116,8 @@ StampDiscrete<I>::StampDiscrete(const StampDiscrete &other) :
     m_dimensions(other.dimensions())
 {}
 
+template<typename I>
+typename StampDiscrete<I>::PixelType StampDiscrete<I>::ms_zero;
 
 template<typename I>
 StampDiscrete<I>::StampDiscrete(const I &image) :
@@ -121,13 +125,16 @@ StampDiscrete<I>::StampDiscrete(const I &image) :
     m_image(image), //TODO: copy pixels?
     m_rule(SD_BILINEAR),
     m_dimensions(Dimensions(1.0, 1.0))
-{}
+{
+//    m_image.initItk(image.width(), image.height());
+//    m_image.copy_pixels(image);
+}
 
 template<typename I>
 typename StampDiscrete<I>::PixelType StampDiscrete<I>::pixel(double x, double y) const
 {
     int dx, dy, tx, ty;
-    PixelType pixel;
+    PixelType pixel = ms_zero;
     double dimX, dimY;
 
     dimX = x / m_dimensions.dimX;
@@ -153,17 +160,17 @@ typename StampDiscrete<I>::PixelType StampDiscrete<I>::pixel(double x, double y)
         if(tx < m_image.width()-1 && ty < m_image.height()-1)
             pixel += m_image.pixelAbsolute(tx+1, ty+1) * (dx*dy);
     }
-    else if(m_rule == SD_NEAREST)
+    else if(m_rule == SD_NEAREST) //TODO: that's not actually a real nearest is it
     {
         if(dx >= 0.5)
             ++tx;
         if(dy >= 0.5)
             ++ty;
 
-        pixel = lmbd_is_in_range(tx, ty) ? m_image.pixelAbsolute(tx, ty) : PixelType();
+        pixel = lmbd_is_in_range(tx, ty) ? m_image.pixelAbsolute(tx, ty) : ms_zero;
     }
     else //m_rule == SD_TRUNC
-        pixel = lmbd_is_in_range(tx, ty) ? m_image.pixelAbsolute(tx, ty) : PixelType();
+        pixel = lmbd_is_in_range(tx, ty) ? m_image.pixelAbsolute(tx, ty) : ms_zero;
 
     return pixel;
 }
