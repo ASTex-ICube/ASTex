@@ -151,7 +151,7 @@ bool import_texton(ASTex::ImageRGBd& texton , std::string file_path)
     return true;
 }
 
-int export_texton(ASTex::ImageRGBd& texton, std::string file_path,
+bool export_texton(ASTex::ImageRGBd& texton, std::string file_path,
                   int order,
                   ImageRGBd::PixelType &mean)
 {
