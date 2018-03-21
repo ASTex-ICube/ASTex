@@ -24,10 +24,10 @@ public:
     virtual std::vector<Eigen::Vector2f> generate()=0;
 };
 
-class RegularSampler : public SamplerBase
+class SamplerRegular : public SamplerBase
 {
 public:
-    RegularSampler(int nbPoints=0) :
+    SamplerRegular(int nbPoints=0) :
         SamplerBase(),
         m_nbPoints(nbPoints)
     {}
@@ -40,10 +40,10 @@ private:
     unsigned int m_nbPoints;
 };
 
-class UniformSampler : public SamplerBase
+class SamplerUniform : public SamplerBase
 {
 public:
-    UniformSampler(int nbPoints=0) :
+    SamplerUniform(int nbPoints=0) :
         SamplerBase(),
         m_nbPoints(nbPoints)
     {}
@@ -56,10 +56,10 @@ private:
     unsigned int m_nbPoints;
 };
 
-class PoissonSampler: public SamplerBase
+class SamplerPoisson: public SamplerBase
 {
 public:
-    PoissonSampler(int nbPoints=0) :
+    SamplerPoisson(int nbPoints=0) :
         SamplerBase(),
         m_nbPoints(nbPoints),
         m_generator(),

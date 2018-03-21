@@ -6,7 +6,7 @@ namespace ASTex
 namespace Stamping
 {
 
-std::vector<Eigen::Vector2f> RegularSampler::generate()
+std::vector<Eigen::Vector2f> SamplerRegular::generate()
 {
     std::vector<Eigen::Vector2f> SamplePoints;
     SamplePoints.reserve(m_nbPoints);
@@ -23,7 +23,7 @@ std::vector<Eigen::Vector2f> RegularSampler::generate()
     return SamplePoints;
 }
 
-std::vector<Eigen::Vector2f> UniformSampler::generate()
+std::vector<Eigen::Vector2f> SamplerUniform::generate()
 {
     std::vector<Eigen::Vector2f> SamplePoints;
     SamplePoints.reserve(m_nbPoints);
@@ -36,7 +36,7 @@ std::vector<Eigen::Vector2f> UniformSampler::generate()
     return SamplePoints;
 }
 
-std::vector<Eigen::Vector2f> PoissonSampler::generate()
+std::vector<Eigen::Vector2f> SamplerPoisson::generate()
 {
     double minDistance=m_minDistance;
     if ( minDistance < 0.0f )
