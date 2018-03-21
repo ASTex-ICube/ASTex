@@ -9,11 +9,52 @@
 
 #include "imageviewer.h"
 
-#define MY_PATH std::string("/home/nlutz/img/texton/")
+#define MY_PATH std::string("/home/nlutz/img/")
 
 using namespace ASTex;
 
-int main( int argc, char **argv )
+int test_genet(int argc, char **argv)
+{
+    QApplication app(argc, argv);
+    std::setlocale(LC_ALL,"C");
+
+    std::string filename_source=argv[1];
+    std::string name_file = IO::remove_path(filename_source);
+    std::string name_noext = IO::remove_ext(name_file);
+
+    //std::string out_path = argv[1];
+
+    std::string input_noext=name_noext;
+
+    filename_source=argv[2];
+    name_file = IO::remove_path(filename_source);
+    name_noext = IO::remove_ext(name_file);
+
+    //Loading sample
+    //Loading im_in
+
+    ImageGrayd im_in, im_out;
+    IO::loadu8_in_01(im_in, std::string(MY_PATH)+argv[1]);
+
+    im_in.for_all_pixels([&] (ImageGrayd::PixelType &pix)
+    {
+        pix *= pix;
+    });
+
+    ImageSpectrald modulus, phase;
+    Fourier::fftForwardModulusAndPhase(im_in, modulus, phase);
+
+    modulus.for_all_pixels([&] (ImageSpectrald::PixelType &pix)
+    {
+        pix = std::abs(pix);
+    });
+
+    IO::save01_in_u8(modulus, std::string(MY_PATH)+"varSpectrum2_" + name_noext + ".png");
+
+    return 0;
+}
+
+int test_texton(int argc, char **argv)
 {
     if( argc < 3 )
     {
@@ -47,29 +88,44 @@ int main( int argc, char **argv )
     //IO::loadu8_in_01(im_texton, MY_PATH+filename_source);
 
     //ImageRGBd::PixelType textonMean;
-    import_texton(im_texton, MY_PATH+filename_source);
+    assert(import_texton_from_png(im_texton, MY_PATH+filename_source));
 
     HistogramRGBd histo_texton(im_texton);
+    ImageRGBd::PixelType mean;
+    for(int i=0; i<3; ++i)
+        mean[i] = histo_texton.mean(i);
+    //transformation image -> texton
+    im_texton.for_all_pixels([&] (ImageRGBd::PixelType &pix) {
+        pix -= mean;
+        pix = pix * (1.0/std::sqrt(im_texton.width()*im_texton.height()));
+    });
 
     //Testing
 
-    Stamping::PoissonSampler sampler;
-    sampler.setNbPoints(300);
-    std::vector<Eigen::Vector2f> pointArray = sampler.generate();
+    Stamping::SamplerUniform sampler;
+    sampler.setNbPoints(30);
+    Stamping::StampDiscrete<ImageRGBd> stamp(im_texton);
+    stamp.setInterpolationRule(Stamping::StampDiscrete<ImageRGBd>::SD_BILINEAR);
 
-    Stamping::TextonStamper tamponneur(pointArray, im_texton);
+    Stamping::StamperTexton<ImageRGBd> tamponneur(&sampler, &stamp);
 
-    tamponneur.setPeriodicity(false);
+    tamponneur.setPeriodicity(true);
     tamponneur.setUseMargins(true);
-    tamponneur.setBilinearInterpolation(true);
 
     int W=im_in.width(), H=im_in.height();
 
     im_out = tamponneur.generate(W, H);
 
+    //transformation texton -> image
+    im_out.for_all_pixels([&] (ImageRGBd::PixelType &pix) {
+        //pix = pix * std::sqrt(im_texton.width()*im_texton.height()); //mistake: no need to re-normalize on top
+        pix += mean;
+    });
+
     im_sample.initItk(W, H, true);
 
 
+    std::vector<Eigen::Vector2f> pointArray = sampler.generate();
     for(std::vector<Eigen::Vector2f>::iterator it=pointArray.begin(); it!=pointArray.end(); ++it)
     {
         int i = im_sample.width() * (*it)[0]; //i & j: single point coordinates in im_out
@@ -148,26 +204,98 @@ int main( int argc, char **argv )
     IO::save01_in_u8(im_texton, std::string(MY_PATH) + name_noext + "_texton.png");
 
     ImageViewer imgv_in("Source", &app, 0);
+    imgv_in.setWindowTitle("Source");
     imgv_in.set_rgb01(im_in.getDataPtr(), im_in.width(),im_in.height(),1);
     imgv_in.show();
 
     ImageViewer imgv_sample("Sampling", &app, 1);
+    imgv_sample.setWindowTitle("Sampling");
     imgv_sample.set_rgb01(im_sample.getDataPtr(), im_sample.width(), im_sample.height(),1);
     imgv_sample.show();
 
     ImageViewer imgv_rpn("RPN", &app, 2);
+    imgv_rpn.setWindowTitle("RPN");
     imgv_rpn.set_rgb01(im_rpn.getDataPtr(), im_rpn.width(),im_rpn.height(),1);
     imgv_rpn.show();
 
     ImageViewer imgv_out("Texton noise", &app, 3);
+    imgv_out.setWindowTitle("Texton noise");
     imgv_out.set_rgb01(im_out.getDataPtr(), im_out.width(), im_out.height(),1);
     imgv_out.show();
 
     im_texton.for_all_pixels(clamp);
 
     ImageViewer imgv_texton("Texton", &app, 4);
+    imgv_texton.setWindowTitle("Texton");
     imgv_texton.set_rgb01(im_texton.getDataPtr(), im_texton.width(), im_texton.height(),1);
     imgv_texton.show();
 
     return app.exec();
+}
+
+int test_autoconvolutionSpectrum(int argc, char **argv)
+{
+    if( argc < 3 )
+    {
+        std::cerr << "Usage: " << std::endl;
+        std::cerr << argv[0] << " <out_path> [source code dependant options]" << std::endl;
+
+        return EXIT_FAILURE;
+    }
+
+    QApplication app(argc, argv);
+    std::setlocale(LC_ALL,"C");
+
+    std::string filename_source=argv[1];
+    std::string name_file = IO::remove_path(filename_source);
+    std::string name_noext = IO::remove_ext(name_file);
+
+    //std::string out_path = argv[1];
+
+    std::string input_noext=name_noext;
+
+    filename_source=argv[2];
+    name_file = IO::remove_path(filename_source);
+    name_noext = IO::remove_ext(name_file);
+
+    //Loading sample
+    //Loading im_in
+
+    ImageGrayd im_in;
+    IO::loadu8_in_01(im_in, std::string(MY_PATH)+argv[1]);
+
+    ImageSpectrald modulus, phase;
+    ImageSpectrald mm;
+    modulus.initItk(im_in.width(), im_in.height());
+    mm.initItk(modulus.width(), modulus.height(), true);
+    phase.initItk(im_in.width(), im_in.height());
+    Fourier::fftForwardModulusAndPhase(im_in, modulus, phase);
+    modulus.for_all_pixels([&] (ImageSpectrald::PixelType &p1, int x, int y)
+    {
+        modulus.for_all_pixels([&] (ImageSpectrald::PixelType &p2)
+        {
+            mm.pixelAbsolute(x, y) += p1 * p2;
+        });
+    });
+
+    ImageViewer imgv_in("Source", &app, 0);
+    imgv_in.set_gray01(im_in.getDataPtr(), im_in.width(), im_in.height(), 1);
+    imgv_in.show();
+
+    ImageViewer imgv_modulus("Input PSD", &app, 1);
+    imgv_modulus.set_gray01(modulus.getDataPtr(), modulus.width(), modulus.height(), 1);
+    imgv_modulus.show();
+
+    ImageViewer imgv_out("Output PSD", &app, 2);
+    imgv_out.set_gray01(mm.getDataPtr(), mm.width(), mm.height(), 1);
+    imgv_out.show();
+
+    return app.exec();
+}
+
+int main( int argc, char **argv )
+{
+    //test_genet(argc, argv);
+    test_texton(argc, argv);
+    //test_autoconvolutionSpectrum(argc, argv);
 }
