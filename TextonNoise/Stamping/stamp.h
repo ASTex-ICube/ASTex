@@ -96,7 +96,7 @@ private:
                                                          typename I::PixelType q21,
                                                          typename I::PixelType q22,
                                                          int x1, int y1,
-                                                         double x, double y);
+                                                         double x, double y) const;
 
     I                       m_image;
     interpolation_rule_t    m_rule;
@@ -187,7 +187,7 @@ typename I::PixelType StampDiscrete<I>::bilinear_interpolation_(typename I::Pixe
                                                                 typename I::PixelType q21,
                                                                 typename I::PixelType q22,
                                                                 int x1, int y1,
-                                                                double x, double y)
+                                                                double x, double y) const
 {
     double x2x, y2y, yy1, xx1;
     yy1 = y - y1;
