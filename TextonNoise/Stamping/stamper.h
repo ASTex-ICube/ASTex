@@ -1,4 +1,3 @@
-
 #ifndef __STAMPER__H__
 #define __STAMPER__H__
 
@@ -15,6 +14,9 @@
 #include <Stamping/stamp.h>
 #include <Stamping/sampler.h>
 
+//TODO: consider removing the const of std::vector<const StampBase<I> *>
+//if you think it should be authorized to modify the stamps given by the caller.
+
 namespace ASTex
 {
 
@@ -26,30 +28,57 @@ class StamperBase
 {
 public:
 
-    StamperBase(SamplerBase *sampler=0, const StampBase<I> *stamp=0)
-        : m_sampler(sampler), m_stamp(stamp) {}
+    StamperBase(SamplerBase *sampler=0, const StampBase<I> *stamp=0);
+    virtual ~StamperBase()                                      {delete(m_stampIndexGenerator);}
+
+    //nested types
 
     typedef typename StampBase<I>::PixelType PixelType;
+    class Func_stampIndexGeneratorBase
+    {
+    public:
+        Func_stampIndexGeneratorBase() {}
+        virtual ~Func_stampIndexGeneratorBase() {}
+        virtual size_t operator() (void)=0;
+    };
+    class Func_stampIndexGeneratorZero : public Func_stampIndexGeneratorBase
+    {
+    public:
+        Func_stampIndexGeneratorZero() : Func_stampIndexGeneratorBase() {}
+        size_t operator() (void) {return 0;}
+    };
+
+    //main function
 
     virtual I generate(int imageWidth, int imageHeight) const = 0;
 
     //get
 
     SamplerBase* sampler() const  {return m_sampler;}
-    const StampBase<I>* stamp() const   {return m_stamp;}
+    const StampBase<I>* stamp(size_t index) const               {return m_stampVec[index];}
+
+    const StampBase<I>*& operator[] (size_t index)              {return m_stampVec[index];}
+    const StampBase<I>* const & operator[] (size_t index) const {return m_stampVec[index];}
+
+    size_t stampVecSize() const                                 {return m_stampVec.size();}
 
     //set
 
-    void setSampler(const SamplerBase* sampler)     {m_sampler = sampler;}
-    void setStamp(const StampBase<I>* stamp)           {m_stamp = stamp;}
+    void setSampler(const SamplerBase* sampler)                 {m_sampler = sampler;}
+    void setStamp(const StampBase<I>* stamp, size_t index)      {m_stampVec[index] = stamp;}
+
+    //add/remove
+
+    void addStamp(const StampBase<I>* stamp)                    {m_stampVec.push_back(stamp);}
+    void removeStamp(size_t index)                              {m_stampVec.erase(m_stampVec.begin() + index); }
 
 protected:
 
     void assert_null_before_generate_() const;
 
-    SamplerBase                *m_sampler;
-    const StampBase<I>         *m_stamp;
-
+    SamplerBase                         *m_sampler;
+    std::vector<const StampBase<I> *>   m_stampVec;
+    Func_stampIndexGeneratorBase        *m_stampIndexGenerator;
 };
 
 template<typename I>
@@ -99,45 +128,64 @@ private:
 };
 
 template<typename I>
+StamperBase<I>::StamperBase(SamplerBase *sampler, const StampBase<I> *stamp)
+    : m_sampler(sampler), m_stampVec(), m_stampIndexGenerator(0)
+{
+    if(stamp!=0) //allows the user to insert a default stamp
+        m_stampVec.push_back(stamp);
+}
+
+template<typename I>
 void StamperBase<I>::assert_null_before_generate_() const
 {
     assert(m_sampler != NULL && "StamperBase::generate(w, h): sampler uninitialized (use setSampler(s) to give one)");
-    assert(m_stamp != NULL && "StamperBase::generate(w, h): stamp uninitialized (use setStamp(s) to give one)");
+    for(typename std::vector<const StampBase<I> *>::const_iterator it=m_stampVec.begin(); it!=m_stampVec.end(); ++it)
+        assert( (*it) != NULL && "StamperBase::generate(w, h): stamp uninitialized found (use addStamp(s) to give one)");
     return;
 }
 
 template<typename I>
 StamperBombing<I>::StamperBombing(SamplerBase *sampler, const StampBase<I> *stamp) :
     StamperBase<I>(sampler, stamp)
-{}
+{
+    /// v it doesn't have to look this complicated if you define your own functor class for index generation.
+    /// note that it will automatically be deleted by the base class destructor.
+    this->m_stampIndexGenerator = new typename StamperBase<I>::Func_stampIndexGeneratorZero;
+}
 
 template<typename I>
 I StamperBombing<I>::generate(int imageWidth, int imageHeight) const
 {
     I im_out;
-    int i, j, textonWidth, textonHeight, tx, ty, rx, ry;
-    this->assert_null_before_generate_();
-    StampBase<I>::m_pointArray = StampBase<I>::m_sampler->generate();
+    int i, j, stampWidth, stampHeight, tx, ty, rx, ry;
+    std::vector<Eigen::Vector2f> verticesArray; //stores the result of the sampler
+    const StampBase<I> *stamp=0;
+    this->assert_null_before_generate_(); /// < you can use this (or not) to check for a null sampler or a null stamp
+    verticesArray = this->m_sampler->generate();
 
     im_out.initItk(imageWidth, imageHeight, true);
-    textonWidth = StampBase<I>::m_stamp->width();
-    textonHeight = StampBase<I>::m_stamp->height();
 
-    for(std::vector<Eigen::Vector2f>::const_iterator it=StampBase<I>::m_pointArray.begin(); it!=StampBase<I>::m_pointArray.end(); ++it)
+    /// v example of iteration over the sampler's result
+    for(std::vector<Eigen::Vector2f>::const_iterator it=verticesArray.begin(); it!=verticesArray.end(); ++it)
     {
+        stamp = this->m_stampVec[(*this->m_stampIndexGenerator)()]; /// < example of how to utilize a generator
+
+        stampWidth = stamp->width();
+        stampHeight = stamp->height();
+
         i = im_out.width() * (*it)[0]; //i & j: single point coordinates in im_out
         j = im_out.height() * (*it)[1];
 
-        rx = i-textonWidth/2; //region origin coordinates
-        ry = j-textonHeight/2;
-        Region reg = gen_region(rx, ry, textonWidth, textonHeight); //the region we stamp
+        rx = i-stampWidth/2; //region origin coordinates (int)
+        ry = j-stampHeight/2;
+        Region reg = gen_region(rx, ry, stampWidth, stampHeight); /// < example of how to utilize regions for stamping
         im_out.for_region_pixels(reg, [&] (typename StampBase<I>::PixelType& pix, int x, int y)
         {
             if(x>0 && x<im_out.width() && y>0 && y<im_out.height())
             {
-                tx=x-rx; //texton coordinate shifted from the region origin coordinates
+                tx=x-rx; //stamp coordinate shifted from the region origin coordinates
                 ty=y-ry;
-                pix = StampBase<I>::m_stamp->pixel(tx, ty);
+                pix = stamp->pixel(tx, ty); /// < example of mixing function (here, erase previous pixel with new one)
             }
         });
     }
@@ -152,12 +200,14 @@ StamperTexton<I>::StamperTexton(SamplerBase *sampler, const StampBase<I> *stamp)
     m_ratioY(1.0),
     m_periodicity(false),
     m_useMargins(true)
-{}
+{
+    this->m_stampIndexGenerator = new typename StamperBase<I>::Func_stampIndexGeneratorZero;
+}
 
 template<typename I>
 I StamperTexton<I>::generate(int imageWidth, int imageHeight) const
 {
-    ImageRGBd im_out;
+    I im_out;
     std::vector<Eigen::Vector2f> verticesArray;
     double stampWidth, stampHeight;
     double i, j;
@@ -168,18 +218,21 @@ I StamperTexton<I>::generate(int imageWidth, int imageHeight) const
     double lambda; //lambda parameter in poisson process
     //assuming given texton is a zero mean texture with normalized variance
 
+    const StampBase<I> *stamp=0;
+
     this->assert_null_before_generate_();
     verticesArray = this->m_sampler->generate();
 
     im_out.initItk(imageWidth, imageHeight, true);
 
-    stampWidth = this->m_stamp->width();
-    stampHeight = this->m_stamp->height();
-
     nbHit=0;
 
     for(std::vector<Eigen::Vector2f>::const_iterator it=verticesArray.begin(); it!=verticesArray.end(); ++it)
     {
+        stamp = this->m_stampVec[(*this->m_stampIndexGenerator)()];
+        stampWidth = stamp->width();
+        stampHeight = stamp->height();
+
         if(m_periodicity || (!m_periodicity && !m_useMargins))
         {
             i = imageWidth * (*it)[0];
@@ -200,12 +253,13 @@ I StamperTexton<I>::generate(int imageWidth, int imageHeight) const
         nbHit += stampWidth*stampHeight; //with periodicity, the entire energy of the texton hits the texture all the time. Without, we pretend it did and normalize including the size of the margins.
         if(m_periodicity)
         {
-            im_out.for_region_pixels(reg, [&] (ImageRGBd::PixelType& pix, int x, int y) //with periodicity
+            im_out.for_region_pixels(reg, [&] (typename I::PixelType& pix, int x, int y) //with periodicity
             {
+                (void)pix; /// pix is unused: remove parameter if there can be a (int, int) lambda
                 tx=x-otx; //texton coordinate in texton space
                 ty=y-oty; //texton coordinate
 
-                im_out.pixelAbsolute((x+im_out.width())%imageWidth, (y+im_out.height())%imageHeight) += this->m_stamp->pixel(tx, ty);
+                im_out.pixelAbsolute((x+im_out.width())%imageWidth, (y+im_out.height())%imageHeight) += stamp->pixel(tx, ty);
             });
         }
         else
@@ -213,55 +267,30 @@ I StamperTexton<I>::generate(int imageWidth, int imageHeight) const
 
             //the region we stamp : it is one pixel longer (per dim.) when the texton can stamped between pixels <=> when bilinear interpolation is activated
             //in othger terms, the region is a 2D bounding box for the texton
-            im_out.for_region_pixels(reg, [&] (ImageRGBd::PixelType& pix, int x, int y) //without periodicity
+            im_out.for_region_pixels(reg, [&] (typename I::PixelType& pix, int x, int y) //without periodicity
             {
+                (void)pix; /// pix is unused: remove parameter if there can be a (int, int) lambda
                 if(x>=0 && y>=0 && x<imageWidth && y<imageHeight)
                 { //here we compute pixel values, it's additive given there is 0 outside of the tx range.
                     tx=x-otx; //texton coordinate in texton space
                     ty=y-oty; //texton coordinate
 
-                    im_out.pixelAbsolute(x, y) += this->m_stamp->pixel(tx, ty);
+                    im_out.pixelAbsolute(x, y) += stamp->pixel(tx, ty);
 
                 }
-                /*
-
-                if(x>=-stampWidth/2.0 && y>=-stampHeight/2.0 && x<imageWidth+stampWidth/2.0 && y<imageHeight+stampHeight/2.0)
-                {//here we compute the energy, which is a good approximation of the mean number of impact. In the future, if a sampler gives the mean number of impact, use it!
-                    dx=tx-std::floor(tx);
-                    dy=ty-std::floor(ty);
-                    if(tx<0) //then the rightmost part counts
-                        if(ty<0) //then only the lower right part counts
-                            nbHit += (1-dx)*(1-dy);
-                        else if(ty>=stampHeight) //then only the upper right part counts
-                            nbHit += (1-dx)*dy);
-                        else //then only the rightmost part counts
-                            nbHit += 1-dx;
-                    else if(tx>=stampWidth) //then only the leftmost part counts
-                        if(ty<0) //then only the lower left part counts
-                            nbHit += dx*(1-dy);
-                        else if(ty>=stampWidth) //then only the upper left part counts
-                            nbHit += dx*dy;
-                        else //then both the upper left and lower left parts count
-                            nbHit += dx;
-                    else if(ty<0) //then only the lower part
-                        nbHit +=1-dy;
-                    else if(ty>=stampHeight)
-
-
-                } */
             });
 
         }
     }
+    //warning: assumes we use only one stamp / stamps with same width and height
     nbHitPerPixel = m_periodicity ? nbHit/(imageWidth*imageHeight) : nbHit/((imageWidth+stampWidth)*(imageHeight+stampHeight));
 
-    lambda = double(nbHitPerPixel)/(this->m_stamp->width() * this->m_stamp->height());
+    lambda = double(nbHitPerPixel)/(stampWidth * stampHeight);
 
     std::cout << "Texton noise: number of impacts per pixel: " << std::to_string(nbHitPerPixel) << std::endl;
 
-    im_out.for_all_pixels([&] (ImageRGBd::PixelType &pix) {
-        for(int i=0; i<3; ++i)
-            pix[i] = 1.0/sqrt(lambda) * (pix[i]) /*+ mean[i]*/;
+    im_out.for_all_pixels([&] (typename I::PixelType &pix) {
+            pix = pix * (1.0/sqrt(lambda)) /*+ mean*/;
     });
 
     return im_out;
