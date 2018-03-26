@@ -91,6 +91,13 @@ public:
 
 private:
 
+    inline typename I::PixelType bilinear_interpolation_(typename I::PixelType q11,
+                                                         typename I::PixelType q12,
+                                                         typename I::PixelType q21,
+                                                         typename I::PixelType q22,
+                                                         int x1, int y1,
+                                                         double x, double y);
+
     I                       m_image;
     interpolation_rule_t    m_rule;
     Dimensions              m_dimensions;
@@ -136,13 +143,12 @@ typename StampDiscrete<I>::PixelType StampDiscrete<I>::pixel(double x, double y)
     int dx, dy, tx, ty;
     PixelType pixel = ms_zero;
     double dimX, dimY;
+    typename I::PixelType q11, q12, q21, q22;
 
     dimX = x / m_dimensions.dimX;
     dimY = y / m_dimensions.dimY; //set x and y to scale;
     tx = (int) dimX;
     ty = (int) dimY;
-    dx = dimX - tx;
-    dy = dimY - ty;
 
     auto lmbd_is_in_range = [&] (int lx, int ly) -> bool
     {
@@ -151,17 +157,17 @@ typename StampDiscrete<I>::PixelType StampDiscrete<I>::pixel(double x, double y)
 
     if(m_rule == SD_BILINEAR)
     {
-        if(tx >= 0 && ty >= 0)
-            pixel += m_image.pixelAbsolute(tx, ty) * ((1-dx)*(1-dy));
-        if(tx >=0 && ty < m_image.height()-1)
-            pixel += m_image.pixelAbsolute(tx, ty+1) * ((1-dx)*dy);
-        if(tx < m_image.width()-1 && ty >= 0)
-            pixel += m_image.pixelAbsolute(tx+1, ty) * (dx*(1-dy));
-        if(tx < m_image.width()-1 && ty < m_image.height()-1)
-            pixel += m_image.pixelAbsolute(tx+1, ty+1) * (dx*dy);
+        q11 = tx >= 0 && ty >= 0 && tx < m_image.width() && ty < m_image.height() ? m_image.pixelAbsolute(tx, ty) : ms_zero;
+        q12 = tx >= 0 && ty >= -1 && tx < m_image.width() && ty < m_image.height()-1 ? m_image.pixelAbsolute(tx, ty+1) : ms_zero;
+        q21 = tx >= -1 && ty >= 0 && tx < m_image.width()-1 && ty < m_image.height() ? m_image.pixelAbsolute(tx+1, ty) : ms_zero;
+        q22 = tx >= -1 && ty >= -1 && tx < m_image.width()-1 && ty < m_image.height()-1 ? m_image.pixelAbsolute(tx+1, ty+1) : ms_zero;
+
+        pixel = bilinear_interpolation_(q11, q12, q21, q22, tx, ty, dimX, dimY);
     }
     else if(m_rule == SD_NEAREST) //TODO: that's not actually a real nearest is it
     {
+        dx = dimX - tx;
+        dy = dimY - ty;
         if(dx >= 0.5)
             ++tx;
         if(dy >= 0.5)
@@ -173,6 +179,26 @@ typename StampDiscrete<I>::PixelType StampDiscrete<I>::pixel(double x, double y)
         pixel = lmbd_is_in_range(tx, ty) ? m_image.pixelAbsolute(tx, ty) : ms_zero;
 
     return pixel;
+}
+
+template<typename I>
+typename I::PixelType StampDiscrete<I>::bilinear_interpolation_(typename I::PixelType q11,
+                                                                typename I::PixelType q12,
+                                                                typename I::PixelType q21,
+                                                                typename I::PixelType q22,
+                                                                int x1, int y1,
+                                                                double x, double y)
+{
+    double x2x, y2y, yy1, xx1;
+    yy1 = y - y1;
+    xx1 = x - x1;
+    x2x = 1.0 - xx1;
+    y2y = 1.0 - yy1;
+    return
+        q11 * (x2x * y2y) +
+        q21 * (xx1 * y2y) +
+        q12 * (x2x * yy1) +
+        q22 * (xx1 * yy1);
 }
 
 //set
