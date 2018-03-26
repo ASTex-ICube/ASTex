@@ -250,7 +250,8 @@ I StamperTexton<I>::generate(int imageWidth, int imageHeight) const
 
         Region reg = gen_region(std::floor(otx), std::floor(oty), stampWidth+1, stampHeight+1); //note: regions are weak when shooting between pixels
 
-        nbHit += stampWidth*stampHeight; //with periodicity, the entire energy of the texton hits the texture all the time. Without, we pretend it did and normalize including the size of the margins.
+        nbHit += stampWidth*stampHeight; //with periodicity, the entire energy of the texton hits the texture all the time.
+        //Without, we pretend it did and normalize including the size of the margins.
         if(m_periodicity)
         {
             im_out.for_region_pixels(reg, [&] (typename I::PixelType& pix, int x, int y) //with periodicity
@@ -279,11 +280,10 @@ I StamperTexton<I>::generate(int imageWidth, int imageHeight) const
 
                 }
             });
-
         }
     }
     //warning: assumes we use only one stamp / stamps with same width and height
-    nbHitPerPixel = m_periodicity ? nbHit/(imageWidth*imageHeight) : nbHit/((imageWidth+stampWidth)*(imageHeight+stampHeight));
+    nbHitPerPixel = m_periodicity || !m_useMargins ? nbHit/(imageWidth*imageHeight) : nbHit/((imageWidth+stampWidth)*(imageHeight+stampHeight));
 
     lambda = double(nbHitPerPixel)/(stampWidth * stampHeight);
 
