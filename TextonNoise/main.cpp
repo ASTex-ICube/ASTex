@@ -9,50 +9,51 @@
 
 #include "imageviewer.h"
 
+// v define your own
 #define MY_PATH std::string("/home/nlutz/img/")
 
 using namespace ASTex;
 
-int test_genet(int argc, char **argv)
-{
-    QApplication app(argc, argv);
-    std::setlocale(LC_ALL,"C");
+//int test_genet(int argc, char **argv)
+//{
+//    QApplication app(argc, argv);
+//    std::setlocale(LC_ALL,"C");
 
-    std::string filename_source=argv[1];
-    std::string name_file = IO::remove_path(filename_source);
-    std::string name_noext = IO::remove_ext(name_file);
+//    std::string filename_source=argv[1];
+//    std::string name_file = IO::remove_path(filename_source);
+//    std::string name_noext = IO::remove_ext(name_file);
 
-    //std::string out_path = argv[1];
+//    //std::string out_path = argv[1];
 
-    std::string input_noext=name_noext;
+//    std::string input_noext=name_noext;
 
-    filename_source=argv[2];
-    name_file = IO::remove_path(filename_source);
-    name_noext = IO::remove_ext(name_file);
+//    filename_source=argv[2];
+//    name_file = IO::remove_path(filename_source);
+//    name_noext = IO::remove_ext(name_file);
 
-    //Loading sample
-    //Loading im_in
+//    //Loading sample
+//    //Loading im_in
 
-    ImageGrayd im_in, im_out;
-    IO::loadu8_in_01(im_in, std::string(MY_PATH)+argv[1]);
+//    ImageGrayd im_in, im_out;
+//    IO::loadu8_in_01(im_in, std::string(MY_PATH)+argv[1]);
 
-    im_in.for_all_pixels([&] (ImageGrayd::PixelType &pix)
-    {
-        pix *= pix;
-    });
+//    im_in.for_all_pixels([&] (ImageGrayd::PixelType &pix)
+//    {
+//        pix *= pix;
+//    });
 
-    ImageSpectrald modulus, phase;
-    Fourier::fftForwardModulusAndPhase(im_in, modulus, phase);
+//    ImageSpectrald modulus, phase;
+//    Fourier::fftForwardModulusAndPhase(im_in, modulus, phase);
 
-    modulus.for_all_pixels([&] (ImageSpectrald::PixelType &pix)
-    {
-        pix = std::abs(pix);
-    });
+//    modulus.for_all_pixels([&] (ImageSpectrald::PixelType &pix)
+//    {
+//        pix = std::abs(pix);
+//    });
 
-    IO::save01_in_u8(modulus, std::string(MY_PATH)+"varSpectrum2_" + name_noext + ".png");
+//    IO::save01_in_u8(modulus, std::string(MY_PATH)+"varSpectrum2_" + name_noext + ".png");
 
-    return 0;
-}
+//    return 0;
+//}
 
 int test_texton(int argc, char **argv)
 {
@@ -71,8 +72,6 @@ int test_texton(int argc, char **argv)
     std::string name_file = IO::remove_path(filename_source);
     std::string name_noext = IO::remove_ext(name_file);
 
-    //std::string out_path = argv[1];
-
     std::string input_noext=name_noext;
 
     filename_source=argv[2];
@@ -85,9 +84,7 @@ int test_texton(int argc, char **argv)
     ImageRGBd im_in, im_out, im_rpn, im_sample, im_texton;
     IO::loadu8_in_01(im_in, std::string(MY_PATH)+argv[1]);
 
-    //IO::loadu8_in_01(im_texton, MY_PATH+filename_source);
-
-    //ImageRGBd::PixelType textonMean;
+    //warning; this import function turns a texton file into a vizualizable image
     assert(import_texton_from_png(im_texton, MY_PATH+filename_source));
 
     HistogramRGBd histo_texton(im_texton);
@@ -103,14 +100,16 @@ int test_texton(int argc, char **argv)
     //Testing
 
     Stamping::SamplerUniform sampler;
-    sampler.setNbPoints(30);
+    sampler.setNbPoints(300);
     Stamping::StampDiscrete<ImageRGBd> stamp(im_texton);
-    stamp.setInterpolationRule(Stamping::StampDiscrete<ImageRGBd>::SD_BILINEAR);
+    stamp.setInterpolationRule(Stamping::StampDiscrete<ImageRGBd>::BILINEAR);
 
     Stamping::StamperTexton<ImageRGBd> tamponneur(&sampler, &stamp);
 
-    tamponneur.setPeriodicity(true);
-    tamponneur.setUseMargins(true);
+    tamponneur.setPeriodicity(false); //if on, the ouput image will be periodic
+    tamponneur.setUseMargins(true); //if on, the program will add extra margins to shoot textons on
+                                    //when the image is not periodic. It is highly advised you let this on true,
+                                    //as the result will lose a lot of energy (variance) otherwise.
 
     int W=im_in.width(), H=im_in.height();
 
@@ -233,65 +232,65 @@ int test_texton(int argc, char **argv)
     return app.exec();
 }
 
-int test_autoconvolutionSpectrum(int argc, char **argv)
-{
-    if( argc < 3 )
-    {
-        std::cerr << "Usage: " << std::endl;
-        std::cerr << argv[0] << " <out_path> [source code dependant options]" << std::endl;
+//int test_autoconvolutionSpectrum(int argc, char **argv)
+//{
+//    if( argc < 3 )
+//    {
+//        std::cerr << "Usage: " << std::endl;
+//        std::cerr << argv[0] << " <out_path> [source code dependant options]" << std::endl;
 
-        return EXIT_FAILURE;
-    }
+//        return EXIT_FAILURE;
+//    }
 
-    QApplication app(argc, argv);
-    std::setlocale(LC_ALL,"C");
+//    QApplication app(argc, argv);
+//    std::setlocale(LC_ALL,"C");
 
-    std::string filename_source=argv[1];
-    std::string name_file = IO::remove_path(filename_source);
-    std::string name_noext = IO::remove_ext(name_file);
+//    std::string filename_source=argv[1];
+//    std::string name_file = IO::remove_path(filename_source);
+//    std::string name_noext = IO::remove_ext(name_file);
 
-    //std::string out_path = argv[1];
+//    //std::string out_path = argv[1];
 
-    std::string input_noext=name_noext;
+//    std::string input_noext=name_noext;
 
-    filename_source=argv[2];
-    name_file = IO::remove_path(filename_source);
-    name_noext = IO::remove_ext(name_file);
+//    filename_source=argv[2];
+//    name_file = IO::remove_path(filename_source);
+//    name_noext = IO::remove_ext(name_file);
 
-    //Loading sample
-    //Loading im_in
+//    //Loading sample
+//    //Loading im_in
 
-    ImageGrayd im_in;
-    IO::loadu8_in_01(im_in, std::string(MY_PATH)+argv[1]);
+//    ImageGrayd im_in;
+//    IO::loadu8_in_01(im_in, std::string(MY_PATH)+argv[1]);
 
-    ImageSpectrald modulus, phase;
-    ImageSpectrald mm;
-    modulus.initItk(im_in.width(), im_in.height());
-    mm.initItk(modulus.width(), modulus.height(), true);
-    phase.initItk(im_in.width(), im_in.height());
-    Fourier::fftForwardModulusAndPhase(im_in, modulus, phase);
-    modulus.for_all_pixels([&] (ImageSpectrald::PixelType &p1, int x, int y)
-    {
-        modulus.for_all_pixels([&] (ImageSpectrald::PixelType &p2)
-        {
-            mm.pixelAbsolute(x, y) += p1 * p2;
-        });
-    });
+//    ImageSpectrald modulus, phase;
+//    ImageSpectrald mm;
+//    modulus.initItk(im_in.width(), im_in.height());
+//    mm.initItk(modulus.width(), modulus.height(), true);
+//    phase.initItk(im_in.width(), im_in.height());
+//    Fourier::fftForwardModulusAndPhase(im_in, modulus, phase);
+//    modulus.for_all_pixels([&] (ImageSpectrald::PixelType &p1, int x, int y)
+//    {
+//        modulus.for_all_pixels([&] (ImageSpectrald::PixelType &p2)
+//        {
+//            mm.pixelAbsolute(x, y) += p1 * p2;
+//        });
+//    });
 
-    ImageViewer imgv_in("Source", &app, 0);
-    imgv_in.set_gray01(im_in.getDataPtr(), im_in.width(), im_in.height(), 1);
-    imgv_in.show();
+//    ImageViewer imgv_in("Source", &app, 0);
+//    imgv_in.set_gray01(im_in.getDataPtr(), im_in.width(), im_in.height(), 1);
+//    imgv_in.show();
 
-    ImageViewer imgv_modulus("Input PSD", &app, 1);
-    imgv_modulus.set_gray01(modulus.getDataPtr(), modulus.width(), modulus.height(), 1);
-    imgv_modulus.show();
+//    ImageViewer imgv_modulus("Input PSD", &app, 1);
+//    imgv_modulus.set_gray01(modulus.getDataPtr(), modulus.width(), modulus.height(), 1);
+//    imgv_modulus.show();
 
-    ImageViewer imgv_out("Output PSD", &app, 2);
-    imgv_out.set_gray01(mm.getDataPtr(), mm.width(), mm.height(), 1);
-    imgv_out.show();
+//    ImageViewer imgv_out("Output PSD", &app, 2);
+//    imgv_out.set_gray01(mm.getDataPtr(), mm.width(), mm.height(), 1);
+//    imgv_out.show();
 
-    return app.exec();
-}
+//    return app.exec();
+//}
 
 int main( int argc, char **argv )
 {
