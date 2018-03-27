@@ -225,8 +225,6 @@ public:
 
     //set
 
-    void setRatioX(double ratioX) {m_ratioX=ratioX; assert(ratioX>0 && "TextonStamper::setRatioX: ratioX must be > 0");}
-    void setRatioY(double ratioY) {m_ratioY=ratioY; assert(ratioY>0 && "TextonStamper::setRatioY: ratioY must be > 0");}
     /**
      * @param periodicity defines whether the output image should be periodic or not.
      * The texton/spot noise is easier to produce when it is a periodic process,
@@ -243,9 +241,6 @@ public:
     void setUseMargins(bool use) {m_useMargins = use;}
 
 private:
-
-    double m_ratioX; //< TODO: remove next commit.
-    double m_ratioY;
 
     bool m_periodicity; //< if the stamping process is periodic or not.
 
