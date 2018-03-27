@@ -296,7 +296,7 @@ private:
         return Eigen::Vector2f( X, Y );
     }
 
-    int m_nbPoints;
+    unsigned int m_nbPoints;
     DefaultPRNG m_generator;
     int m_newPointsCount;
     int m_generateInCircle;
