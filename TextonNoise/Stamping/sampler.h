@@ -15,50 +15,104 @@ namespace ASTex
 namespace Stamping
 {
 
+/**
+ * @brief The SamplerBase class is an interface for every Samplers.
+ * the main idea is for them to provide an array of coordinates between (0, 0) and (1, 1),
+ * and setters to modify the parameters of the generative process.
+ */
 class SamplerBase
 {
 public:
 
+    /**
+     * @brief SamplerBase constructor for SamplerBase.
+     */
     SamplerBase() {}
 
+    /**
+     * @brief generate a function which yields an array of floating point coordinates.
+     * @return the coordinates array.
+     */
     virtual std::vector<Eigen::Vector2f> generate()=0;
 };
 
+/**
+ * @brief The SamplerRegular class is an override of SamplerBase,
+ * supposed to yield an array of points sampled on a regular grid.
+ * Behavior: The first point is always at (0,0),
+ * but the last point will be before (M, N). (could change?)
+ */
 class SamplerRegular : public SamplerBase
 {
 public:
+    /**
+     * @brief SamplerRegular constructor for SamplerRegular.
+     * @param nbPoints is the default number of points the generate() function yields.
+     */
     SamplerRegular(int nbPoints=0) :
         SamplerBase(),
         m_nbPoints(nbPoints)
     {}
 
+    /**
+     * @param nbPoints is the number of points per dimension the generate() function will produce.
+     * For example, giving 3 will produce 9 points.
+     */
     void setNbPoints(unsigned nbPoints) {m_nbPoints = nbPoints;}
 
+    /**
+     * @brief generate yields an array of floating point coordinates disposed on a regular grid.
+     * @return the coordinates array.
+     */
     std::vector<Eigen::Vector2f> generate();
 
 private:
     unsigned int m_nbPoints;
 };
 
+/**
+ * @brief The SamplerUniform class is an override of SamplerBase,
+ * supposed to yield an array of points in respect to a uniform random process.
+ */
 class SamplerUniform : public SamplerBase
 {
 public:
+    /**
+     * @brief SamplerUniform constructor for SamplerUniform.
+     * @param nbPoints is the default number of points the generate() function yields.
+     */
     SamplerUniform(int nbPoints=0) :
         SamplerBase(),
         m_nbPoints(nbPoints)
     {}
 
+    /**
+     * @param nbPoints is the total number of points the generate() function will produce.
+     */
     void setNbPoints(unsigned nbPoints) {m_nbPoints = nbPoints;}
 
+    /**
+     * @brief generate yields an array of floating point coordinates
+     * randomly distributed according to 2 uniform laws between 0 and 1.
+     * @return the coordinates array.
+     */
     std::vector<Eigen::Vector2f> generate();
 
 private:
     unsigned int m_nbPoints;
 };
 
+/**
+ * @brief The SamplerPoisson class is an override of SamplerBase,
+ * supposed to yield an array of points in respect to a Poisson random process.
+ */
 class SamplerPoisson: public SamplerBase
 {
 public:
+    /**
+     * @brief SamplerPoisson constructor for SamplerPoisson.
+     * @param nbPoints the default number of points the generate() function yields.
+     */
     SamplerPoisson(int nbPoints=0) :
         SamplerBase(),
         m_nbPoints(nbPoints),
@@ -69,21 +123,38 @@ public:
     {}
 
     /**
-        Return a vector of generated points
-
-        NewPointsCount - refer to bridson-siggraph07-poissondisk.pdf for details (the value 'k')
-        Circle  - 'true' to fill a circle, 'false' to fill a rectangle
-        MinDist - minimal distance estimator, use negative value for default
-    **/
-
+     * @param nbPoints is the total number of points the generate() function will produce.
+     */
     void setNbPoints(unsigned nbPoints)     {m_nbPoints = nbPoints;}
+    /**
+     * @param count defines the number of points the process tries to pick in a single loop, 30 by default.
+     * Refer to bridson-siggraph07-poissondisk.pdf for details (the value 'k')
+     */
     void setNewPointsCount(int count)       {m_newPointsCount = std::max(0, count);}
+    /**
+     * @param b true for generating the poisson process within a circle of diameter 1.
+     * false for generating the process within a unity square.
+     */
     void setGenerateInCircle(bool b)        {m_generateInCircle = b;}
+    /**
+     * @param d the minimal distance between points.
+     * If under 0, will be determined according to the number of points.
+     */
     void setMinDistance(float d)            {m_minDistance = d;}
 
+    /**
+     * @brief generate yields an array of floating point coordinates
+     * randomly distributed according to a poisson law between (0,0) and (1,1).
+     * @return the coordinates array.
+     */
     std::vector<Eigen::Vector2f> generate();
 
 private:
+    /**
+     * @brief The DefaultPRNG class a pseudo random number generator class
+     * based on the std PRNG classes.
+     * Note for developpement: we should include a PRNG in every other sampler class.
+     */
     class DefaultPRNG
     {
     public:
@@ -225,11 +296,11 @@ private:
         return Eigen::Vector2f( X, Y );
     }
 
-    int m_nbPoints;             ///< Number of points to be generated at the end of the process. No default, must be set.
-    DefaultPRNG m_generator;    ///< The random number generator. The user can't change that, as we aren't preoccupied with low-level considerations.
-    int m_newPointsCount;       ///< Defines the number of points the process tries to pick in a single loop... 30 by default. TODO: refer to bridson-siggraph07-poissondisk.pdf for details (the value 'k')
-    int m_generateInCircle;     ///< Defines whether you want to generate the points inside circles of diameter 1 or a square of dimension 1x1. Off by default. TODO: check with circle on.
-    float m_minDistance;        ///< Defines the minimum distance between generated points. If lower than 0, the process determines an optimal distance automatically. -1.0f by default.
+    int m_nbPoints;
+    DefaultPRNG m_generator;
+    int m_newPointsCount;
+    int m_generateInCircle;
+    float m_minDistance;
 };
 
 } //namespace Stamping

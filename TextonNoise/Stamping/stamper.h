@@ -23,17 +23,38 @@ namespace ASTex
 namespace Stamping
 {
 
+
 template<typename I>
+/**
+ * @brief The StamperBase class is an interface for every Stampers.
+ * The main idea is to combine the work of a Sampler, one or several Stamps
+ * and a Stamp-chosing function to generate texture by stamping the stamps and
+ * mixing them in different ways.
+ */
 class StamperBase
 {
 public:
 
+    /**
+     * @brief StamperBase constructor of StamperBase.
+     * @param sampler the sampler generating an array of 2D vertices between 0 and 1.
+     * @param stamp a first stamp to add, doesn't add anything if 0.
+     */
     StamperBase(SamplerBase *sampler=0, const StampBase<I> *stamp=0);
+
+    /**
+     * @brief ~StamperBase destructor of StamperBase.
+     * Explicitely desallocates the index generator of the class.
+     */
     virtual ~StamperBase()                                      {delete(m_stampIndexGenerator);}
 
     //nested types
 
     typedef typename StampBase<I>::PixelType PixelType;
+    /**
+     * @brief The Func_stampIndexGeneratorBase class is a base for an index generator.
+     * An index generator is a functor which choses a stamp index everytime it is called.
+     */
     class Func_stampIndexGeneratorBase
     {
     public:
@@ -41,6 +62,11 @@ public:
         virtual ~Func_stampIndexGeneratorBase() {}
         virtual size_t operator() (void)=0;
     };
+
+    /**
+     * @brief The Func_stampIndexGeneratorZero class is an override for Func_stampIndexGeneratorBase.
+     * It always returns 0 when called.
+     */
     class Func_stampIndexGeneratorZero : public Func_stampIndexGeneratorBase
     {
     public:
@@ -50,30 +76,79 @@ public:
 
     //main function
 
+    /**
+     * @brief generate a virtual pure method. It is used to generate an output image of size (imageWidth, imageHeight).
+     * @param imageWidth the width of the output image.
+     * @param imageHeight the height of the output image.
+     * @return an Image of the template type I.
+     */
     virtual I generate(int imageWidth, int imageHeight) const = 0;
 
     //get
 
+    /**
+     * @return the sampler class is used
+     * to generate an array of coordinates during the convolution process.
+     */
     SamplerBase* sampler() const  {return m_sampler;}
-    const StampBase<I>* stamp(size_t index) const               {return m_stampVec[index];}
 
+    /**
+     * @param index the position in the vector of stamps.
+     * @return a reference on a stamp pointer which may be used during the convolution process.
+     */
+    const StampBase<I>* stamp(size_t index)                     {return m_stampVec[index];}
+
+    /**
+     * @brief same as stamp(index), const version (result reference cannot be modified).
+     */
+    const StampBase<I>* const & stamp(size_t index) const       {return m_stampVec[index];}
+
+    /**
+     * @brief operator [] same as stamp(index).
+     */
     const StampBase<I>*& operator[] (size_t index)              {return m_stampVec[index];}
+    /**
+     * @brief operator [] calls stamp(index), const version (result reference cannot be modified).
+     */
     const StampBase<I>* const & operator[] (size_t index) const {return m_stampVec[index];}
 
     size_t stampVecSize() const                                 {return m_stampVec.size();}
 
     //set
 
+    /**
+     * @param sampler is the sampler which will be used
+     * to generate an array of coordinates during the convolution process.
+     */
     void setSampler(const SamplerBase* sampler)                 {m_sampler = sampler;}
+    /**
+     * @brief setStamp changes the stamp at vector position index to stamp.
+     * @param stamp this stamp may be used during the convolution process.
+     * @param index the position of the vector on which the stamp is modified.
+     * @pre index is in the range of available stamps.
+     */
     void setStamp(const StampBase<I>* stamp, size_t index)      {m_stampVec[index] = stamp;}
 
     //add/remove
 
+    /**
+     * @brief addStamp adds a stamp to the collection of stamps.
+     * It is pushed at the end of the internal vector.
+     * @param stamp the stamp to be added.
+     */
     void addStamp(const StampBase<I>* stamp)                    {m_stampVec.push_back(stamp);}
+    /**
+     * @brief removeStamp removes a stamp at position index.
+     * Warning: complexity is linear.
+     * @param index position of the stamp.
+     */
     void removeStamp(size_t index)                              {m_stampVec.erase(m_stampVec.begin() + index); }
 
 protected:
 
+    /**
+     * @brief assert_null_before_generate_ crashes the program if the sampler or some stamps are NULL.
+     */
     void assert_null_before_generate_() const;
 
     SamplerBase                         *m_sampler;
@@ -82,12 +157,27 @@ protected:
 };
 
 template<typename I>
+/**
+ * @brief The StamperBombing class is an override of the StamperBase, used to produce bombing synthesis outputs.
+ * The mixing method is to override every written pixels.
+ */
 class StamperBombing : public StamperBase<I>
 {
 public:
 
+    /**
+     * @brief StamperBombing constructor of StamperBombing.
+     * @param sampler the sampler generating an array of 2D vertices between 0 and 1.
+     * @param stamp a first stamp to add, doesn't add anything if 0.
+     */
     StamperBombing(SamplerBase *sampler=0, const StampBase<I> *stamp=0);
 
+    /**
+     * @brief generate produces an output image which is the result of a bombing process of a single stamp.
+     * @param imageWidth the width of the output
+     * @param imageHeight the height of the output
+     * @return the output image
+     */
     I generate(int imageWidth, int imageHeight) const;
 };
 
@@ -97,16 +187,39 @@ class StamperTexton : public StamperBase<I>
 public:
 
     //warning: input must be a shifted and normalized texton (mean 0).
+    /**
+     * @brief StamperTexton constructor of StamperTexton.
+     * @param sampler the sampler generating an array of 2D vertices between 0 and 1.
+     * @param stamp a first stamp to add, doesn't add anything if 0.
+     */
     StamperTexton(SamplerBase *sampler=0, const StampBase<I> *stamp=0);
 
     //warning: output is a shifted and normalized texton as well.
+    /**
+     * @brief generate produces an output image which is the result of a spot noise of a single stamp.
+     * @param imageWidth the width of the output
+     * @param imageHeight the height of the output
+     * @return the output image
+     */
     I generate(int imageWidth, int imageHeight) const;
 
     //get
 
     double ratioX() {return m_ratioX;}
     double ratioY() {return m_ratioY;}
+    /**
+     * @return whether the output image is periodic or not.
+     * The texton/spot noise is easier to produce when it is a periodic process,
+     * but there exists a workaround with "margins" if it shouldn't be periodic.
+     */
     bool periodicity() {return m_periodicity;}
+    /**
+    * @return whether margins are used or not.
+    * Margins are made to extend the spot noise domain,
+    * such that a non periodic image would still be able to receive the full energy
+    * of the stamp during the spot noise process.
+    * It is strongly advised you let this on to get correct results.
+    */
     bool useMargins() {return m_useMargins;}
 
 
@@ -114,17 +227,29 @@ public:
 
     void setRatioX(double ratioX) {m_ratioX=ratioX; assert(ratioX>0 && "TextonStamper::setRatioX: ratioX must be > 0");}
     void setRatioY(double ratioY) {m_ratioY=ratioY; assert(ratioY>0 && "TextonStamper::setRatioY: ratioY must be > 0");}
+    /**
+     * @param periodicity defines whether the output image should be periodic or not.
+     * The texton/spot noise is easier to produce when it is a periodic process,
+     * but there exists a workaround with "margins" if it shouldn't be periodic.
+     */
     void setPeriodicity(bool periodicity) {m_periodicity = periodicity;}
+    /**
+     * @param use defines whether margins should be used or not.
+     * Margins are made to extend the spot noise domain,
+     * such that a non periodic image would still be able to receive the full energy
+     * of the stamp during the spot noise process.
+     * It is strongly advised you let this on to get correct results.
+     */
     void setUseMargins(bool use) {m_useMargins = use;}
 
 private:
 
-    double m_ratioX; //< these define the resolution of the texton relative to the resolution of the texture (in X and Y)
+    double m_ratioX; //< TODO: remove next commit.
     double m_ratioY;
 
     bool m_periodicity; //< if the stamping process is periodic or not.
 
-    bool m_useMargins; //< if m_periodicity is true, defines if we don't extend the domain of the output with margins to improve the energy at the edges.
+    bool m_useMargins; //< if true, extends the domain to preserve energy.
 };
 
 template<typename I>
@@ -213,7 +338,6 @@ I StamperTexton<I>::generate(int imageWidth, int imageHeight) const
     double i, j;
     double otx, oty; //texton origin in texture space (top left)
     double tx, ty; //texton coordinates
-    //double dx, dy; //difference between int part of tx and double part of tx. Used to compute of the exact amount of energy which hit the texture
     double nbHit, nbHitPerPixel; //keeps track of the number of times the texture was hit
     double lambda; //lambda parameter in poisson process
     //assuming given texton is a zero mean texture with normalized variance
