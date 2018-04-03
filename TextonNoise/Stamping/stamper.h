@@ -205,8 +205,6 @@ public:
 
     //get
 
-    double ratioX() {return m_ratioX;}
-    double ratioY() {return m_ratioY;}
     /**
      * @return whether the output image is periodic or not.
      * The texton/spot noise is easier to produce when it is a periodic process,
@@ -316,8 +314,6 @@ I StamperBombing<I>::generate(int imageWidth, int imageHeight) const
 template<typename I>
 StamperTexton<I>::StamperTexton(SamplerBase *sampler, const StampBase<I> *stamp) :
     StamperBase<I>(sampler, stamp),
-    m_ratioX(1.0),
-    m_ratioY(1.0),
     m_periodicity(false),
     m_useMargins(true)
 {
