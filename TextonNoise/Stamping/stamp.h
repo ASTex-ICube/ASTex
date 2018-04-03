@@ -17,6 +17,7 @@
 #include <ASTex/utils.h>
 #include <ASTex/distances_maps.h>
 #include <Eigen/Core>
+#include <ASTex/mask.h>
 
 namespace ASTex
 {
@@ -179,7 +180,7 @@ public:
      * @param y height coordinate.
      * @return the value of the pixel p(x, y).
      */
-    PixelType   pixel(double x, double y) const;
+    virtual PixelType   pixel(double x, double y) const;
 
     //set
 
@@ -216,6 +217,10 @@ public:
      */
     void setImage(const I& image); //TODO: might be sensitive, check for itk documentation
 
+protected:
+
+    virtual bool is_in_range(int x, int y) const;
+
 private:
 
     /**
@@ -238,7 +243,7 @@ private:
                                                          int x1, int y1,
                                                          double x, double y) const;
 
-    I                       m_image;
+    const I&                m_image;
     interpolation_rule_t    m_rule;
     Dimensions              m_dimensions;
 
@@ -250,9 +255,35 @@ private:
     static PixelType ms_zero;
 };
 
+//Declaration of StampDiscreteWithMask
+
+template<typename I>
+class StampDiscreteWithMask : public StampDiscrete<I>
+{
+public:
+    StampDiscreteWithMask();
+    StampDiscreteWithMask(const StampDiscreteWithMask<I> &other);
+    StampDiscreteWithMask(const I& image);
+
+    void setMask(const MaskBool &mask);
+
+    const MaskBool& mask() const {return m_mask;}
+    MaskBool &mask() {return m_mask;}
+
+protected:
+
+    bool is_in_range(int x, int y) const;
+
+private:
+
+    MaskBool m_mask;
+};
+
 //Declaration of StampContinuous?
 
+//
 //Implementation of StampDiscrete
+//
 
 template<typename I>
 StampDiscrete<I>::StampDiscrete() :
@@ -263,7 +294,7 @@ StampDiscrete<I>::StampDiscrete() :
 
 template<typename I>
 StampDiscrete<I>::StampDiscrete(const StampDiscrete &other) :
-    m_image(other.image()), //warning!!!
+    m_image(other.image()),
     m_rule(other.interpolationRule()),
     m_dimensions(other.dimensions())
 {}
@@ -274,13 +305,10 @@ typename StampDiscrete<I>::PixelType StampDiscrete<I>::ms_zero;
 template<typename I>
 StampDiscrete<I>::StampDiscrete(const I &image) :
     StampBase<I>::StampBase(),
-    m_image(image), //TODO: copy pixels?
+    m_image(image),
     m_rule(BILINEAR),
     m_dimensions(Dimensions(1.0, 1.0))
-{
-//    m_image.initItk(image.width(), image.height());
-//    m_image.copy_pixels(image);
-}
+{}
 
 template<typename I>
 typename StampDiscrete<I>::PixelType StampDiscrete<I>::pixel(double x, double y) const
@@ -295,17 +323,12 @@ typename StampDiscrete<I>::PixelType StampDiscrete<I>::pixel(double x, double y)
     tx = (int) dimX;
     ty = (int) dimY;
 
-    auto lmbd_is_in_range = [&] (int lx, int ly) -> bool
-    {
-        return lx >= 0 && lx < m_image.width() && ly >= 0 && ly < m_image.height();
-    };
-
     if(m_rule == BILINEAR)
     {
-        q11 = tx >= 0 && ty >= 0 && tx < m_image.width() && ty < m_image.height() ? m_image.pixelAbsolute(tx, ty) : ms_zero;
-        q12 = tx >= 0 && ty >= -1 && tx < m_image.width() && ty < m_image.height()-1 ? m_image.pixelAbsolute(tx, ty+1) : ms_zero;
-        q21 = tx >= -1 && ty >= 0 && tx < m_image.width()-1 && ty < m_image.height() ? m_image.pixelAbsolute(tx+1, ty) : ms_zero;
-        q22 = tx >= -1 && ty >= -1 && tx < m_image.width()-1 && ty < m_image.height()-1 ? m_image.pixelAbsolute(tx+1, ty+1) : ms_zero;
+        q11 = is_in_range(tx, ty) ? m_image.pixelAbsolute(tx, ty) : ms_zero;
+        q12 = is_in_range(tx, ty+1) ? m_image.pixelAbsolute(tx, ty+1) : ms_zero;
+        q21 = is_in_range(tx+1, ty) ? m_image.pixelAbsolute(tx+1, ty) : ms_zero;
+        q22 = is_in_range(tx+1, ty+1) ? m_image.pixelAbsolute(tx+1, ty+1) : ms_zero;
 
         pixel = bilinear_interpolation_(q11, q12, q21, q22, tx, ty, dimX, dimY);
     }
@@ -318,13 +341,20 @@ typename StampDiscrete<I>::PixelType StampDiscrete<I>::pixel(double x, double y)
         if(dy >= 0.5)
             ++ty;
 
-        pixel = lmbd_is_in_range(tx, ty) ? m_image.pixelAbsolute(tx, ty) : ms_zero;
+        pixel = is_in_range(tx, ty) ? m_image.pixelAbsolute(tx, ty) : ms_zero;
     }
     else //m_rule == SD_TRUNC
-        pixel = lmbd_is_in_range(tx, ty) ? m_image.pixelAbsolute(tx, ty) : ms_zero;
+        pixel = is_in_range(tx, ty) ? m_image.pixelAbsolute(tx, ty) : ms_zero;
 
     return pixel;
 }
+
+template<typename I>
+bool StampDiscrete<I>::is_in_range(int x, int y) const
+{
+    return x >= 0 && x < m_image.width() && y >= 0 && y < m_image.height();
+}
+
 
 template<typename I>
 typename I::PixelType StampDiscrete<I>::bilinear_interpolation_(typename I::PixelType q11,
@@ -383,6 +413,42 @@ void StampDiscrete<I>::setImage(const I& image)
 {
     assert(image.isInitialized());
     m_image = image;
+}
+
+//
+//Implementation of StampDiscreteWithMask
+//
+
+template<typename I>
+StampDiscreteWithMask<I>::StampDiscreteWithMask() :
+    StampDiscrete<I>(),
+    m_mask(MaskBool(0, 0, false))
+{}
+
+template<typename I>
+StampDiscreteWithMask<I>::StampDiscreteWithMask(const StampDiscreteWithMask<I> &other) :
+    StampDiscrete<I>(other),
+    m_mask(other.mask())
+{}
+
+template<typename I>
+StampDiscreteWithMask<I>::StampDiscreteWithMask(const I& image) :
+    StampDiscrete<I>(image),
+    m_mask(image.width(), image.height(), true)
+{}
+
+template<typename I>
+void StampDiscreteWithMask<I>::setMask(const MaskBool &mask)
+{
+    assert(mask.width() == this->width() && mask.height() == this->height() &&
+           "StampDiscreteWithMask::setMask(mask): mask must have the same dimensions as the underlying image");
+    m_mask=mask;
+}
+
+template<typename I>
+bool StampDiscreteWithMask<I>::is_in_range(int x, int y) const
+{
+    return StampDiscrete<I>::is_in_range(x, y) && m_mask(x, y);
 }
 
 } //namespace Stamping
