@@ -11,6 +11,12 @@
 using namespace ASTex;
 
 template <class I>
+/**
+ * @brief The Mipmap class is a base class for mip-mapping.
+ * It is able to filter any image with mipmaps by computing a recursive bilinear average over a 4 pixels neighboorhood.
+ * the filterDivide functions determine how the mip-map is handled, and they are the functions to override to change
+ * the behaviour of the mipmapping.
+ */
 class Mipmap
 {
 public:
@@ -23,11 +29,13 @@ public:
 
     void fullMipmap(I& fullMipmap);
 
-private:
+protected:
 
-    void filterDivide2Width(const I& texture, I& result);
-    void filterDivide2Height(const I& texture, I& result);
-    void filterDivide2Full(const I& texture, I& result);
+    virtual void filterDivide2Width(const I& texture, I& result);
+    virtual void filterDivide2Height(const I& texture, I& result);
+    virtual void filterDivide2Full(const I& texture, I& result);
+
+private:
 
     std::vector<I> m_isoMipmaps; //< only isotropic mipmaps
     std::vector<std::vector<I>> m_anisoMipmapsWidth; //only anisotropic mipmaps which have reduced width compared to their isotropic counterparts
@@ -137,37 +145,6 @@ const I& Mipmap<I>::mipmap(int xPowReduction, int yPowReduction)
 }
 
 template <class I>
-void Mipmap<I>::filterDivide2Width(const I& texture, I& result)
-{
-    //an average filter, nothing special.
-    result.initItk(texture.width()/2, texture.height());
-    result.for_all_pixels([&] (typename I::PixelType &pix, int x, int y)
-    {
-        pix=(texture.pixelAbsolute(2*x, y) + texture.pixelAbsolute(2*x + 1, y)) * 0.5;
-    });
-}
-
-template <class I>
-void Mipmap<I>::filterDivide2Height(const I& texture, I& result)
-{
-    result.initItk(texture.width(), texture.height()/2);
-    result.for_all_pixels([&] (typename I::PixelType &pix, int x, int y)
-    {
-        pix=(texture.pixelAbsolute(x, 2*y) + texture.pixelAbsolute(x, 2*y + 1)) * 0.5;
-    });
-}
-
-template <class I>
-void Mipmap<I>::filterDivide2Full(const I& texture, I& result)
-{
-    result.initItk(texture.width()/2, texture.height()/2);
-    result.for_all_pixels([&] (typename I::PixelType &pix, int x, int y)
-    {
-        pix=(texture.pixelAbsolute(2*x, 2*y) + texture.pixelAbsolute(2*x + 1, 2*y) + texture.pixelAbsolute(2*x, 2*y + 1) + texture.pixelAbsolute(2*x + 1, 2*y + 1)) * 0.25; //TODO: /4.0 doesn't work if I is ImageRGBd, but *0.25 does.
-    });
-}
-
-template <class I>
 void Mipmap<I>::fullMipmap(I& fullMipmap)
 {
     //creates a compact image containing all mipmaps computed into fullMipmap.
@@ -240,6 +217,89 @@ void Mipmap<I>::fullMipmap(I& fullMipmap)
             ++itIso;
         }
     }
+}
+
+template <class I>
+void Mipmap<I>::filterDivide2Width(const I& texture, I& result)
+{
+    //an average filter, nothing special.
+    result.initItk(texture.width()/2, texture.height());
+    result.for_all_pixels([&] (typename I::PixelType &pix, int x, int y)
+    {
+        pix=(texture.pixelAbsolute(2*x, y) + texture.pixelAbsolute(2*x + 1, y)) * 0.5;
+    });
+}
+
+template <class I>
+void Mipmap<I>::filterDivide2Height(const I& texture, I& result)
+{
+    result.initItk(texture.width(), texture.height()/2);
+    result.for_all_pixels([&] (typename I::PixelType &pix, int x, int y)
+    {
+        pix=(texture.pixelAbsolute(x, 2*y) + texture.pixelAbsolute(x, 2*y + 1)) * 0.5;
+    });
+}
+
+template <class I>
+void Mipmap<I>::filterDivide2Full(const I& texture, I& result)
+{
+    result.initItk(texture.width()/2, texture.height()/2);
+    result.for_all_pixels([&] (typename I::PixelType &pix, int x, int y)
+    {
+        pix=(texture.pixelAbsolute(2*x, 2*y)
+             + texture.pixelAbsolute(2*x + 1, 2*y)
+             + texture.pixelAbsolute(2*x, 2*y + 1)
+             + texture.pixelAbsolute(2*x + 1, 2*y + 1)) * 0.25;
+    });
+}
+
+using ImageGrayb = ImageCommon<ImageGrayBase<bool>, false>;
+class MipmapBooleanImage : public Mipmap< ImageGrayb >
+{
+public:
+
+    MipmapBooleanImage(const ImageGrayb& texture, mipmap_mode_t mode=MIPMAP_ISO, int maxReductionLevel=0);
+
+protected:
+
+    void filterDivide2Width(const ImageGrayb& texture, ImageGrayb& result);
+    void filterDivide2Height(const ImageGrayb& texture, ImageGrayb& result);
+    void filterDivide2Full(const ImageGrayb& texture, ImageGrayb& result);
+};
+
+MipmapBooleanImage::MipmapBooleanImage(const ImageGrayb& texture, mipmap_mode_t mode, int maxReductionLevel):
+    Mipmap<ImageGrayb>(texture, mode, maxReductionLevel)
+{}
+
+void MipmapBooleanImage::filterDivide2Width(const ImageGrayb& texture, ImageGrayb& result)
+{
+    //sets the new cell to true if any of the interpolating cell is true.
+    result.initItk(texture.width()/2, texture.height());
+    result.for_all_pixels([&] (bool &pix, int x, int y)
+    {
+        pix = texture.pixelAbsolute(2*x, y) || texture.pixelAbsolute(2*x+1, y);
+    });
+}
+
+void MipmapBooleanImage::filterDivide2Height(const ImageGrayb& texture, ImageGrayb& result)
+{
+    result.initItk(texture.width(), texture.height()/2);
+    result.for_all_pixels([&] (bool &pix, int x, int y)
+    {
+        pix = texture.pixelAbsolute(x, 2*y) || texture.pixelAbsolute(x, 2*y+1);
+    });
+}
+
+void MipmapBooleanImage::filterDivide2Full(const ImageGrayb& texture, ImageGrayb& result)
+{
+    result.initItk(texture.width()/2, texture.height()/2);
+    result.for_all_pixels([&] (bool &pix, int x, int y)
+    {
+        pix = texture.pixelAbsolute(2*x, 2*y)
+            || texture.pixelAbsolute(2*x+1, 2*y)
+            || texture.pixelAbsolute(2*x, 2*y+1)
+            || texture.pixelAbsolute(2*x+1, 2*y+1);
+    });
 }
 
 #endif //__MIPMAP__
