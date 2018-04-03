@@ -87,10 +87,6 @@ template<typename I>
 class StampDiscrete : public StampBase<I>
 {
 public:
-    /**
-     * @brief StampDiscrete constructor for StampDiscrete.
-     */
-    StampDiscrete();
 
     /**
      * @brief StampDiscrete copy constructor for StampDiscrete.
@@ -261,7 +257,6 @@ template<typename I>
 class StampDiscreteWithMask : public StampDiscrete<I>
 {
 public:
-    StampDiscreteWithMask();
     StampDiscreteWithMask(const StampDiscreteWithMask<I> &other);
     StampDiscreteWithMask(const I& image);
 
@@ -284,13 +279,6 @@ private:
 //
 //Implementation of StampDiscrete
 //
-
-template<typename I>
-StampDiscrete<I>::StampDiscrete() :
-    m_image(),
-    m_rule(BILINEAR),
-    m_dimensions(Dimensions(1.0, 1.0))
-{}
 
 template<typename I>
 StampDiscrete<I>::StampDiscrete(const StampDiscrete &other) :
@@ -418,12 +406,6 @@ void StampDiscrete<I>::setImage(const I& image)
 //
 //Implementation of StampDiscreteWithMask
 //
-
-template<typename I>
-StampDiscreteWithMask<I>::StampDiscreteWithMask() :
-    StampDiscrete<I>(),
-    m_mask(MaskBool(0, 0, false))
-{}
 
 template<typename I>
 StampDiscreteWithMask<I>::StampDiscreteWithMask(const StampDiscreteWithMask<I> &other) :
