@@ -23,6 +23,15 @@ std::vector<Eigen::Vector2f> SamplerRegular::generate()
     return SamplePoints;
 }
 
+std::vector<Eigen::Vector2f> SamplerOrigin::generate()
+{
+    std::vector<Eigen::Vector2f> samplePoints;
+    samplePoints.reserve(m_nbPoints);
+    for(unsigned i=0; i<m_nbPoints; ++i)
+        samplePoints.push_back(Eigen::Vector2f(0, 0));
+    return samplePoints;
+}
+
 std::vector<Eigen::Vector2f> SamplerUniform::generate()
 {
     std::vector<Eigen::Vector2f> SamplePoints;

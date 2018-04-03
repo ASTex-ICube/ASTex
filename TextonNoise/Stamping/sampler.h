@@ -37,6 +37,26 @@ public:
 };
 
 /**
+ * @brief The SamplerOrigin class is an override of SamplerBase,
+ * supposed to yield an array of points all located at the origin.
+ */
+class SamplerOrigin : public SamplerBase
+{
+public:
+    SamplerOrigin(int nbPoints=1):
+        SamplerBase(),
+        m_nbPoints(nbPoints)
+    {}
+
+    void setNbPoints(unsigned nbPoints) {m_nbPoints = nbPoints;}
+
+    std::vector<Eigen::Vector2f> generate();
+
+private:
+    unsigned int m_nbPoints;
+};
+
+/**
  * @brief The SamplerRegular class is an override of SamplerBase,
  * supposed to yield an array of points sampled on a regular grid.
  * Behavior: The first point is always at (0,0),
