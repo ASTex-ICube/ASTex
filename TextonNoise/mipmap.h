@@ -36,6 +36,9 @@ public:
     const I& texture() const;
     I& texture();
 
+    bool generated() const {return m_generated;}
+    bool textureSet() const {return m_textureSet;}
+
     //set
 
     void setTexture(const I& texture);
