@@ -42,6 +42,8 @@ public:
     //misc
 
     virtual void generate(mipmap_mode_t mode=MIPMAP_ISO, unsigned maxPowReductionLevel=0);
+    void revertSetTexture();
+    void revertGenerate();
 
     void fullMipmap(I& fullMipmap);
 
@@ -57,21 +59,21 @@ protected:
 
     mipmap_mode_t m_mode;
     bool m_generated;
-    bool m_textureGiven;
+    bool m_textureSet;
 };
 
 template <class I>
 Mipmap<I>::Mipmap() :
     m_mode(MIPMAP_ISO),
     m_generated(false),
-    m_textureGiven(false)
+    m_textureSet(false)
 {}
 
 template <class I>
 Mipmap<I>::Mipmap(const I& texture) :
     m_mode(MIPMAP_ISO),
     m_generated(false),
-    m_textureGiven(true)
+    m_textureSet(true)
 {
     m_isoMipmaps.push_back(texture);
 }
@@ -79,7 +81,7 @@ Mipmap<I>::Mipmap(const I& texture) :
 template <class I>
 void Mipmap<I>::generate(mipmap_mode_t mode, unsigned maxPowReductionLevel)
 {
-    assert(m_textureGiven && "Mipmap::generate: no default texture has been set (try using Mipmap::setTexture first)");
+    assert(m_textureSet && "Mipmap::generate: no default texture has been set (try using Mipmap::setTexture first)");
     m_generated = true;
     m_mode=mode;
     //Resizing is done by computing the expected number of mipmaps and comparing it to the max number of mipmaps allowed.
@@ -156,10 +158,34 @@ void Mipmap<I>::generate(mipmap_mode_t mode, unsigned maxPowReductionLevel)
 }
 
 template <class I>
+void Mipmap<I>::revertSetTexture()
+{
+    if(m_textureSet)
+    {
+        revertGenerate();
+        m_isoMipmaps.erase(m_isoMipmaps.begin());
+    }
+}
+
+template <class I>
+void Mipmap<I>::revertGenerate()
+{
+    if(m_generated)
+    {
+        m_isoMipmaps.erase(m_isoMipmaps.begin()+1, m_isoMipmaps.end());
+        if(m_mode==MIPMAP_ANISO)
+        {
+            m_anisoMipmapsWidth.clear();
+            m_anisoMipmapsHeight.clear();
+        }
+    }
+}
+
+template <class I>
 void Mipmap<I>::setTexture(const I& texture)
 {
     m_generated=false;
-    m_textureGiven=true;
+    m_textureSet=true;
     if(m_isoMipmaps.size()>0)
         m_isoMipmaps[0]=texture;
     else
@@ -169,7 +195,7 @@ void Mipmap<I>::setTexture(const I& texture)
 template <class I>
 size_t Mipmap<I>::numberMipmapsWidth() const
 {
-    if(m_textureGiven)
+    if(m_textureSet)
         return 1;
     if(!m_generated)
         return 0;
@@ -180,7 +206,7 @@ size_t Mipmap<I>::numberMipmapsWidth() const
 template <class I>
 size_t Mipmap<I>::numberMipmapsHeight() const
 {
-    if(m_textureGiven)
+    if(m_textureSet)
         return 1;
     if(!m_generated)
         return 0;
@@ -213,7 +239,7 @@ const I& Mipmap<I>::mipmap(unsigned xPowReduction, unsigned yPowReduction) const
 template <class I>
 const I& Mipmap<I>::texture() const
 {
-    assert(m_textureGiven && "Mipmap::image(): mipmap must have been given a base texture (use setTexture(I) to give one).");
+    assert(m_textureSet && "Mipmap::image(): mipmap must have been given a base texture (use setTexture(I) to give one).");
     return m_isoMipmaps[0];
 }
 
@@ -226,7 +252,7 @@ I& Mipmap<I>::texture()
 template <class I>
 void Mipmap<I>::fullMipmap(I& fullMipmap)
 {
-    assert(m_textureGiven &&
+    assert(m_textureSet &&
            "Mipmap::fullMipmap: cannot save an empty mipmap (try using Mipmap::setTexture and Mipmap::generate first)");
     //creates a compact image containing all mipmaps computed into fullMipmap.
 
@@ -477,7 +503,7 @@ MipmapCEContent<I>::MipmapCEContent(const Mipmap<I> &contentColor, const Mipmap<
            && contentColor.numberMipmapsHeight() == patchAlpha.numberMipmapsHeight()
            && "MipmapCEContent(): contentColor mipmaps and patchAlpha mipmaps don't seem to come from the same process (different mipmap modes or differents sizes)");
     this->m_mode=contentColor.mode();
-    this->m_textureGiven=true;
+    this->m_textureSet=true;
     this->m_generated=true;
 
     unsigned i, j, maxIterations;
