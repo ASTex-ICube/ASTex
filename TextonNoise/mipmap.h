@@ -24,7 +24,7 @@ public:
     typedef enum {MIPMAP_ISO=0, MIPMAP_ANISO=1} mipmap_mode_t;
 
     Mipmap();
-    Mipmap(const I& texture, mipmap_mode_t mode=MIPMAP_ISO, unsigned maxReductionLevel=0);
+    Mipmap(const I& texture);
 
     //get
 
@@ -32,10 +32,16 @@ public:
     size_t numberMipmapsWidth() const;
     size_t numberMipmapsHeight() const;
     const I& mipmap(unsigned xPowReduction, unsigned yPowReduction) const;
+    const I& texture() const;
+    I& texture();
+
+    //set
+
+    void setTexture(const I& texture);
 
     //misc
 
-    virtual void generate(const I& texture, mipmap_mode_t mode=MIPMAP_ISO, unsigned maxPowReductionLevel=0);
+    virtual void generate(mipmap_mode_t mode=MIPMAP_ISO, unsigned maxPowReductionLevel=0);
 
     void fullMipmap(I& fullMipmap);
 
@@ -51,35 +57,38 @@ protected:
 
     mipmap_mode_t m_mode;
     bool m_generated;
+    bool m_textureGiven;
 };
 
 template <class I>
 Mipmap<I>::Mipmap() :
     m_mode(MIPMAP_ISO),
-    m_generated(false)
+    m_generated(false),
+    m_textureGiven(false)
 {}
 
 template <class I>
-Mipmap<I>::Mipmap(const I& texture, mipmap_mode_t mode, unsigned maxPowReductionLevel) :
-    m_mode(mode),
-    m_generated(true)
+Mipmap<I>::Mipmap(const I& texture) :
+    m_mode(MIPMAP_ISO),
+    m_generated(false),
+    m_textureGiven(true)
 {
-    generate(texture, mode, maxPowReductionLevel);
+    m_isoMipmaps.push_back(texture);
 }
 
 template <class I>
-void Mipmap<I>::generate(const I& texture, mipmap_mode_t mode, unsigned maxPowReductionLevel)
+void Mipmap<I>::generate(mipmap_mode_t mode, unsigned maxPowReductionLevel)
 {
+    assert(m_textureGiven && "Mipmap::generate: no default texture has been set (try using Mipmap::setTexture first)");
     m_generated = true;
     m_mode=mode;
     //Resizing is done by computing the expected number of mipmaps and comparing it to the max number of mipmaps allowed.
 
-    m_isoMipmaps.resize(   maxPowReductionLevel==0 ? std::floor( std::log2(std::min(texture.width(), texture.height()))+1 )
-                                                   : std::min( maxPowReductionLevel+1, unsigned(std::floor(std::log2(std::min(texture.width(), texture.height()))))+1 )  );
+    m_isoMipmaps.resize(   maxPowReductionLevel==0 ? std::floor( std::log2(std::min(m_isoMipmaps[0].width(), m_isoMipmaps[0].height()))+1 )
+                                                   : std::min( maxPowReductionLevel+1,
+                                                               unsigned(std::floor(std::log2(std::min(  m_isoMipmaps[0].width(),
+                                                                                                        m_isoMipmaps[0].height()))))+1 )  );
 
-    //Set the first mipmap to the given image
-    m_isoMipmaps[0].initItk(texture.width(), texture.height());
-    m_isoMipmaps[0].copy_pixels(texture);
     for(typename std::vector<I>::iterator it=m_isoMipmaps.begin()+1; it!=m_isoMipmaps.end(); ++it)
     {
         //then successively divide the width and height by 2, computing the average over a 4 pixels window.
@@ -98,10 +107,10 @@ void Mipmap<I>::generate(const I& texture, mipmap_mode_t mode, unsigned maxPowRe
         //until the max number of reductions is reached or the texture width is 1.
 
         powReductionLevel=maxPowReductionLevel;
-        m_anisoMipmapsWidth.resize(cappedNbOfReductions     ? std::floor( std::log2(texture.height()) )
-                                                            : std::min ( maxPowReductionLevel, unsigned(std::floor(std::log2(texture.height()))) ) );
+        m_anisoMipmapsWidth.resize(cappedNbOfReductions     ? std::floor( std::log2(m_isoMipmaps[0].height()) )
+                                                            : std::min ( maxPowReductionLevel, unsigned(std::floor(std::log2(m_isoMipmaps[0].height()))) ) );
         indexIso=0; //< index used to track the row of the matrix, so we know which isotropic mipmap should be used for the reduction.
-        w=texture.width(), h=texture.height();
+        w=m_isoMipmaps[0].width(), h=m_isoMipmaps[0].height();
         //for each row of the matrix, do
         for(typename std::vector<std::vector<I>>::iterator it=m_anisoMipmapsWidth.begin(); it!=m_anisoMipmapsWidth.end(); ++it)
         {
@@ -125,10 +134,10 @@ void Mipmap<I>::generate(const I& texture, mipmap_mode_t mode, unsigned maxPowRe
         //If the diagonal is set to be the isotropic vector, the concatenation between the first matrix and the transpose of this one is the full mipmap matrix.
 
         powReductionLevel=maxPowReductionLevel;
-        m_anisoMipmapsHeight.resize(cappedNbOfReductions    ? std::floor( std::log2(texture.width()) )
-                                                            : std::min( powReductionLevel, int(std::floor(std::log2(texture.width()))) ) );
+        m_anisoMipmapsHeight.resize(cappedNbOfReductions    ? std::floor( std::log2(m_isoMipmaps[0].width()) )
+                                                            : std::min( powReductionLevel, int(std::floor(std::log2(m_isoMipmaps[0].width()))) ) );
         indexIso=0;
-        w=texture.width(), h=texture.height();
+        w=m_isoMipmaps[0].width(), h=m_isoMipmaps[0].height();
         for(typename std::vector<std::vector<I>>::iterator it=m_anisoMipmapsHeight.begin(); it!=m_anisoMipmapsHeight.end(); ++it)
         {
             (*it).resize(cappedNbOfReductions   ? std::floor( std::log2(h) )
@@ -147,8 +156,21 @@ void Mipmap<I>::generate(const I& texture, mipmap_mode_t mode, unsigned maxPowRe
 }
 
 template <class I>
+void Mipmap<I>::setTexture(const I& texture)
+{
+    m_generated=false;
+    m_textureGiven=true;
+    if(m_isoMipmaps.size()>0)
+        m_isoMipmaps[0]=texture;
+    else
+        m_isoMipmaps.push_back(texture);
+}
+
+template <class I>
 size_t Mipmap<I>::numberMipmapsWidth() const
 {
+    if(m_textureGiven)
+        return 1;
     if(!m_generated)
         return 0;
     return m_mode == MIPMAP_ANISO ? m_anisoMipmapsWidth[0].size()+1 : m_isoMipmaps.size();
@@ -158,6 +180,8 @@ size_t Mipmap<I>::numberMipmapsWidth() const
 template <class I>
 size_t Mipmap<I>::numberMipmapsHeight() const
 {
+    if(m_textureGiven)
+        return 1;
     if(!m_generated)
         return 0;
     return m_mode == MIPMAP_ANISO ? m_anisoMipmapsHeight[0].size()+1 : m_isoMipmaps.size();
@@ -166,8 +190,10 @@ size_t Mipmap<I>::numberMipmapsHeight() const
 template <class I>
 const I& Mipmap<I>::mipmap(unsigned xPowReduction, unsigned yPowReduction) const
 {
-    assert(m_generated && "Mipmap::mipmap: mipmap has not been yet generated (use function generate() or provide necessary arguments to constructor)");
-    assert((m_mode!=MIPMAP_ISO || xPowReduction==yPowReduction) && "Mipmap::mipmap: xReduction and yReduction must be identical when using isotropic filtering");
+    assert(m_generated &&
+            "Mipmap::mipmap: mipmaps have not been generated yet (try using Mipmap::generate)");
+    assert((m_mode!=MIPMAP_ISO || xPowReduction==yPowReduction) &&
+            "Mipmap::mipmap: xReduction and yReduction must be identical when using isotropic filtering");
     xPowReduction = std::min(xPowReduction, (unsigned)m_isoMipmaps.size()-1);
     yPowReduction = std::min(yPowReduction, (unsigned)m_isoMipmaps.size()-1);
 
@@ -185,8 +211,23 @@ const I& Mipmap<I>::mipmap(unsigned xPowReduction, unsigned yPowReduction) const
 }
 
 template <class I>
+const I& Mipmap<I>::texture() const
+{
+    assert(m_textureGiven && "Mipmap::image(): mipmap must have been given a base texture (use setTexture(I) to give one).");
+    return m_isoMipmaps[0];
+}
+
+template <class I>
+I& Mipmap<I>::texture()
+{
+    return const_cast<I&>(static_cast<const Mipmap<I>*>(this)->texture());
+}
+
+template <class I>
 void Mipmap<I>::fullMipmap(I& fullMipmap)
 {
+    assert(m_textureGiven &&
+           "Mipmap::fullMipmap: cannot save an empty mipmap (try using Mipmap::setTexture and Mipmap::generate first)");
     //creates a compact image containing all mipmaps computed into fullMipmap.
 
     //first, determine the width and height of the image, iteratively so we don't bother too much with special cases.
@@ -298,7 +339,8 @@ class MipmapBooleanImage : public Mipmap< ImageGrayb >
 {
 public:
 
-    MipmapBooleanImage(const ImageGrayb& texture, mipmap_mode_t mode=MIPMAP_ISO, unsigned maxReductionLevel=0);
+    MipmapBooleanImage();
+    MipmapBooleanImage(const ImageGrayb& texture);
 
 protected:
 
@@ -307,8 +349,12 @@ protected:
     void filterDivide2Full(const ImageGrayb& texture, ImageGrayb& result);
 };
 
-MipmapBooleanImage::MipmapBooleanImage(const ImageGrayb& texture, mipmap_mode_t mode, unsigned maxReductionLevel):
-    Mipmap<ImageGrayb>(texture, mode, maxReductionLevel)
+MipmapBooleanImage::MipmapBooleanImage():
+    Mipmap<ImageGrayb>()
+{}
+
+MipmapBooleanImage::MipmapBooleanImage(const ImageGrayb& texture):
+    Mipmap<ImageGrayb>(texture)
 {}
 
 void MipmapBooleanImage::filterDivide2Width(const ImageGrayb& texture, ImageGrayb& result)
@@ -347,7 +393,8 @@ class MipmapBitmask : public Mipmap<I>
 {
 public:
 
-    MipmapBitmask(const I& texture, typename Mipmap<I>::mipmap_mode_t mode=Mipmap<I>::MIPMAP_ISO, unsigned maxReductionLevel=0);
+    MipmapBitmask();
+    MipmapBitmask(const I& texture);
 
 protected:
 
@@ -357,8 +404,13 @@ protected:
 };
 
 template<typename I>
-MipmapBitmask<I>::MipmapBitmask(const I& texture, typename Mipmap<I>::mipmap_mode_t mode, unsigned maxReductionLevel) :
-    Mipmap<I>(texture, mode, maxReductionLevel)
+MipmapBitmask<I>::MipmapBitmask() :
+    Mipmap<I>()
+{}
+
+template<typename I>
+MipmapBitmask<I>::MipmapBitmask(const I& texture) :
+    Mipmap<I>(texture)
 {}
 
 template<typename I>
@@ -413,7 +465,7 @@ public:
      */
     MipmapCEContent(const Mipmap<I> &contentColor, const Mipmap<ImageGrayd> &patchAlpha);
 
-    void generate(const I& texture, typename Mipmap<I>::mipmap_mode_t mode=Mipmap<I>::MIPMAP_ISO, unsigned maxPowReductionLevel=0);
+    void generate(typename Mipmap<I>::mipmap_mode_t mode=Mipmap<I>::MIPMAP_ISO, unsigned maxPowReductionLevel=0);
 };
 
 template<typename I>
@@ -425,6 +477,7 @@ MipmapCEContent<I>::MipmapCEContent(const Mipmap<I> &contentColor, const Mipmap<
            && contentColor.numberMipmapsHeight() == patchAlpha.numberMipmapsHeight()
            && "MipmapCEContent(): contentColor mipmaps and patchAlpha mipmaps don't seem to come from the same process (different mipmap modes or differents sizes)");
     this->m_mode=contentColor.mode();
+    this->m_textureGiven=true;
     this->m_generated=true;
 
     unsigned i, j, maxIterations;
@@ -549,9 +602,8 @@ MipmapCEContent<I>::MipmapCEContent(const Mipmap<I> &contentColor, const Mipmap<
 }
 
 template<typename I>
-void MipmapCEContent<I>::generate(const I& texture, typename Mipmap<I>::mipmap_mode_t mode, unsigned maxPowReductionLevel)
+void MipmapCEContent<I>::generate(typename Mipmap<I>::mipmap_mode_t mode, unsigned maxPowReductionLevel)
 {
-    (void) texture;
     (void) mode;
     (void) maxPowReductionLevel;
     return;
