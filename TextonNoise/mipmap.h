@@ -10,6 +10,8 @@
 
 using namespace ASTex;
 
+typedef enum {ISOTROPIC=0, ANISOTROPIC=1, NO_FILTER=2} mipmap_mode_t;
+
 template <class I>
 /**
  * @brief The Mipmap class is a base class for mip-mapping.
@@ -21,8 +23,6 @@ template <class I>
 class Mipmap
 {
 public:
-
-    typedef enum {ISOTROPIC=0, ANISOTROPIC=1, NO_FILTER=2} mipmap_mode_t;
 
     Mipmap();
     Mipmap(const I& texture);
@@ -224,7 +224,7 @@ template <class I>
 const I& Mipmap<I>::mipmap(unsigned xPowReduction, unsigned yPowReduction) const
 {
     assert(m_mode!=NO_FILTER &&
-            "Mipmap::mipmap: cannot call mipmaps with mode set to NO_FILTER (try Mipmap::generate with ISOTROPIC)")
+            "Mipmap::mipmap: cannot call mipmaps with mode set to NO_FILTER (try Mipmap::generate with ISOTROPIC)");
     assert(m_generated &&
             "Mipmap::mipmap: mipmaps have not been generated yet (try using Mipmap::generate)");
     assert((m_mode!=ISOTROPIC || xPowReduction==yPowReduction) &&
@@ -501,7 +501,7 @@ public:
      */
     MipmapCEContent(const Mipmap<I> &contentColor, const Mipmap<ImageGrayd> &patchAlpha);
 
-    void generate(typename Mipmap<I>::mipmap_mode_t mode=Mipmap<I>::ISOTROPIC, unsigned maxPowReductionLevel=0);
+    void generate(mipmap_mode_t mode=ISOTROPIC, unsigned maxPowReductionLevel=0);
 };
 
 template<typename I>
@@ -638,7 +638,7 @@ MipmapCEContent<I>::MipmapCEContent(const Mipmap<I> &contentColor, const Mipmap<
 }
 
 template<typename I>
-void MipmapCEContent<I>::generate(typename Mipmap<I>::mipmap_mode_t mode, unsigned maxPowReductionLevel)
+void MipmapCEContent<I>::generate(mipmap_mode_t mode, unsigned maxPowReductionLevel)
 {
     (void) mode;
     (void) maxPowReductionLevel;
