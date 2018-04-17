@@ -16,12 +16,13 @@ template <class I>
  * It is able to filter any image with mipmaps by computing a recursive bilinear average over a 4 pixels neighboorhood.
  * the filterDivide functions determine how the mip-map is handled, and they are the functions to override to change
  * the behaviour of the mipmapping.
+ * The default mode for Mipmaps is ISOTROPIC.
  */
 class Mipmap
 {
 public:
 
-    typedef enum {MIPMAP_ISO=0, MIPMAP_ANISO=1} mipmap_mode_t;
+    typedef enum {ISOTROPIC=0, ANISOTROPIC=1, NO_FILTER=2} mipmap_mode_t;
 
     Mipmap();
     Mipmap(const I& texture);
@@ -41,7 +42,7 @@ public:
 
     //misc
 
-    virtual void generate(mipmap_mode_t mode=MIPMAP_ISO, unsigned maxPowReductionLevel=0);
+    virtual void generate(mipmap_mode_t mode=ISOTROPIC, unsigned maxPowReductionLevel=0);
     void revertSetTexture();
     void revertGenerate();
 
@@ -64,14 +65,14 @@ protected:
 
 template <class I>
 Mipmap<I>::Mipmap() :
-    m_mode(MIPMAP_ISO),
+    m_mode(ISOTROPIC),
     m_generated(false),
     m_textureSet(false)
 {}
 
 template <class I>
 Mipmap<I>::Mipmap(const I& texture) :
-    m_mode(MIPMAP_ISO),
+    m_mode(ISOTROPIC),
     m_generated(false),
     m_textureSet(true)
 {
@@ -81,9 +82,12 @@ Mipmap<I>::Mipmap(const I& texture) :
 template <class I>
 void Mipmap<I>::generate(mipmap_mode_t mode, unsigned maxPowReductionLevel)
 {
-    assert(m_textureSet && "Mipmap::generate: no default texture has been set (try using Mipmap::setTexture first)");
+    assert(m_textureSet
+           && "Mipmap::generate: no default texture has been set (try using Mipmap::setTexture first)");
     m_generated = true;
     m_mode=mode;
+    if(mode == NO_FILTER)
+        return;
     //Resizing is done by computing the expected number of mipmaps and comparing it to the max number of mipmaps allowed.
 
     m_isoMipmaps.resize(   maxPowReductionLevel==0 ? std::floor( std::log2(std::min(m_isoMipmaps[0].width(), m_isoMipmaps[0].height()))+1 )
@@ -98,7 +102,7 @@ void Mipmap<I>::generate(mipmap_mode_t mode, unsigned maxPowReductionLevel)
     }
     //The vector is filled with all isotropic mipmaps.
     //Anisotropic filtering can be enabled by passing MIPMAP_ANISO as the mode parameter of this constructor.
-    if(mode==MIPMAP_ANISO)
+    if(mode==ANISOTROPIC)
     {
         int powReductionLevel; //< sliding max number of reductions by 2, used to cap the reductions
         int w, h, indexIso; //< sliding width, sliding height, index in the isotropic mipmaps vector
@@ -173,7 +177,7 @@ void Mipmap<I>::revertGenerate()
     if(m_generated)
     {
         m_isoMipmaps.erase(m_isoMipmaps.begin()+1, m_isoMipmaps.end());
-        if(m_mode==MIPMAP_ANISO)
+        if(m_mode==ANISOTROPIC)
         {
             m_anisoMipmapsWidth.clear();
             m_anisoMipmapsHeight.clear();
@@ -199,7 +203,7 @@ size_t Mipmap<I>::numberMipmapsWidth() const
         return 1;
     if(!m_generated)
         return 0;
-    return m_mode == MIPMAP_ANISO ? m_anisoMipmapsWidth[0].size()+1 : m_isoMipmaps.size();
+    return m_mode == ANISOTROPIC ? m_anisoMipmapsWidth[0].size()+1 : m_isoMipmaps.size();
     //+1 because the first mipmap is the full image, which is stored in m_isoMipmaps[0] but not in m_anisoMipmapsWidth
 }
 
@@ -210,15 +214,17 @@ size_t Mipmap<I>::numberMipmapsHeight() const
         return 1;
     if(!m_generated)
         return 0;
-    return m_mode == MIPMAP_ANISO ? m_anisoMipmapsHeight[0].size()+1 : m_isoMipmaps.size();
+    return m_mode == ANISOTROPIC ? m_anisoMipmapsHeight[0].size()+1 : m_isoMipmaps.size();
 }
 
 template <class I>
 const I& Mipmap<I>::mipmap(unsigned xPowReduction, unsigned yPowReduction) const
 {
+    assert(m_mode!=NO_FILTER &&
+            "Mipmap::mipmap: cannot call mipmaps with mode set to NO_FILTER (try Mipmap::generate with ISOTROPIC)")
     assert(m_generated &&
             "Mipmap::mipmap: mipmaps have not been generated yet (try using Mipmap::generate)");
-    assert((m_mode!=MIPMAP_ISO || xPowReduction==yPowReduction) &&
+    assert((m_mode!=ISOTROPIC || xPowReduction==yPowReduction) &&
             "Mipmap::mipmap: xReduction and yReduction must be identical when using isotropic filtering");
     xPowReduction = std::min(xPowReduction, (unsigned)m_isoMipmaps.size()-1);
     yPowReduction = std::min(yPowReduction, (unsigned)m_isoMipmaps.size()-1);
@@ -239,7 +245,8 @@ const I& Mipmap<I>::mipmap(unsigned xPowReduction, unsigned yPowReduction) const
 template <class I>
 const I& Mipmap<I>::texture() const
 {
-    assert(m_textureSet && "Mipmap::image(): mipmap must have been given a base texture (use setTexture(I) to give one).");
+    assert(m_textureSet &&
+            "Mipmap::image(): mipmap must have been given a base texture (use Mipmap::setTexture to give one).");
     return m_isoMipmaps[0];
 }
 
@@ -279,7 +286,7 @@ void Mipmap<I>::fullMipmap(I& fullMipmap)
 
     x0=0, y0=0;
     //then draw the rest of the owl in case of anisotropy
-    if(m_mode==MIPMAP_ANISO)
+    if(m_mode==ANISOTROPIC)
     {
         //superior triangle
 
@@ -491,7 +498,7 @@ public:
      */
     MipmapCEContent(const Mipmap<I> &contentColor, const Mipmap<ImageGrayd> &patchAlpha);
 
-    void generate(typename Mipmap<I>::mipmap_mode_t mode=Mipmap<I>::MIPMAP_ISO, unsigned maxPowReductionLevel=0);
+    void generate(typename Mipmap<I>::mipmap_mode_t mode=Mipmap<I>::ISOTROPIC, unsigned maxPowReductionLevel=0);
 };
 
 template<typename I>
@@ -609,17 +616,17 @@ MipmapCEContent<I>::MipmapCEContent(const Mipmap<I> &contentColor, const Mipmap<
 
     maxIterations = std::max(contentColor.numberMipmapsWidth(), contentColor.numberMipmapsHeight());
     this->m_isoMipmaps.resize(maxIterations);
-    if(contentColor.mode() == Mipmap<I>::MIPMAP_ANISO)
+    if(contentColor.mode() == Mipmap<I>::ANISOTROPIC)
     {
         this->m_anisoMipmapsWidth.resize(contentColor.numberMipmapsWidth()-1);
         this->m_anisoMipmapsHeight.resize(contentColor.numberMipmapsHeight()-1);
     }
 
-    if(contentColor.mode()==Mipmap<I>::MIPMAP_ISO)
+    if(contentColor.mode()==Mipmap<I>::ISOTROPIC)
     for(i=0, j=0; i<maxIterations; ++i, ++j)
         emplaceMipmap();
 
-    else if(contentColor.mode()==Mipmap<I>::MIPMAP_ANISO)
+    else if(contentColor.mode()==Mipmap<I>::ANISOTROPIC)
         for(i=0; i<contentColor.numberMipmapsWidth(); ++i)
             for(j=0; j<contentColor.numberMipmapsHeight(); ++i)
                 emplaceMipmap();
