@@ -298,6 +298,12 @@ const I& Mipmap<I>::mipmap(unsigned xPowReduction, unsigned yPowReduction) const
             : m_anisoMipmapsHeight[xPowReduction][yPowReduction-xPowReduction-1];
 }
 
+template <class I>
+I& Mipmap<I>::mipmap(unsigned xPowReduction, unsigned yPowReduction)
+{
+    return const_cast<I&>(static_cast<const Mipmap<I>*>(this)->mipmap(xPowReduction, yPowReduction));
+}
+
 
 template <class I>
 const I& Mipmap<I>::texture() const
@@ -534,169 +540,6 @@ void MipmapBitmask<I>::filterDivide2Full(const I& texture, I& result)
             | texture.pixelAbsolute(2*x, 2*y+1)
             | texture.pixelAbsolute(2*x+1, 2*y+1);
     });
-}
-
-template<typename I>
-/**
- * @brief The MipmapContentExchange class is a particular type of mipmap
- * which embodies mipmapped portions of an image.
- * These portions must have been stored in an image and mipmapped before using this class.
- * Content must have been shifted and emplaced where the patch's default content is
- * in order to fit the size.
- */
-class MipmapCEContent : public Mipmap<I>
-{
-public:
-    /**
-     * @brief MipmapCEContent constructor for MipmapCEContent.
-     * Immediately produces the output image.
-     * @param contentColor input-sized mipmap containing the content, shifted to the position of the patch.
-     * @param patchAlpha input-sized mipmap containing the alpha information of the patch.
-     */
-    MipmapCEContent(const Mipmap<I> &contentColor, const Mipmap<ImageGrayd> &patchAlpha);
-
-    void generate(mipmap_mode_t mode=ISOTROPIC, unsigned maxPowReductionLevel=0);
-};
-
-template<typename I>
-MipmapCEContent<I>::MipmapCEContent(const Mipmap<I> &contentColor, const Mipmap<ImageGrayd> &patchAlpha) :
-    Mipmap<I>()
-{
-    assert(contentColor.mode()==patchAlpha.mode() && contentColor.mipmap(0, 0).size()==patchAlpha.mipmap(0, 0).size()
-           && contentColor.numberMipmapsWidth() == patchAlpha.numberMipmapsWidth()
-           && contentColor.numberMipmapsHeight() == patchAlpha.numberMipmapsHeight()
-           && "MipmapCEContent(): contentColor mipmaps and patchAlpha mipmaps don't seem to come from the same process (different mipmap modes or differents sizes)");
-    this->m_mode=contentColor.mode();
-    this->m_textureSet=true;
-    this->m_generated=true;
-
-    unsigned i, j, maxIterations;
-    unsigned xMin, yMin, xMax, yMax;
-    auto emplaceMipmap = [&] ()
-    {
-        const I& mipmapContentColor=contentColor.mipmap(i, j);
-        const ImageGrayd &mipmapPatchAlpha=patchAlpha.mipmap(i, j);
-        I* mipmapContentBox=NULL;
-
-        //slighty awkward assignement, corresponds to mipmap(i, j)
-        if(i == j) //isotropic
-            mipmapContentBox = &this->m_isoMipmaps[i];
-        else
-            mipmapContentBox = i > j ? &this->m_anisoMipmapsWidth[j][i-j-1] : &this->m_anisoMipmapsHeight[i][j-i-1];
-
-        //first iteration: find the edges of the box using the patch's alpha.
-        //note how patches can bleed from one edge of the image to another due to periodicity.
-
-        xMin=mipmapPatchAlpha.width()-1;
-        yMin=mipmapPatchAlpha.height()-1;
-        xMax=0;
-        yMax=0;
-        mipmapPatchAlpha.for_all_pixels([&] (typename ImageGrayd::PixelType &pix, int x, int y)
-        {
-            if(pix>0) //meaning there's a patch portion
-            {
-                xMin=std::min(xMin, (unsigned)x);
-                yMin=std::min(yMin, (unsigned)y);
-                xMax=std::max(xMax, (unsigned)x);
-                yMax=std::max(xMax, (unsigned)y);
-            }
-        });
-
-        //we have found a non periodic bounding box.
-        //Now we need to check if the bounding box is aperiodic in width.
-        //TODO: if a bug is found, it could come from this part. It's easy to make a mistake.
-        //TODO: this part of the code WILL also be problematic if some periodic boxes take the entire width.
-        if(xMin == 0 && xMax == mipmapPatchAlpha.width()-1)
-        { //this block occurs when the bounding box is suspected to be periodic in width.
-            //check discontinuities in image width (an empty column)
-            int oldXMax = xMax;
-            for(int x=xMin; x<=xMax; ++x)
-            {
-                int y;
-                for(y=yMin; y<=yMax && mipmapPatchAlpha.pixelAbsolute(x, y)==0; ++y);
-                if(y>yMax) //discontinuity found
-                    xMax=x-1; //assign xMax to the last full row we found, breaking the loop
-            }
-            if(oldXMax != xMax) //if false, it means the content was simply taking the entire width
-            {
-                //iterate the other way until a discontinuity is found
-                for(int x=oldXMax; x>=xMin; --x)
-                {
-                    int y;
-                    for(y=yMin; y<=yMax && mipmapPatchAlpha.pixelAbsolute(x, y)==0; ++y);
-                    if(y>yMax) //discontinuity found
-                        xMin=x+1; //assign xMin to the last full row we found, breaking the loop
-                }
-            }
-        }
-        //from here onwards, the bounding box shall take periodicity in width in account.
-        //now for the periodicity in height, it's the same iteration, but in height, with y instead of x, and a modulo on x.
-        if(yMin == 0 && yMax == mipmapPatchAlpha.height()-1)
-        {
-            int oldYMax = yMax;
-            //notice the new iterator: we use != to xMax+1 and the iteration is periodic on the width.
-            for(int y=yMin; y<=yMax; ++y)
-            {
-                int x;
-                for(x=xMin; x!=xMax+1 && mipmapPatchAlpha.pixelAbsolute(x, y)==0; x = (x+1)%mipmapPatchAlpha.width());
-                if(x==xMax+1) //discontinuity found (don't use >)
-                    yMax=y-1;
-            }
-            if(oldYMax != yMax)
-            {
-                for(int y=oldYMax; y>=yMin; --y)
-                {
-                    int x;
-                    for(x=xMin; x!=xMax+1 && mipmapPatchAlpha.pixelAbsolute(x, y)==0; x = (x+1)%mipmapPatchAlpha.width());
-                    if(x==xMax+1)
-                        yMin=y+1;
-                }
-            }
-        }
-        //from here onwards we have found the correctly periodic bounding box.
-        //TODO: this code should be copied, or even exported, to the place we compute the boxes for the patches.
-        //Then, we could simply pass every boxes we computed to this function.
-
-        //Allocate the new mipmap
-
-        mipmapContentBox->initItk(xMin<xMax ? xMax-xMin+1 : mipmapPatchAlpha.width()-xMin + xMax,
-                                  yMin<yMax ? yMax-yMin+1 : mipmapPatchAlpha.height()-yMin + yMax, true);
-        //Fill up the new mipmap
-        mipmapContentBox->for_all_pixels([&] (typename I::PixelType &pix, int x, int y)
-        {
-            pix = mipmapContentColor.pixelAbsolute((xMin+x)%mipmapContentColor.width(),
-                                                   (yMin+y)%mipmapContentColor.height());
-        });
-    };
-
-    //allocation
-
-    maxIterations = std::max(contentColor.numberMipmapsWidth(), contentColor.numberMipmapsHeight());
-    this->m_isoMipmaps.resize(maxIterations);
-    if(contentColor.mode() == Mipmap<I>::ANISOTROPIC)
-    {
-        this->m_anisoMipmapsWidth.resize(contentColor.numberMipmapsWidth()-1);
-        this->m_anisoMipmapsHeight.resize(contentColor.numberMipmapsHeight()-1);
-    }
-
-    if(contentColor.mode()==Mipmap<I>::ISOTROPIC)
-    for(i=0, j=0; i<maxIterations; ++i, ++j)
-        emplaceMipmap();
-
-    else if(contentColor.mode()==Mipmap<I>::ANISOTROPIC)
-        for(i=0; i<contentColor.numberMipmapsWidth(); ++i)
-            for(j=0; j<contentColor.numberMipmapsHeight(); ++i)
-                emplaceMipmap();
-
-
-}
-
-template<typename I>
-void MipmapCEContent<I>::generate(mipmap_mode_t mode, unsigned maxPowReductionLevel)
-{
-    (void) mode;
-    (void) maxPowReductionLevel;
-    return;
 }
 
 #endif //__MIPMAP__
