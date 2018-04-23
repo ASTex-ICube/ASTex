@@ -325,7 +325,7 @@ I StamperTexton<I>::generate(int imageWidth, int imageHeight) const
 {
     I im_out;
     std::vector<Eigen::Vector2f> verticesArray;
-    double stampWidth, stampHeight;
+    double stampWidth=0.0, stampHeight=0.0;
     double i, j;
     double otx, oty; //texton origin in texture space (top left)
     double tx, ty; //texton coordinates
