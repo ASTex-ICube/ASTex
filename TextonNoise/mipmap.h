@@ -26,6 +26,7 @@ public:
 
     Mipmap();
     Mipmap(const I& texture);
+    Mipmap(const Mipmap& other);
 
     //get
 
@@ -89,6 +90,32 @@ Mipmap<I>::Mipmap(const I& texture) :
     m_textureSet(true)
 {
     m_isoMipmaps.push_back(texture);
+}
+
+template <class I>
+Mipmap<I>::Mipmap(const Mipmap& other):
+    m_isoMipmaps(),
+    m_anisoMipmapsWidth(),
+    m_anisoMipmapsHeight(),
+    m_mode(other.mode()),
+    m_maxPowReductionLevel(other.maxPowReductionLevel()),
+    m_generated(other.isGenerated()),
+    m_textureSet(other.isTextureSet())
+{
+    if(m_textureSet)
+    {
+        m_isoMipmaps.resize(std::max(other.numberMipmapsWidth(), other.numberMipmapsHeight()));
+        m_anisoMipmapsWidth.resize(other.numberMipmapsWidth()-1);
+        m_anisoMipmapsHeight.resize(other.numberMipmapsHeight()-1);
+        for(size_t i=0; i<other.numberMipmapsWidth(); ++i)
+            for(size_t j=0; j<other.numberMipmapsHeight(); ++j)
+            {
+                I& m=this->mipmap(i, j);
+                const I& mOther=other.mipmap(i, j);
+                m.initItk(mOther.width(), mOther.height(), false);
+                m.copy_pixels(mOther);
+            }
+    }
 }
 
 template <class I>
