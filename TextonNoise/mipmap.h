@@ -30,22 +30,28 @@ public:
     //get
 
     mipmap_mode_t mode() const {return m_mode;}
+    unsigned maxPowReductionLevel() const {return m_maxPowReductionLevel;}
+
     size_t numberMipmapsWidth() const;
     size_t numberMipmapsHeight() const;
     const I& mipmap(unsigned xPowReduction, unsigned yPowReduction) const;
+    I& mipmap(unsigned xPowReduction, unsigned yPowReduction);
+
     const I& texture() const;
     I& texture();
 
-    bool generated() const {return m_generated;}
-    bool textureSet() const {return m_textureSet;}
+    bool isGenerated() const {return m_generated;}
+    bool isTextureSet() const {return m_textureSet;}
 
     //set
 
     void setTexture(const I& texture);
+    void setMode(mipmap_mode_t mode);
+    void setMaxPowReductionLevel(unsigned maxPowReductionLevel=0);
 
     //misc
 
-    virtual void generate(mipmap_mode_t mode=ISOTROPIC, unsigned maxPowReductionLevel=0);
+    virtual void generate();
     void revertSetTexture();
     void revertGenerate();
 
@@ -62,6 +68,7 @@ protected:
     std::vector<std::vector<I>> m_anisoMipmapsHeight; //only anisotropic mipmaps which have reduced height compared to their isotropic counterparts
 
     mipmap_mode_t m_mode;
+    unsigned m_maxPowReductionLevel;
     bool m_generated;
     bool m_textureSet;
 };
@@ -69,6 +76,7 @@ protected:
 template <class I>
 Mipmap<I>::Mipmap() :
     m_mode(ISOTROPIC),
+    m_maxPowReductionLevel(0),
     m_generated(false),
     m_textureSet(false)
 {}
@@ -76,6 +84,7 @@ Mipmap<I>::Mipmap() :
 template <class I>
 Mipmap<I>::Mipmap(const I& texture) :
     m_mode(ISOTROPIC),
+    m_maxPowReductionLevel(0),
     m_generated(false),
     m_textureSet(true)
 {
@@ -83,18 +92,17 @@ Mipmap<I>::Mipmap(const I& texture) :
 }
 
 template <class I>
-void Mipmap<I>::generate(mipmap_mode_t mode, unsigned maxPowReductionLevel)
+void Mipmap<I>::generate()
 {
     assert(m_textureSet
            && "Mipmap::generate: no default texture has been set (try using Mipmap::setTexture first)");
     m_generated = true;
-    m_mode=mode;
-    if(mode == NO_FILTER)
+    if(m_mode == NO_FILTER)
         return;
     //Resizing is done by computing the expected number of mipmaps and comparing it to the max number of mipmaps allowed.
 
-    m_isoMipmaps.resize(   maxPowReductionLevel==0 ? std::floor( std::log2(std::min(m_isoMipmaps[0].width(), m_isoMipmaps[0].height()))+1 )
-                                                   : std::min( maxPowReductionLevel+1,
+    m_isoMipmaps.resize(   m_maxPowReductionLevel==0 ? std::floor( std::log2(std::min(m_isoMipmaps[0].width(), m_isoMipmaps[0].height()))+1 )
+                                                   : std::min( m_maxPowReductionLevel+1,
                                                                unsigned(std::floor(std::log2(std::min(  m_isoMipmaps[0].width(),
                                                                                                         m_isoMipmaps[0].height()))))+1 )  );
 
@@ -105,19 +113,19 @@ void Mipmap<I>::generate(mipmap_mode_t mode, unsigned maxPowReductionLevel)
     }
     //The vector is filled with all isotropic mipmaps.
     //Anisotropic filtering can be enabled by passing MIPMAP_ANISO as the mode parameter of this constructor.
-    if(mode==ANISOTROPIC)
+    if(m_mode==ANISOTROPIC)
     {
         int powReductionLevel; //< sliding max number of reductions by 2, used to cap the reductions
         int w, h, indexIso; //< sliding width, sliding height, index in the isotropic mipmaps vector
-        bool cappedNbOfReductions=maxPowReductionLevel==0; //< boolean determining if the number of reductions are capped, for readability
+        bool cappedNbOfReductions=m_maxPowReductionLevel==0; //< boolean determining if the number of reductions are capped, for readability
 
         //First triangular matrix is filled only with mipmaps whose content are mipmaps with successively divided widths compared to isotropic counterparts.
         //For instance, say I have a 256x256 texture (row number 0) with a 64x64 mipmap (row number 2), the columns would be 32x64 (column 0), 16x64 (column 1)...
         //until the max number of reductions is reached or the texture width is 1.
 
-        powReductionLevel=maxPowReductionLevel;
+        powReductionLevel=m_maxPowReductionLevel;
         m_anisoMipmapsWidth.resize(cappedNbOfReductions     ? std::floor( std::log2(m_isoMipmaps[0].height()) )
-                                                            : std::min ( maxPowReductionLevel, unsigned(std::floor(std::log2(m_isoMipmaps[0].height()))) ) );
+                                                            : std::min ( m_maxPowReductionLevel, unsigned(std::floor(std::log2(m_isoMipmaps[0].height()))) ) );
         indexIso=0; //< index used to track the row of the matrix, so we know which isotropic mipmap should be used for the reduction.
         w=m_isoMipmaps[0].width(), h=m_isoMipmaps[0].height();
         //for each row of the matrix, do
@@ -142,7 +150,7 @@ void Mipmap<I>::generate(mipmap_mode_t mode, unsigned maxPowReductionLevel)
         //The second triangular matrix is filled like the first one but the height is divided instead of the width.
         //If the diagonal is set to be the isotropic vector, the concatenation between the first matrix and the transpose of this one is the full mipmap matrix.
 
-        powReductionLevel=maxPowReductionLevel;
+        powReductionLevel=m_maxPowReductionLevel;
         m_anisoMipmapsHeight.resize(cappedNbOfReductions    ? std::floor( std::log2(m_isoMipmaps[0].width()) )
                                                             : std::min( powReductionLevel, int(std::floor(std::log2(m_isoMipmaps[0].width()))) ) );
         indexIso=0;
@@ -185,13 +193,31 @@ void Mipmap<I>::revertGenerate()
             m_anisoMipmapsWidth.clear();
             m_anisoMipmapsHeight.clear();
         }
+        m_generated=false;
     }
+}
+
+template <class I>
+void Mipmap<I>::setMode(mipmap_mode_t mode)
+{
+    if(m_mode!=mode)
+        revertGenerate();
+    m_mode=mode;
+}
+
+template <class I>
+void Mipmap<I>::setMaxPowReductionLevel(unsigned maxPowReductionLevel=0)
+{
+    if(maxPowReductionLevel!=m_maxPowReductionLevel)
+        revertGenerate();
+    m_maxPowReductionLevel=maxPowReductionLevel;
 }
 
 template <class I>
 void Mipmap<I>::setTexture(const I& texture)
 {
     m_generated=false;
+    //revertGenerate(); //Yes? No?
     m_textureSet=true;
     if(m_isoMipmaps.size()>0)
         m_isoMipmaps[0]=texture;
@@ -202,7 +228,7 @@ void Mipmap<I>::setTexture(const I& texture)
 template <class I>
 size_t Mipmap<I>::numberMipmapsWidth() const
 {
-    if(m_textureSet)
+    if(!m_generated && m_textureSet)
         return 1;
     if(!m_generated)
         return 0;
@@ -213,7 +239,7 @@ size_t Mipmap<I>::numberMipmapsWidth() const
 template <class I>
 size_t Mipmap<I>::numberMipmapsHeight() const
 {
-    if(m_textureSet)
+    if(!m_generated && m_textureSet)
         return 1;
     if(!m_generated)
         return 0;
@@ -223,27 +249,28 @@ size_t Mipmap<I>::numberMipmapsHeight() const
 template <class I>
 const I& Mipmap<I>::mipmap(unsigned xPowReduction, unsigned yPowReduction) const
 {
-    assert(m_mode!=NO_FILTER &&
-            "Mipmap::mipmap: cannot call mipmaps with mode set to NO_FILTER (try Mipmap::generate with ISOTROPIC)");
+    assert((m_mode!=NO_FILTER || (xPowReduction==0 && yPowReduction==0)) &&
+            "Mipmap::mipmap: cannot use mipmaps with mode set to NO_FILTER (try Mipmap::setMode with ISOTROPIC/ANISOTROPIC)");
     assert(m_generated &&
             "Mipmap::mipmap: mipmaps have not been generated yet (try using Mipmap::generate)");
     assert((m_mode!=ISOTROPIC || xPowReduction==yPowReduction) &&
-            "Mipmap::mipmap: xReduction and yReduction must be identical when using isotropic filtering");
+            "Mipmap::mipmap: xReduction and yReduction must be identical when using isotropic filtering (or try Mipmap::setMode with ANISOTROPIC)");
     xPowReduction = std::min(xPowReduction, (unsigned)m_isoMipmaps.size()-1);
     yPowReduction = std::min(yPowReduction, (unsigned)m_isoMipmaps.size()-1);
 
     if(xPowReduction==yPowReduction)
-    {
         return m_isoMipmaps[xPowReduction];
-    }
 
     //The wanted mipmap is in the vector which holds mipmaps with width reduced only if the reduction on x is higher than the one on y ;
     //for access, each line of the anisotropic vector holds images that are already scaled down on x and y.
     //For instance, at line (7, 2), the image is actually scaled down by (7, 9 (7+2)), so we have to take that in account.
     //also, the first column of any anisotropic mipmap vector was made to hold a first reduction (so, that's the -1 in the last index) ;
     //finally, the anisotropic mipmap vector holds lines of different y reductions for the Width one, and vice versa for the Height one, so the indexes may look a little weird.
-    return xPowReduction > yPowReduction ? m_anisoMipmapsWidth[yPowReduction][xPowReduction-yPowReduction-1] : m_anisoMipmapsHeight[xPowReduction][yPowReduction-xPowReduction-1];
+    return xPowReduction > yPowReduction
+            ? m_anisoMipmapsWidth[yPowReduction][xPowReduction-yPowReduction-1]
+            : m_anisoMipmapsHeight[xPowReduction][yPowReduction-xPowReduction-1];
 }
+
 
 template <class I>
 const I& Mipmap<I>::texture() const
