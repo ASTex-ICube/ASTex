@@ -814,8 +814,8 @@ void HistogramGrayBase<T>::updateStatistics()
     //mean, min and max
     for(const auto& bin : *this)
     {
-        m_min = std::min(m_min, bin);
-        m_max = std::max(m_max, bin);
+        m_min = std::min(m_min, bin.first);
+        m_max = std::max(m_max, bin.first);
         m_mean+=(real)bin.first*bin.second / this->size();
     }
 
