@@ -78,8 +78,9 @@ void MipmapCEContent<I>::generate()
     {
         const MipmapCEPatch &patchMipmapAlpha=m_parentPatch->alphaMipmap();
         //find the size of the new, sparse content and its origin in contentColor's mipmap
-        I& mipmapContentColor=this->mipmap(i, j);
         const ImageGrayd& correspondingPatchAlphaMipmap=patchMipmapAlpha.mipmap(i, j);
+        I& oldContentColor = this->mipmap(i, j);
+        I mipmapContentColor;
         mipmapContentColor.initItk(correspondingPatchAlphaMipmap.width(), correspondingPatchAlphaMipmap.height(), true);
         MipmapCEPatch::PixelPos origin = patchMipmapAlpha.originAt(i, j);
         xMin=(unsigned)origin[0];
@@ -88,9 +89,11 @@ void MipmapCEContent<I>::generate()
         //Fill up the new mipmap
         mipmapContentColor.for_all_pixels([&] (typename I::PixelType &pix, int x, int y)
         {
-            pix = correspondingPatchAlphaMipmap.pixelAbsolute(  (xMin+x)%mipmapContentColor.width(),
-                                                                (yMin+y)%mipmapContentColor.height());
+            pix = oldContentColor.pixelAbsolute(  (xMin+x)%oldContentColor.width(),
+                                                  (yMin+y)%oldContentColor.height());
         });
+        //replace the old with the new
+        oldContentColor = mipmapContentColor;
     };
 
     //allocation
