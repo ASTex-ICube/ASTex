@@ -136,7 +136,6 @@ void MipmapCEPatch::generate()
             for(int y=yMin; y<=yMax; ++y)
             {
                 int x;
-                std::cout << xMax << std::endl;
                 for(x=oldXMin; x<=oldXMax && mipmapAlpha.pixelAbsolute(x, y)==0; ++x);
                 if(x>oldXMax) //discontinuity found (don't use >)
                     yMax=y-1;
@@ -146,7 +145,7 @@ void MipmapCEPatch::generate()
                 for(int y=oldYMax; y>=yMin; --y)
                 {
                     int x;
-                    for(x=oldXMin; x<oldXMax && mipmapAlpha.pixelAbsolute(x, y)==0; ++x);
+                    for(x=oldXMin; x<=oldXMax && mipmapAlpha.pixelAbsolute(x, y)==0; ++x);
                     if(x>oldXMax)
                         yMin=y+1;
                 }
