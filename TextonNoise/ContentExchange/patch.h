@@ -15,17 +15,18 @@ template<typename I>
 class Content;
 
 using PixelPos = itk::Index<2>;
+using ImageAlphad = ImageGrayd;
 
 //Mipmap
 
-class MipmapCEPatch : public Mipmap<ImageGrayd>
+class MipmapCEPatch : public Mipmap<ImageAlphad>
 {
 public:
 
     typedef itk::Index<2> PixelPos;
 
     MipmapCEPatch();
-    MipmapCEPatch(const ImageGrayd &patchAlpha);
+    MipmapCEPatch(const ImageAlphad &patchAlpha);
 
     void generate();
 
@@ -37,12 +38,12 @@ private:
 };
 
 MipmapCEPatch::MipmapCEPatch():
-    Mipmap<ImageGrayd>(), //sets m_textureSet to true
+    Mipmap<ImageAlphad>(), //sets m_textureSet to true
     m_pixelOriginMap()
 {}
 
-MipmapCEPatch::MipmapCEPatch(const ImageGrayd &patchAlpha):
-    Mipmap<ImageGrayd>(patchAlpha), //sets m_textureSet to true
+MipmapCEPatch::MipmapCEPatch(const ImageAlphad &patchAlpha):
+    Mipmap<ImageAlphad>(patchAlpha), //sets m_textureSet to true
     m_pixelOriginMap()
 {}
 
@@ -53,9 +54,9 @@ void MipmapCEPatch::generate()
         std::cerr << "Warning: MipmapCEPatch::generate: texture must be set before generating" << std::endl;
         return;
     }
-    Mipmap<ImageGrayd>::generate(); //will set m_generated to true and generate a big alpha mipmap map
+    Mipmap<ImageAlphad>::generate(); //will set m_generated to true and generate a big alpha mipmap map
     //debug
-    ImageGrayd fullMipmapAlphaImage;
+    ImageAlphad fullMipmapAlphaImage;
     this->fullMipmap(fullMipmapAlphaImage);
     IO::save01_in_u8(fullMipmapAlphaImage, "fullMipmapAlphaImage.png");
 
@@ -74,8 +75,8 @@ void MipmapCEPatch::generate()
 
     auto emplaceMipmap = [&] ()
     {
-        ImageGrayd &mipmapAlpha=mipmap(i, j); //the mipmap we are going to change in the end
-        ImageGrayd mipmapPatchAlpha; //the mipmap we are going to compute
+        ImageAlphad &mipmapAlpha=mipmap(i, j); //the mipmap we are going to change in the end
+        ImageAlphad mipmapPatchAlpha; //the mipmap we are going to compute
 
         //first iteration: find the edges of the box using the patch's alpha.
         //note how patches can bleed from one edge of the image to another due to periodicity.
@@ -84,7 +85,7 @@ void MipmapCEPatch::generate()
         yMin=mipmapAlpha.height()-1;
         xMax=0;
         yMax=0;
-        mipmapAlpha.for_all_pixels([&] (const typename ImageGrayd::PixelType &pix, int x, int y)
+        mipmapAlpha.for_all_pixels([&] (const typename ImageAlphad::PixelType &pix, int x, int y)
         {
             if(pix>0) //meaning there's a patch portion
             {
@@ -160,7 +161,7 @@ void MipmapCEPatch::generate()
                                     yMin<yMax ? yMax-yMin+1 : mipmapAlpha.height()-yMin + yMax, true);
         //Fill up the new mipmap
 
-        mipmapPatchAlpha.for_all_pixels([&] (ImageGrayd::PixelType &pix, int x, int y)
+        mipmapPatchAlpha.for_all_pixels([&] (ImageAlphad::PixelType &pix, int x, int y)
         {
             pix=mipmapAlpha.pixelAbsolute((xMin+x)%mipmapAlpha.width(), (yMin+y)%mipmapAlpha.height());
         });
@@ -209,6 +210,9 @@ public:
 
     //get
 
+    using ImageAlphad = ImageGrayd;
+
+    const ImageAlphad& mipmap(unsigned i, unsigned j) const {return m_alphaMipmap.mipmap(i, j);}
     const MipmapCEPatch& alphaMipmap() const {return m_alphaMipmap;}
     const Content<I>& contentAt(size_t index) const {return m_alternativeContents[index];}
     Content<I>& contentAt(size_t index) {return m_alternativeContents[index];}
@@ -216,7 +220,7 @@ public:
 
     //set
 
-    void setAlphaMap(const ImageGrayd& alphaMap, mipmap_mode_t mipmapMode=NO_FILTER);
+    void setAlphaMap(const ImageAlphad& alphaMap, mipmap_mode_t mipmapMode=NO_FILTER);
     void addContent(const Content<I> &content);
 
 private:
@@ -236,7 +240,7 @@ Patch<I>::Patch():
 {}
 
 template<typename I>
-void Patch<I>::setAlphaMap(const ImageGrayd& alphaMap, mipmap_mode_t mipmapMode)
+void Patch<I>::setAlphaMap(const ImageAlphad& alphaMap, mipmap_mode_t mipmapMode)
 {
     m_alphaMipmap.setTexture(alphaMap);
     m_alphaMipmap.setMode(mipmapMode);
