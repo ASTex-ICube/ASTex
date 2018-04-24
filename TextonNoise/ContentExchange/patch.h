@@ -212,6 +212,7 @@ public:
     const MipmapCEPatch& alphaMipmap() const {return m_alphaMipmap;}
     const Content<I>& contentAt(size_t index) const {return m_alternativeContents[index];}
     Content<I>& contentAt(size_t index) {return m_alternativeContents[index];}
+    size_t numberContents() const {return m_alternativeContents.size();}
 
     //set
 
