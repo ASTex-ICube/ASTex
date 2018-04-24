@@ -12,6 +12,8 @@ namespace ASTex
 namespace ContentExchange
 {
 
+using ImageMask64 = ImageGrayd;
+
 template<typename I>
 class PatchProcessor
 {
@@ -64,7 +66,7 @@ private:
 
     std::vector<Patch<I>> m_patches;
     I m_texture;
-    ImageGrayd m_patchMask; //allows for up to 64 patches
+    ImageMask64 m_patchMask; //allows for up to 64 patches. TODO: replace ImageMask64 with MipmapMask
     mipmap_mode_t m_mipmapMode;
 
     static mipmap_mode_t ms_defaultMipmapMode;
@@ -136,15 +138,15 @@ void PatchProcessor<I>::generate()
     //find the number of patches
 
     //compute the bitwise maximum value of the texture, which looks like 0b00..011..11
-    using word=uint64_t;
-    word w=0x0;
-    m_patchMask.for_all_pixels([&] (ImageGrayd::PixelType &pix)
+    using word64=uint64_t;
+    word64 w=0x0;
+    m_patchMask.for_all_pixels([&] (ImageMask64::PixelType &pix)
     {
-        w|=reinterpret_cast<word&>(pix);
+        w|=reinterpret_cast<word64&>(pix);
     });
     //its log's floor defines the number of different patches and is proprely computed this way:
     int lg;
-    word wTest;
+    word64 wTest;
     for(lg=0, wTest=0x1; (w & wTest) > 0x0; ++lg, wTest*=2);
     m_patches.resize(lg);
 
@@ -158,7 +160,7 @@ void PatchProcessor<I>::generate()
         alphaMap.initItk(m_texture.width(), m_texture.height(), true );
         m_patchMask.for_all_pixels([&] (ImageGrayd::PixelType &pix, int x, int y)
         {
-            if((w|=reinterpret_cast<word&>(pix))==wTest)
+            if((w|=reinterpret_cast<word64&>(pix))==wTest)
                 alphaMap.pixelAbsolute(x, y)=1.0;
             w=0x0;
         });
