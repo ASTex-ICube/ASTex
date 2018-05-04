@@ -156,8 +156,8 @@ void MipmapCEPatch::generate()
         //from here onwards we have found the correctly periodic bounding box.
         //Allocate the new mipmap
 
-        mipmapPatchAlpha.initItk(   xMin<xMax ? xMax-xMin+1 : mipmapAlpha.width()-xMin + xMax,
-                                    yMin<yMax ? yMax-yMin+1 : mipmapAlpha.height()-yMin + yMax, true);
+        mipmapPatchAlpha.initItk(   xMin<xMax ? xMax-xMin+1 : mipmapAlpha.width()-xMin + xMax+1,
+                                    yMin<yMax ? yMax-yMin+1 : mipmapAlpha.height()-yMin + yMax+1, true);
         //Fill up the new mipmap
 
         mipmapPatchAlpha.for_all_pixels([&] (ImageAlphad::PixelType &pix, int x, int y)
@@ -224,7 +224,6 @@ public:
 
 private:
 
-    PixelPos m_origin;
     MipmapCEPatch m_alphaMipmap;
 
     std::vector<Content<I>> m_alternativeContents;
@@ -233,7 +232,6 @@ private:
 
 template<typename I>
 Patch<I>::Patch():
-    m_origin(),
     m_alphaMipmap(),
     m_alternativeContents()
 {}
