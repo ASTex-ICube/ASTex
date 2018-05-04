@@ -76,7 +76,6 @@ void MipmapCEContent<I>::generate()
     unsigned xMin, yMin;
     auto computeMipmap = [&] ()
     {
-        const MipmapCEPatch &patchMipmapAlpha=m_parentPatch->alphaMipmap();
         //find the size of the new, sparse content and its origin in contentColor's mipmap
         const ImageGrayd& correspondingPatchAlphaMipmap=patchMipmapAlpha.mipmap(i, j);
         I& oldContentColor = this->mipmap(i, j);
@@ -131,7 +130,7 @@ public:
     Content(const I &imageContainingContent, const Patch<I> &parentPatch);
 
     const I& texture() const;
-    const I& mipmap(unsigned i, unsigned j);
+    const I& mipmap(unsigned i, unsigned j) const;
     const MipmapCEContent<I>& contentMipmap() const {return m_explicitContentMipmap;}
 private:
     MipmapCEContent<I> m_explicitContentMipmap;
@@ -154,7 +153,7 @@ const I& Content<I>::texture() const
 }
 
 template<typename I>
-const I& Content<I>::mipmap(unsigned i, unsigned j)
+const I& Content<I>::mipmap(unsigned i, unsigned j) const
 {
     return m_explicitContentMipmap.mipmap(i, j);
 }
