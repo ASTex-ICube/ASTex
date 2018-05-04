@@ -71,13 +71,6 @@ int test_wendling(int argc, char **argv)
             p/=var_img;
         });
 
-        HistogramGrayd resultHistogram(result);
-
-        int i=0;
-        for(HistogramGrayd::const_iterator it=resultHistogram.begin(); i<50 && it!=resultHistogram.end(); ++it, ++i)
-        {
-            std::cout << (*it).first << ", " << (*it).second << std::endl;
-        }
         return 0;
 }
 
@@ -110,7 +103,8 @@ int test_contentFiltering(int argc, char **argv)
     translationsVector.reserve(patchesHisto.binsNumber());
 
     Mipmap<ImageRGBd> groundTruthMipmap(im_in);
-    groundTruthMipmap.generate(ANISOTROPIC);
+    groundTruthMipmap.setMode(ANISOTROPIC);
+    groundTruthMipmap.generate();
     groundTruthMipmap.fullMipmap(im_groundTruthMipmap);
     im_globalMipmap.initItk(im_groundTruthMipmap.width(), im_groundTruthMipmap.height(), true);
 
@@ -138,7 +132,8 @@ int test_contentFiltering(int argc, char **argv)
         });
 
         Mipmap<ImageRGBAd> mipmap(patchesVector.back());
-        mipmap.generate(ANISOTROPIC);
+        mipmap.setMode(ANISOTROPIC);
+        mipmap.generate();
         mipmap.fullMipmap(im_fullMipmap);
         IO::save01_in_u8(im_fullMipmap, std::string(MY_PATH)+"mipmap_" + std::to_string(k++) + ".png");
         im_globalMipmap.for_all_pixels( [&] (ImageRGBAd::PixelType &pix, int x, int y)
@@ -168,19 +163,59 @@ int test_contentFilteringWithPatches(int argc, char **argv)
     if(!IO::loadu8_in_01(im_patches, std::string(MY_PATH)+argv[2]))
         return 1;
 
-    ////turn im_patches into a bitmask image, then...
+    std::string out_dir=std::string(MY_PATH)+"contentMipmaps/";
+    create_directory(out_dir);
 
     ContentExchange::PatchProcessor<ImageRGBd>::setDefaultFilteringMode(ANISOTROPIC);
     ContentExchange::PatchProcessor<ImageRGBd> patchProcessor(im_in);
+    //add some patches here
     patchProcessor.debug_setPatchFromImageRGBd(im_patches);
-    patchProcessor.generate();
-    ////-> adds every patch into an array in patchProcessor,
-    ////-> adds every default content and mipmaps them into each patch.
-    //// Now we can add some contents.
-    IO::save01_in_u8(patchProcessor.patchAt(1).contentAt(0).texture(), std::string(MY_PATH)+"_first_fragment.png");
-    std::cout << patchProcessor.patchAt(0).contentAt(0).contentMipmap().mode() << std::endl;
-    IO::save01_in_u8(patchProcessor.patchAt(0).contentAt(0).contentMipmap().mipmap(2,2), std::string(MY_PATH)+"_second_fragment.png");
-    IO::save01_in_u8(patchProcessor.patchAt(1).contentAt(0).contentMipmap().mipmap(4,2), std::string(MY_PATH)+"_third_fragment.png");
+    patchProcessor.initialize();
+    //add some contents there
+    unsigned k=0;
+
+    //TEST 1: EVERY CONTENTS OF EVERY PATCH, + EVERY ALPHA OF EVERY PATCH, + EVERY POSSIBLE COMBINATION PATCH+CONTENT
+
+    for(typename ContentExchange::PatchProcessor<ImageRGBd>::iterator it=patchProcessor.begin(); it!=patchProcessor.end(); ++it, ++k)
+    {
+        ImageRGBAd im_out;
+        typename ContentExchange::Patch<ImageRGBd> &patch=(*it);
+        for(unsigned i=0; i<patch.alphaMipmap().numberMipmapsWidth(); ++i)
+            for(unsigned j=0; j<patch.alphaMipmap().numberMipmapsHeight(); ++j)
+            {
+                for(unsigned l=0; l<patch.numberContents(); ++l)
+                {
+                    const ImageRGBd &contentMipmap=patch.contentAt(l).mipmap(i, j);
+                    IO::save01_in_u8(contentMipmap, out_dir + "content_p" + std::to_string(k) + "_c" + std::to_string(l)
+                                     + "_mw" + std::to_string(i) + "_mh" + std::to_string(j) + ".png");
+                    im_out.initItk(contentMipmap.width(), contentMipmap.height(), true);
+                    contentMipmap.for_all_pixels([&] (const ImageRGBd::PixelType &pix, int x, int y)
+                    {
+                        ImageRGBAd::PixelType p;
+                        p.SetRed(pix.GetRed());
+                        p.SetGreen(pix.GetGreen());
+                        p.SetBlue(pix.GetBlue());
+                        p.SetAlpha(patch.mipmap(i, j).pixelAbsolute(x, y));
+                        im_out.pixelAbsolute(x, y)=p;
+                    });
+                    IO::save01_in_u8(patch.mipmap(i, j), out_dir + "alpha_p" + std::to_string(k) + "_c" + std::to_string(l)
+                                     + "_mw" + std::to_string(i) + "_mh" + std::to_string(j) + ".png");
+                    IO::save01_in_u8(im_out, out_dir + "mipmap_p" + std::to_string(k) + "_c" + std::to_string(l)
+                                     + "_mw" + std::to_string(i) + "_mh" + std::to_string(j) + ".png");
+                }
+            }
+    }
+
+    //TEST 2 : OUTPUT MIPMAP WITH EVERY DEFAULT CONTENTS
+
+    ImageRGBd im_out;
+    Mipmap<ImageRGBd> fullMipmap(patchProcessor.generate(512, 512));
+    fullMipmap.fullMipmap(im_out);
+    IO::save01_in_u8(im_out, std::string(MY_PATH)+"contentMipmaps/fullMipmap.png");
+    fullMipmap.setTexture(im_in);
+    fullMipmap.generate();
+    fullMipmap.fullMipmap(im_out);
+    IO::save01_in_u8(im_out, std::string(MY_PATH)+"contentMipmaps/fullMipmapOfInput.png");
 
     return 0;
 }
@@ -290,7 +325,7 @@ int test_texton(int argc, char **argv)
     //Testing
 
     Stamping::SamplerUniform sampler;
-    sampler.setNbPoints(500); //< you can change that
+    sampler.setNbPoints(400); //< you can change that
     Stamping::StampDiscrete<ImageRGBd> stamp(im_texton);
     stamp.setInterpolationRule(Stamping::StampDiscrete<ImageRGBd>::BILINEAR); //< you can change that too
 
@@ -299,7 +334,7 @@ int test_texton(int argc, char **argv)
     tamponneur.setPeriodicity(false);
     tamponneur.setUseMargins(true);
 
-    int W=1024, H=1024;
+    int W=512, H=512;
 
     im_out = tamponneur.generate(W, H);
 
@@ -379,7 +414,6 @@ int test_texton(int argc, char **argv)
 //        quantizedHisto.saveHistogram(std::string(MY_PATH) + "out_" + input_noext + "_tn_galerne" + ".csv", 24);
 //    }
 
-
     //Saving sample
     //Saving im_out
     IO::save01_in_u8(im_sample, std::string(MY_PATH) + name_noext + "_sample.png");
@@ -410,71 +444,11 @@ int test_texton(int argc, char **argv)
     return app.exec();
 }
 
-//int test_autoconvolutionSpectrum(int argc, char **argv)
-//{
-//    if( argc < 3 )
-//    {
-//        std::cerr << "Usage: " << std::endl;
-//        std::cerr << argv[0] << " <out_path> [source code dependant options]" << std::endl;
-
-//        return EXIT_FAILURE;
-//    }
-
-//    QApplication app(argc, argv);
-//    std::setlocale(LC_ALL,"C");
-
-//    std::string filename_source=argv[1];
-//    std::string name_file = IO::remove_path(filename_source);
-//    std::string name_noext = IO::remove_ext(name_file);
-
-//    //std::string out_path = argv[1];
-
-//    std::string input_noext=name_noext;
-
-//    filename_source=argv[2];
-//    name_file = IO::remove_path(filename_source);
-//    name_noext = IO::remove_ext(name_file);
-
-//    //Loading sample
-//    //Loading im_in
-
-//    ImageGrayd im_in;
-//    IO::loadu8_in_01(im_in, std::string(MY_PATH)+argv[1]);
-
-//    ImageSpectrald modulus, phase;
-//    ImageSpectrald mm;
-//    modulus.initItk(im_in.width(), im_in.height());
-//    mm.initItk(modulus.width(), modulus.height(), true);
-//    phase.initItk(im_in.width(), im_in.height());
-//    Fourier::fftForwardModulusAndPhase(im_in, modulus, phase);
-//    modulus.for_all_pixels([&] (ImageSpectrald::PixelType &p1, int x, int y)
-//    {
-//        modulus.for_all_pixels([&] (ImageSpectrald::PixelType &p2)
-//        {
-//            mm.pixelAbsolute(x, y) += p1 * p2;
-//        });
-//    });
-
-//    ImageViewer imgv_in("Source", &app, 0);
-//    imgv_in.set_gray01(im_in.getDataPtr(), im_in.width(), im_in.height(), 1);
-//    imgv_in.show();
-
-//    ImageViewer imgv_modulus("Input PSD", &app, 1);
-//    imgv_modulus.set_gray01(modulus.getDataPtr(), modulus.width(), modulus.height(), 1);
-//    imgv_modulus.show();
-
-//    ImageViewer imgv_out("Output PSD", &app, 2);
-//    imgv_out.set_gray01(mm.getDataPtr(), mm.width(), mm.height(), 1);
-//    imgv_out.show();
-
-//    return app.exec();
-//}
-
 int main( int argc, char **argv )
 {
     //return test_genet(argc, argv);
-    return test_texton(argc, argv);
+    //return test_texton(argc, argv);
     //return test_autoconvolutionSpectrum(argc, argv);
-    //return test_contentFilteringWithPatches(argc, argv);
+    return test_contentFilteringWithPatches(argc, argv);
     //return test_wendling(argc, argv);
 }
