@@ -60,6 +60,7 @@ MipmapCEContent<I>::MipmapCEContent(const I& content):
 template<typename I>
 void MipmapCEContent<I>::generate()
 {
+    static typename I::PixelType zero;
     if(!m_parentPatch)
     {
         std::cerr << "Warning: MipmapCEContent::generate: parent patch has not been given (try MipmapCEContent::setParentPatch)" << std::endl;
@@ -70,6 +71,29 @@ void MipmapCEContent<I>::generate()
         std::cerr << "Warning: MipmapCEContent::generate: no content texture was set" << std::endl;
         return;
     }
+
+    //clean content before generating
+    const MipmapCEPatch &patchMipmapAlpha = m_parentPatch->alphaMipmap();
+    const ImageGrayd& correspondingPatchAlphaTexture = patchMipmapAlpha.texture();
+    PixelPos patchOrigin = patchMipmapAlpha.originAt(0, 0);
+    I cleanedTexture;
+    IO::save01_in_u8(this->m_isoMipmaps[0], "potato_xd.png");
+    cleanedTexture.initItk(this->m_isoMipmaps[0].width(), this->m_isoMipmaps[0].height(), true); //does not set at 0?? WTF????
+    cleanedTexture.for_all_pixels([&] (typename I::PixelType &pix)
+    {
+        pix=zero;
+    });
+    correspondingPatchAlphaTexture.for_all_pixels([&] (const ImageGrayd::PixelType &pix, int x, int y)
+    {
+        if(pix>0)
+        {
+            int xShift=(x+patchOrigin[0])%cleanedTexture.width();
+            int yShift=(y+patchOrigin[1])%cleanedTexture.height();
+            cleanedTexture.pixelAbsolute(xShift, yShift) = this->m_isoMipmaps[0].pixelAbsolute(xShift, yShift);
+        }
+    });
+    this->m_isoMipmaps[0].copy_pixels(cleanedTexture);
+
     Mipmap<I>::generate();
 
     unsigned i, j, maxIterations;
