@@ -89,7 +89,7 @@ Mipmap<I>::Mipmap(const I& texture) :
     m_generated(false),
     m_textureSet(true)
 {
-    m_isoMipmaps.push_back(texture);
+    this->setTexture(texture);
 }
 
 template <class I>
@@ -105,8 +105,16 @@ Mipmap<I>::Mipmap(const Mipmap& other):
     if(m_textureSet)
     {
         m_isoMipmaps.resize(std::max(other.numberMipmapsWidth(), other.numberMipmapsHeight()));
-        m_anisoMipmapsWidth.resize(other.numberMipmapsWidth()-1);
+        m_anisoMipmapsWidth.resize(other.numberMipmapsWidth()-1); //counter-intuitive, but trust me
         m_anisoMipmapsHeight.resize(other.numberMipmapsHeight()-1);
+        for(size_t i=0; i<m_anisoMipmapsWidth.size(); ++i)
+        {
+            m_anisoMipmapsWidth[i].resize(other.numberMipmapsWidth()-1-i);
+        }
+        for(size_t j=0; j<m_anisoMipmapsHeight.size(); ++j)
+        {
+            m_anisoMipmapsHeight[j].resize(other.numberMipmapsHeight()-1-j);
+        }
         for(size_t i=0; i<other.numberMipmapsWidth(); ++i)
             for(size_t j=0; j<other.numberMipmapsHeight(); ++j)
             {
@@ -233,7 +241,7 @@ void Mipmap<I>::setMode(mipmap_mode_t mode)
 }
 
 template <class I>
-void Mipmap<I>::setMaxPowReductionLevel(unsigned maxPowReductionLevel=0)
+void Mipmap<I>::setMaxPowReductionLevel(unsigned maxPowReductionLevel)
 {
     if(maxPowReductionLevel!=m_maxPowReductionLevel)
         revertGenerate();
@@ -247,9 +255,19 @@ void Mipmap<I>::setTexture(const I& texture)
     //revertGenerate(); //Yes? No?
     m_textureSet=true;
     if(m_isoMipmaps.size()>0)
-        m_isoMipmaps[0]=texture;
+    {
+        //because apparently = and the copy constructor can't be bothered to deep copy half the time
+        m_isoMipmaps[0].initItk(texture.width(), texture.height());
+        m_isoMipmaps[0].copy_pixels(texture);
+    }
     else
-        m_isoMipmaps.push_back(texture);
+    {
+        //same here
+        I idiotTexture;
+        idiotTexture.initItk(texture.width(), texture.height());
+        idiotTexture.copy_pixels(texture);
+        m_isoMipmaps.push_back(idiotTexture);
+    }
 }
 
 template <class I>
@@ -513,7 +531,7 @@ template<typename I>
 void MipmapBitmask<I>::filterDivide2Width(const I& texture, I& result)
 {
     result.initItk(texture.width()/2, texture.height());
-    result.for_all_pixels([&] (bool &pix, int x, int y)
+    result.for_all_pixels([&] (typename I::PixelType &pix, int x, int y)
     {
         pix = texture.pixelAbsolute(2*x, y) | texture.pixelAbsolute(2*x+1, y);
     });
@@ -523,7 +541,7 @@ template<typename I>
 void MipmapBitmask<I>::filterDivide2Height(const I& texture, I& result)
 {
     result.initItk(texture.width(), texture.height()/2);
-    result.for_all_pixels([&] (bool &pix, int x, int y)
+    result.for_all_pixels([&] (typename I::PixelType &pix, int x, int y)
     {
         pix = texture.pixelAbsolute(x, 2*y) | texture.pixelAbsolute(x, 2*y+1);
     });
@@ -533,7 +551,7 @@ template<typename I>
 void MipmapBitmask<I>::filterDivide2Full(const I& texture, I& result)
 {
     result.initItk(texture.width()/2, texture.height()/2);
-    result.for_all_pixels([&] (bool &pix, int x, int y)
+    result.for_all_pixels([&] (typename I::PixelType &pix, int x, int y)
     {
         pix = texture.pixelAbsolute(2*x, 2*y)
             | texture.pixelAbsolute(2*x+1, 2*y)
