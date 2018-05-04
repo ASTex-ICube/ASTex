@@ -12,7 +12,8 @@ namespace ASTex
 namespace ContentExchange
 {
 
-using ImageMask64 = ImageGrayd;
+using ImageMask64 = ImageGrayu64;
+using word64=uint64_t;
 
 template<typename I>
 class PatchProcessor
@@ -52,12 +53,6 @@ public:
     iterator end() {return m_patches.end();}
     const_iterator end() const {return m_patches.end();}
 
-//    iterator& operator++(iterator& it);
-//    const_iterator& operator++(const_iterator& it) const;
-
-//    iterator operator++(iterator& it, int);
-//    const_iterator operator++(iterator& it, int) const;
-
     //static
 
     static void setDefaultFilteringMode(mipmap_mode_t defaultMipmapMode) {ms_defaultMipmapMode=defaultMipmapMode;}
@@ -66,7 +61,7 @@ private:
 
     std::vector<Patch<I>> m_patches;
     I m_texture;
-    ImageMask64 m_patchMask; //allows for up to 64 patches. TODO: replace ImageMask64 with MipmapMask
+    MipmapBitmask<ImageMask64> m_patchMaskMipmap;
     mipmap_mode_t m_mipmapMode;
 
     static mipmap_mode_t ms_defaultMipmapMode;
@@ -158,7 +153,7 @@ void PatchProcessor<I>::generate()
     {
         ImageGrayd alphaMap;
         alphaMap.initItk(m_texture.width(), m_texture.height(), true );
-        m_patchMask.for_all_pixels([&] (ImageGrayd::PixelType &pix, int x, int y)
+        m_patchMaskMipmap.texture().for_all_pixels([&] (ImageMask64::PixelType &pix, int x, int y)
         {
             if((w|=reinterpret_cast<word64&>(pix))==wTest)
                 alphaMap.pixelAbsolute(x, y)=1.0;
@@ -182,16 +177,16 @@ void PatchProcessor<I>::debug_setPatchFromImageRGBd(const ImageRGBd& patchImage)
     HistogramRGBd histogramPI(patchImage);
     assert(histogramPI.binsNumber()<65 &&
            "PatchProcessor::debug_setPatchFromImageRGBd: there should be up to 64 different colors in the given image");
-    using word=uint64_t;
-    word w=0x1;
-    m_patchMask.initItk(patchImage.width(), patchImage.height(), true);
+    word64 w=0x1;
+    ImageMask64 patchMask;
+    patchMask.initItk(patchImage.width(), patchImage.height(), true);
     for(auto it=histogramPI.begin(); it!=histogramPI.end(); ++it)
     {
         patchImage.for_all_pixels([&] (const ImageRGBd::PixelType &pix, int x, int y)
         {
             if((*it).first==pix)
             {
-                word &wPixel=reinterpret_cast<word&>(m_patchMask.pixelAbsolute(x, y));
+                word64 &wPixel=reinterpret_cast<word64&>(patchMask.pixelAbsolute(x, y));
                 wPixel |= w;
             }
         });
