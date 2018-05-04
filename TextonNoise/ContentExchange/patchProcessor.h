@@ -199,6 +199,7 @@ Mipmap<I> PatchProcessor<I>::generate(int textureWidth, int textureHeight) const
                         if(y2 < 0)
                             y2+=mipmap.height();
 
+                        //choose your content here
                         pix += this->patchAt(p).contentAt(0).mipmap(i, j).pixelAbsolute(x2, y2);
                     }
                     w*=2;
@@ -242,6 +243,27 @@ void PatchProcessor<I>::debug_setPatchFromImageRGBd(const ImageRGBd& patchImage)
 template<typename I>
 void PatchProcessor<I>::debug_setRandomContents(unsigned nbContentsPerPatch)
 {
+    assert(m_patches.size()>0 && "PatchProcessor::debug_setRandomContents: initialize() must be called before being able to chose contents");
+    int i, j;
+    int randomShiftX, randomShiftY;
+    I shiftedTexture;
+    shiftedTexture.initItk(m_texture.width(), m_texture.height());
+
+    for(i=0; i<nbContentsPerPatch; ++i)
+    {
+        randomShiftX = rand();
+        randomShiftY = rand();
+        shiftedTexture.for_all_pixels([&] (typename I::PixelType &pix, int x, int y)
+        {
+            pix = m_texture.pixelAbsolute((x + randomShiftX)%shiftedTexture.width(), (y + randomShiftY)%shiftedTexture.height());
+        });
+        for(j=0; j<m_patches.size(); ++j)
+        {
+            Patch<I> &patch=m_patches[j];
+            Content<I> c(shiftedTexture, patch);
+            patch.addContent(c);
+        }
+    }
 
 }
 
