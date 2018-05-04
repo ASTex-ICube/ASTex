@@ -37,7 +37,8 @@ public:
 
     //misc
 
-    void generate();
+    void initialize();
+    Mipmap<I> generate(int textureWidth, int textureHeight) const; //const?
 
     void debug_setPatchFromImageRGBd(const ImageRGBd& patchImage);
     void debug_setRandomContents(unsigned nbContentsPerPatch);
@@ -74,7 +75,7 @@ template<typename I>
 PatchProcessor<I>::PatchProcessor():
     m_patches(),
     m_texture(),
-    m_patchMask(),
+    m_patchMaskMipmap(),
     m_mipmapMode(ms_defaultMipmapMode)
 {}
 
@@ -82,7 +83,7 @@ template<typename I>
 PatchProcessor<I>::PatchProcessor(const I& texture):
     m_patches(),
     m_texture(texture),
-    m_patchMask(),
+    m_patchMaskMipmap(),
     m_mipmapMode(ms_defaultMipmapMode)
 {}
 
@@ -121,21 +122,20 @@ void PatchProcessor<I>::setFiltering(mipmap_mode_t mipmapMode)
 }
 
 template<typename I>
-void PatchProcessor<I>::generate()
+void PatchProcessor<I>::initialize()
 {
     assert(m_texture.is_initialized() &&
            "PatchProcessor::generate: texture uninitialized (use PatchProcessor::setTexture with an initialized texture)");
-    assert(m_patchMask.is_initialized() &&
-           "PatchProcessor::generate: patch mask uninitialized (use PatchProcessor::computePatches to compute patches)");
-    assert(m_texture.size()==m_patchMask.size() &&
+    assert(m_patchMaskMipmap.isGenerated() &&
+           "PatchProcessor::generate: patch mask mipmap not generated (use PatchProcessor::computePatches to compute patches)");
+    assert(m_texture.size()==m_patchMaskMipmap.texture().size() &&
            "PatchProcessor::generate: patch mask must have the same size as texture (texture changed?)");
 
     //find the number of patches
 
     //compute the bitwise maximum value of the texture, which looks like 0b00..011..11
-    using word64=uint64_t;
     word64 w=0x0;
-    m_patchMask.for_all_pixels([&] (ImageMask64::PixelType &pix)
+    m_patchMaskMipmap.texture().for_all_pixels([&] (ImageMask64::PixelType &pix)
     {
         w|=reinterpret_cast<word64&>(pix);
     });
@@ -167,6 +167,48 @@ void PatchProcessor<I>::generate()
     }
 }
 
+template<typename I>
+Mipmap<I> PatchProcessor<I>::generate(int textureWidth, int textureHeight) const
+{
+    assert(m_patches.size()>0 && "PatchProcessor::generate: initialize() must be called after setting patch mask");
+    I output;
+    output.initItk(m_texture.width(), m_texture.height(), true);
+    Mipmap<I> mipmapOutput(output);
+    mipmapOutput.setMaxPowReductionLevel(m_patchMaskMipmap.maxPowReductionLevel());
+    mipmapOutput.setMode(m_patchMaskMipmap.mode());
+    mipmapOutput.generate();
+    for(unsigned i=0; i<mipmapOutput.numberMipmapsWidth(); ++i)
+        for(unsigned j=0; j<mipmapOutput.numberMipmapsHeight(); ++j)
+        {
+            I &mipmap = mipmapOutput.mipmap(i, j);
+            mipmap.for_all_pixels([&] (typename I::PixelType &pix, int x, int y)
+            {
+                pix=typename I::PixelType();
+                word64 wPixel=reinterpret_cast<word64>(m_patchMaskMipmap.mipmap(i, j).pixelAbsolute(x, y));
+                word64 w=0x1;
+                for(size_t p=0; p<m_patches.size(); ++p)
+                {
+                    word64 wTmp=w;
+                    if((wTmp&=wPixel)>0)
+                    {
+                        PixelPos patchOrigin = this->patchAt(p).alphaMipmap().originAt(i, j);
+                        int x2=x-patchOrigin[0];
+                        int y2=y-patchOrigin[1];
+                        if(x2 < 0)
+                            x2+=mipmap.width();
+                        if(y2 < 0)
+                            y2+=mipmap.height();
+
+                        pix += this->patchAt(p).contentAt(0).mipmap(i, j).pixelAbsolute(x2, y2);
+                    }
+                    w*=2;
+                }
+            });
+        }
+
+    return mipmapOutput;
+}
+
 //misc
 
 template<typename I>
@@ -192,6 +234,9 @@ void PatchProcessor<I>::debug_setPatchFromImageRGBd(const ImageRGBd& patchImage)
         });
         w*=2;
     }
+    m_patchMaskMipmap.setTexture(patchMask);
+    m_patchMaskMipmap.setMode(ms_defaultMipmapMode);
+    m_patchMaskMipmap.generate();
 }
 
 template<typename I>
