@@ -14,6 +14,136 @@
 
 using namespace ASTex;
 
+int test_gettis_gi(int argc, char **argv)
+{
+    if(argc < 2)
+    {
+        std::cerr << "Usage: " << std::endl;
+        std::cerr << argv[0] << " <in_texture> [max_dist (pixels)] [variance]" << std::endl;
+        return EXIT_FAILURE;
+    }
+
+    double sumW=0;
+    double S=0;
+    int max_dist=10.0, variance=1.0;
+    if(argc>2)
+        max_dist=atoi(argv[2]);
+    if(argc>3)
+        variance=atof(argv[3]);
+    max_dist = max_dist%2 == 1 ? max_dist:max_dist-1; //must be odd
+    ImageGrayd img, result;
+    IO::loadu8_in_01(img, std::string(MY_PATH) + argv[1]);
+
+    //building gaussian kernel of size max_dist
+    ImageGrayd gaussianKernel;
+    gaussianKernel.initItk(max_dist, max_dist, false);
+    gaussianKernel.for_all_pixels([&] (ImageGrayd::PixelType &pix, int x, int y)
+    {
+        int middle=int(gaussianKernel.width())/2;
+        if(x==middle && y==middle)
+            pix=0;
+        else
+            pix = exp( -0.5*(pow(sqrt((x-middle)*(x-middle)+(y-middle)*(y-middle)) / variance, 2)) ) / (variance*sqrt(2*M_PI));
+        sumW += pix;
+    });
+    //normalisation of the kernel
+    gaussianKernel.for_all_pixels([&] (ImageGrayd::PixelType &pix)
+    {
+        pix /= sumW;
+        std::cout << pix << std::endl;
+    });
+
+    HistogramGrayd h(img);
+
+    double mean = h.mean();
+    double sigma = h.variance();
+    //mean and sigma of image =/= mean and sigma of zone
+
+    //computing S
+    img.for_all_pixels([&] (ImageGrayd::PixelType &pix, int x, int y)
+    {
+        S += pix*pix;
+    });
+
+    S /= img.width()*img.height();
+    S -= mean*mean;
+    S = std::sqrt(S);
+
+    auto lmbd_gi = [&] (const ImageGrayd& texture, int x, int y) -> double
+    {
+        int dx, dy, x2, y2;
+        double gi = 0, w;
+
+        x += texture.width();
+        y += texture.height();
+
+//        double mean, sigma;
+//        //computing local mean
+
+//        for(dx=-gaussianKernel.width()/2; dx<=gaussianKernel.width()/2; ++dx)
+//            for(dy=-gaussianKernel.height()/2; dy<=gaussianKernel.height()/2; ++dy)
+//            {
+//                x2 = (x + dx)%texture.width();
+//                y2 = (y + dy)%texture.height();
+//                mean += texture.pixelAbsolute(x2, y2);
+//            }
+//        mean /= gaussianKernel.width()*gaussianKernel.height();
+
+//        //computing local sigma
+
+//        for(dx=-gaussianKernel.width()/2; dx<=gaussianKernel.width()/2; ++dx)
+//            for(dy=-gaussianKernel.height()/2; dy<=gaussianKernel.height()/2; ++dy)
+//            {
+//                x2 = (x + dx)%texture.width();
+//                y2 = (y + dy)%texture.height();
+//                sigma += (texture.pixelAbsolute(x2, y2)-mean) * (texture.pixelAbsolute(x2, y2)-mean);
+//            }
+//        sigma /= gaussianKernel.width()*gaussianKernel.height()-1;
+
+        //computing Gi
+
+        double denom_gi=0;
+
+        for(dx=-gaussianKernel.width()/2; dx<=gaussianKernel.width()/2; ++dx)
+            for(dy=-gaussianKernel.height()/2; dy<=gaussianKernel.height()/2; ++dy)
+            {
+                x2 = (x + dx)%texture.width();
+                y2 = (y + dy)%texture.height();
+                w = gaussianKernel.pixelAbsolute(dx + gaussianKernel.width()/2, dy + gaussianKernel.height()/2);
+                gi += texture.pixelAbsolute(x2, y2) * w;
+
+                denom_gi += w*w;
+            }
+        gi -= mean;
+        denom_gi *= img.width()*img.height();
+        denom_gi -= 1;
+        denom_gi /= img.width()*img.height()-1;
+        denom_gi = S*std::sqrt(denom_gi);
+
+        gi /= denom_gi;
+        return gi;
+
+    };
+
+    result.initItk(img.width(), img.height());
+    result.for_all_pixels([&] (ImageGrayd::PixelType &pix, int x, int y)
+    {
+        pix = lmbd_gi(img, x, y);
+        std::cout << "gi(" << x << ", " << y << "): " << pix << std::endl;
+        pix+=1;
+        //pix*=0.5;
+        pix = std::abs(pix);
+        pix = pix > 1.0 ? 1.0 : pix < 0 ? 0 : pix;
+    });
+
+    std::string filename_source=argv[1];
+    std::string name_file = IO::remove_path(filename_source);
+    std::string name_noext = IO::remove_ext(name_file);
+    IO::save01_in_u8(result, std::string(MY_PATH)+ "gi_translated_" + name_noext + "_" + std::to_string(max_dist) + "_" + std::to_string(variance) + ".png");
+
+    return 0;
+}
+
 int test_wendling(int argc, char **argv)
 {
     if(argc < 3)
@@ -142,7 +272,11 @@ int test_contentFiltering(int argc, char **argv)
         });
     }
 
-    IO::save01_in_u8(im_globalMipmap, std::string(MY_PATH)+"mipmap_full_computed.png");
+    std::string filename_source=argv[1];
+    std::string name_file = IO::remove_path(filename_source);
+    std::string name_noext = IO::remove_ext(name_file);
+
+    IO::save01_in_u8(im_globalMipmap, std::string(MY_PATH)+name_noext+"_mipmap_full_computed.png");
 
     return 0;
 }
@@ -169,9 +303,14 @@ int test_contentFilteringWithPatches(int argc, char **argv)
     ContentExchange::PatchProcessor<ImageRGBd>::setDefaultFilteringMode(ANISOTROPIC);
     ContentExchange::PatchProcessor<ImageRGBd> patchProcessor(im_in);
     //add some patches here
-    patchProcessor.debug_setPatchFromImageRGBd(im_patches);
-    patchProcessor.initialize();
+    //patchProcessor.debug_setPatchFromImageRGBd(im_patches);
+    patchProcessor.initializePatchesRegularGrid(64);
+    patchProcessor.initializeContents();
     //add some contents there
+    patchProcessor.debug_setRandomContents(1);
+    std::cout << "memory cost of one pixel: " << std::to_string(sizeof(ImageRGBd::PixelType)) << std::endl;
+    std::cout << "total memory cost: " << std::to_string(patchProcessor.analysis_getGPUMemoryCost()) << std::endl;
+
     unsigned k=0;
 
     //TEST 1: EVERY CONTENTS OF EVERY PATCH, + EVERY ALPHA OF EVERY PATCH, + EVERY POSSIBLE COMBINATION PATCH+CONTENT
@@ -183,6 +322,8 @@ int test_contentFilteringWithPatches(int argc, char **argv)
         for(unsigned i=0; i<patch.alphaMipmap().numberMipmapsWidth(); ++i)
             for(unsigned j=0; j<patch.alphaMipmap().numberMipmapsHeight(); ++j)
             {
+                IO::save01_in_u8(patch.mipmap(i, j), out_dir + "alpha_p" + std::to_string(k) + "_c0"
+                                 + "_mw" + std::to_string(i) + "_mh" + std::to_string(j) + ".png");
                 for(unsigned l=0; l<patch.numberContents(); ++l)
                 {
                     const ImageRGBd &contentMipmap=patch.contentAt(l).mipmap(i, j);
@@ -198,8 +339,6 @@ int test_contentFilteringWithPatches(int argc, char **argv)
                         p.SetAlpha(patch.mipmap(i, j).pixelAbsolute(x, y));
                         im_out.pixelAbsolute(x, y)=p;
                     });
-                    IO::save01_in_u8(patch.mipmap(i, j), out_dir + "alpha_p" + std::to_string(k) + "_c" + std::to_string(l)
-                                     + "_mw" + std::to_string(i) + "_mh" + std::to_string(j) + ".png");
                     IO::save01_in_u8(im_out, out_dir + "mipmap_p" + std::to_string(k) + "_c" + std::to_string(l)
                                      + "_mw" + std::to_string(i) + "_mh" + std::to_string(j) + ".png");
                 }
@@ -209,12 +348,33 @@ int test_contentFilteringWithPatches(int argc, char **argv)
     //TEST 2 : OUTPUT MIPMAP WITH EVERY DEFAULT CONTENTS
 
     ImageRGBd im_out;
-    Mipmap<ImageRGBd> fullMipmap(patchProcessor.generate(512, 512));
-    fullMipmap.fullMipmap(im_out);
+    Mipmap<ImageRGBd> outputMipmap(patchProcessor.generate(512, 512));
+
+    size_t s=0;
+    for(unsigned m=0; m<outputMipmap.numberMipmapsWidth(); ++m)
+    {
+        if(outputMipmap.mode()==ISOTROPIC)
+            s+=outputMipmap.mipmap(m, m).width()*outputMipmap.mipmap(m, m).height()*sizeof(ImageRGBd::PixelType);
+        else
+            for(unsigned l=0; l<outputMipmap.numberMipmapsHeight(); ++l)
+            {
+                int access;
+                access = patchProcessor.analysis_getNumberOfTextureAccessForMipmap(m, l);
+                std::cout << "Mipmap(" << m << ", " << l << "): ";
+                std::cout << "The number of texture access for computing this mipmap is " << std::to_string(access)
+                          << ", which means there are " << std::to_string(access/(double(outputMipmap.mipmap(m, l).width()*outputMipmap.mipmap(m, l).height())))
+                          << " reads per pixel, in mean." << std::endl;
+                s+=outputMipmap.mipmap(m, l).width()*outputMipmap.mipmap(m, l).height()*sizeof(ImageRGBd::PixelType);
+            }
+    }
+
+    std::cout << "Classic mipmap's memory cost: " << s << std::endl;
+
+    outputMipmap.fullMipmap(im_out);
     IO::save01_in_u8(im_out, std::string(MY_PATH)+"contentMipmaps/fullMipmap.png");
-    fullMipmap.setTexture(im_in);
-    fullMipmap.generate();
-    fullMipmap.fullMipmap(im_out);
+    outputMipmap.setTexture(im_in);
+    outputMipmap.generate();
+    outputMipmap.fullMipmap(im_out);
     IO::save01_in_u8(im_out, std::string(MY_PATH)+"contentMipmaps/fullMipmapOfInput.png");
 
     return 0;
@@ -451,4 +611,5 @@ int main( int argc, char **argv )
     //return test_autoconvolutionSpectrum(argc, argv);
     return test_contentFilteringWithPatches(argc, argv);
     //return test_wendling(argc, argv);
+    //return test_getti_gi(argc, argv);
 }

@@ -171,10 +171,6 @@ void MipmapCEPatch::generate()
         //emplace the new mipmap
         mipmapAlpha.initItk(mipmapPatchAlpha.width(), mipmapPatchAlpha.height());
         mipmapAlpha.copy_pixels(mipmapPatchAlpha);
-
-
-#include "ASTex/easy_io.h"
-        IO::save01_in_u8(mipmapAlpha, "mipmapPatch_" + std::to_string(fffff) + "_number_" + std::to_string(i) + "_" + std::to_string(j) + ".png");
     };
 
     if(m_mode==NO_FILTER || m_mode==ISOTROPIC)

@@ -37,11 +37,17 @@ public:
 
     //misc
 
-    void initialize();
-    Mipmap<I> generate(int textureWidth, int textureHeight) const; //const?
+    void initializePatchesRegularGrid(unsigned nbPatches=64);
+    void refinePatchesGI();
+    void initializeContents();
+
+    Mipmap<I> generate(int textureWidth, int textureHeight) const;
 
     void debug_setPatchFromImageRGBd(const ImageRGBd& patchImage);
     void debug_setRandomContents(unsigned nbContentsPerPatch);
+
+    size_t analysis_getGPUMemoryCost() const;
+    size_t analysis_getNumberOfTextureAccessForMipmap(unsigned i, unsigned j) const;
 
     //iterators
 
@@ -122,14 +128,56 @@ void PatchProcessor<I>::setFiltering(mipmap_mode_t mipmapMode)
 }
 
 template<typename I>
-void PatchProcessor<I>::initialize()
+void PatchProcessor<I>::initializePatchesRegularGrid(unsigned nbPatches)
 {
     assert(m_texture.is_initialized() &&
-           "PatchProcessor::generate: texture uninitialized (use PatchProcessor::setTexture with an initialized texture)");
+           "PatchProcessor::initializePatches: texture uninitialized (use PatchProcessor::setTexture with an initialized texture)");
+    assert(nbPatches <= 64 &&
+           "PatchProcessor::initializePatches: synthesis cannot allow more than 64 patches (nor should need to)");
+    double nbPixelsInWidthPerPatch, nbPixelsInHeightPerPatch;
+    int nbPatchesPerSide = int(std::sqrt(nbPatches));
+    nbPatches = nbPatchesPerSide * nbPatchesPerSide;
+    ImageMask64 patchMap;
+    patchMap.initItk(m_texture.width(), m_texture.height());
+    nbPixelsInWidthPerPatch = m_texture.width()/double(nbPatchesPerSide);
+    nbPixelsInHeightPerPatch = m_texture.height()/double(nbPatchesPerSide);
+
+    patchMap.for_all_pixels([&] (ImageMask64::PixelType &pix, int x, int y)
+    {
+        int xId = x/nbPixelsInWidthPerPatch;
+        int yId = y/nbPixelsInHeightPerPatch;
+        int id = yId * nbPatchesPerSide + xId;
+        pix = uint64_t(std::pow(2, id));
+    });
+
+    m_patchMaskMipmap.setTexture(patchMap);
+    m_patchMaskMipmap.setMode(ms_defaultMipmapMode);
+    m_patchMaskMipmap.generate();
+}
+
+template<typename I>
+void PatchProcessor<I>::refinePatchesGI()
+{
+    assert(m_texture.is_initialized() &&
+           "PatchProcessor::refinePatchesGI: texture uninitialized (use PatchProcessor::setTexture with an initialized texture)");
     assert(m_patchMaskMipmap.isGenerated() &&
-           "PatchProcessor::generate: patch mask mipmap not generated (use PatchProcessor::computePatches to compute patches)");
+           "PatchProcessor::refinePatchesGI: patch mask mipmap not generated (use PatchProcessor::initializePatches<Mode> to compute patches)");
     assert(m_texture.size()==m_patchMaskMipmap.texture().size() &&
-           "PatchProcessor::generate: patch mask must have the same size as texture (texture changed?)");
+           "PatchProcessor::refinePatchesGI: patch mask must have the same size as texture (texture changed?)");
+
+
+
+}
+
+template<typename I>
+void PatchProcessor<I>::initializeContents()
+{
+    assert(m_texture.is_initialized() &&
+           "PatchProcessor::initializeContents: texture uninitialized (use PatchProcessor::setTexture with an initialized texture)");
+    assert(m_patchMaskMipmap.isGenerated() &&
+           "PatchProcessor::initializeContents: patch mask mipmap not generated (use PatchProcessor::initializePatches<Mode> to compute patches)");
+    assert(m_texture.size()==m_patchMaskMipmap.texture().size() &&
+           "PatchProcessor::initializeContents: patch mask must have the same size as texture (texture changed?)");
 
     //find the number of patches
 
@@ -142,13 +190,14 @@ void PatchProcessor<I>::initialize()
     //its log's floor defines the number of different patches and is proprely computed this way:
     int lg;
     word64 wTest;
+    //we can then predict the number of patches based on what we read in the texture
     for(lg=0, wTest=0x1; (w & wTest) > 0x0; ++lg, wTest*=2);
     m_patches.resize(lg);
 
     wTest=0x1;
     w=0x0;
 
-    //then for each patch, compute their alpha map and give it to them. The patches will take care of the rest with reduce().
+    //then for each patch, compute their alpha map and give it to them. The patches will take care of the rest.
     for(typename std::vector<Patch<I>>::iterator it=m_patches.begin(); it!=m_patches.end(); ++it)
     {
         ImageGrayd alphaMap;
@@ -184,6 +233,7 @@ Mipmap<I> PatchProcessor<I>::generate(int textureWidth, int textureHeight) const
             mipmap.for_all_pixels([&] (typename I::PixelType &pix, int x, int y)
             {
                 pix=typename I::PixelType();
+                //the following utilizes bitmasks to read the data of each mipmap
                 word64 wPixel=reinterpret_cast<word64>(m_patchMaskMipmap.mipmap(i, j).pixelAbsolute(x, y));
                 word64 w=0x1;
                 for(size_t p=0; p<m_patches.size(); ++p)
@@ -244,7 +294,7 @@ template<typename I>
 void PatchProcessor<I>::debug_setRandomContents(unsigned nbContentsPerPatch)
 {
     assert(m_patches.size()>0 && "PatchProcessor::debug_setRandomContents: initialize() must be called before being able to chose contents");
-    int i, j;
+    unsigned i, j;
     int randomShiftX, randomShiftY;
     I shiftedTexture;
     shiftedTexture.initItk(m_texture.width(), m_texture.height());
@@ -267,6 +317,71 @@ void PatchProcessor<I>::debug_setRandomContents(unsigned nbContentsPerPatch)
 
 }
 
+template<typename I>
+size_t PatchProcessor<I>::analysis_getGPUMemoryCost() const
+{
+    unsigned i, j, k, l;
+    size_t s=0;
+
+    //lambda to compute the memory cost of an image
+    auto addImageMemoryCostOf = [&](const I &image)
+    {
+        s+=sizeof(typename I::PixelType)*image.height()*image.width();
+    };
+    //lambda to compute the memory cost of the mask image
+    auto addImageMaskMemoryCostOf = [&](const ImageMask64 &image)
+    {
+        s+=sizeof(typename ImageMask64::PixelType)*image.height()*image.width();
+    };
+    for(i=0; i<m_patchMaskMipmap.numberMipmapsWidth(); ++i)
+    {
+        if(m_patchMaskMipmap.mode()==ISOTROPIC) //if isotropic, there are mipmaps only on the diagonal (i, i)
+            addImageMaskMemoryCostOf(m_patchMaskMipmap.mipmap(i, i));
+        else
+            for(j=0; j<m_patchMaskMipmap.numberMipmapsHeight(); ++j)
+                addImageMaskMemoryCostOf(m_patchMaskMipmap.mipmap(i, j));
+    }
+    for(i=0; i<m_patches.size(); ++i)
+    {
+        const Patch<I> &patch=m_patches[i];
+        for(j=0; j<patch.numberContents(); ++j)
+        {
+            const Content<I> &content=patch.contentAt(j);
+            for(k=0; k<content.contentMipmap().numberMipmapsWidth(); ++k)
+            {
+                if(content.contentMipmap().mode()==ISOTROPIC)
+                    addImageMemoryCostOf(content.mipmap(k, k));
+                else
+                    for(l=0; l<content.contentMipmap().numberMipmapsHeight(); ++l)
+                        addImageMemoryCostOf(content.mipmap(k, l));
+            }
+        }
+    }
+    return s;
+}
+
+template<typename I>
+size_t PatchProcessor<I>::analysis_getNumberOfTextureAccessForMipmap(unsigned i, unsigned j) const
+{
+    const ImageMask64& mipmap=m_patchMaskMipmap.mipmap(i, j);
+    unsigned access = 0; //counts the number of texture access
+    mipmap.for_all_pixels([&] (const ImageMask64::PixelType &pix)
+    {
+        //mask analysis
+        word64 wPixel=reinterpret_cast<word64>(pix);
+        word64 w=0x1;
+        for(size_t p=0; p<m_patches.size(); ++p)
+        {
+            word64 wTmp=w;
+            if((wTmp&=wPixel)>0)
+                ++access;
+            w *= 2;
+        }
+    });
+
+    return access;
+
+}
 
 }
 
