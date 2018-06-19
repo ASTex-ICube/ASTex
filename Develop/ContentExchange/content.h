@@ -77,7 +77,6 @@ void MipmapCEContent<I>::generate()
     const ImageGrayd& correspondingPatchAlphaTexture = patchMipmapAlpha.texture();
     PixelPos patchOrigin = patchMipmapAlpha.originAt(0, 0);
     I cleanedTexture;
-    IO::save01_in_u8(this->m_isoMipmaps[0], "potato_xd.png");
     cleanedTexture.initItk(this->m_isoMipmaps[0].width(), this->m_isoMipmaps[0].height(), true); //does not set at 0?? WTF????
     cleanedTexture.for_all_pixels([&] (typename I::PixelType &pix)
     {

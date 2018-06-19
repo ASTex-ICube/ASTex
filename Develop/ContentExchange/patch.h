@@ -58,7 +58,6 @@ void MipmapCEPatch::generate()
     //debug
     ImageAlphad fullMipmapAlphaImage;
     this->fullMipmap(fullMipmapAlphaImage);
-    IO::save01_in_u8(fullMipmapAlphaImage, "fullMipmapAlphaImage.png");
 
     //origins vector: it's okay for it to be redundant in case of isotropy since it's not heavy
     m_pixelOriginMap.resize(this->numberMipmapsWidth());

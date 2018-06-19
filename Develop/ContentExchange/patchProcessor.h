@@ -5,6 +5,7 @@
 #include "patch.h"
 #include "mipmap.h"
 #include "content.h"
+#include "ASTex/easy_io.h"
 
 namespace ASTex
 {
@@ -24,7 +25,7 @@ public:
 
     //get
 
-    const I& getTexture() const;
+    const I& texture() const;
     const Patch<I>& patchAt(size_t index) const;
     Patch<I> &patchAt(size_t index);
 
@@ -43,8 +44,11 @@ public:
 
     Mipmap<I> generate(int textureWidth, int textureHeight) const;
 
-    void debug_setPatchFromImageRGBd(const ImageRGBd& patchImage);
+    template<typename R>
+    void debug_setPatchFromImageRGB(const ImageCommon<ImageRGBBase<R>, false> &patchImage);
     void debug_setRandomContents(unsigned nbContentsPerPatch);
+
+    void saveRenderingPack(const std::string &outputDirectory);
 
     size_t analysis_getGPUMemoryCost() const;
     size_t analysis_getNumberOfTextureAccessForMipmap(unsigned i, unsigned j) const;
@@ -72,10 +76,14 @@ private:
     mipmap_mode_t m_mipmapMode;
 
     static mipmap_mode_t ms_defaultMipmapMode;
+    static typename I::PixelType ms_zero;
 };
 
 template<typename I>
 mipmap_mode_t PatchProcessor<I>::ms_defaultMipmapMode = NO_FILTER;
+
+template<typename I>
+typename I::PixelType PatchProcessor<I>::ms_zero;
 
 template<typename I>
 PatchProcessor<I>::PatchProcessor():
@@ -96,7 +104,7 @@ PatchProcessor<I>::PatchProcessor(const I& texture):
 //get
 
 template<typename I>
-const I& PatchProcessor<I>::getTexture() const
+const I& PatchProcessor<I>::texture() const
 {
     return m_texture;
 }
@@ -133,7 +141,7 @@ void PatchProcessor<I>::initializePatchesRegularGrid(unsigned nbPatches)
     assert(m_texture.is_initialized() &&
            "PatchProcessor::initializePatches: texture uninitialized (use PatchProcessor::setTexture with an initialized texture)");
     assert(nbPatches <= 64 &&
-           "PatchProcessor::initializePatches: synthesis cannot allow more than 64 patches (nor should need to)");
+           "PatchProcessor::initializePatches: synthesis cannot allow more than 64 patches ()");
     double nbPixelsInWidthPerPatch, nbPixelsInHeightPerPatch;
     int nbPatchesPerSide = int(std::sqrt(nbPatches));
     nbPatches = nbPatchesPerSide * nbPatchesPerSide;
@@ -164,8 +172,6 @@ void PatchProcessor<I>::refinePatchesGI()
            "PatchProcessor::refinePatchesGI: patch mask mipmap not generated (use PatchProcessor::initializePatches<Mode> to compute patches)");
     assert(m_texture.size()==m_patchMaskMipmap.texture().size() &&
            "PatchProcessor::refinePatchesGI: patch mask must have the same size as texture (texture changed?)");
-
-
 
 }
 
@@ -226,36 +232,51 @@ Mipmap<I> PatchProcessor<I>::generate(int textureWidth, int textureHeight) const
     mipmapOutput.setMaxPowReductionLevel(m_patchMaskMipmap.maxPowReductionLevel());
     mipmapOutput.setMode(m_patchMaskMipmap.mode());
     mipmapOutput.generate();
-    for(unsigned i=0; i<mipmapOutput.numberMipmapsWidth(); ++i)
-        for(unsigned j=0; j<mipmapOutput.numberMipmapsHeight(); ++j)
-        {
-            I &mipmap = mipmapOutput.mipmap(i, j);
-            mipmap.for_all_pixels([&] (typename I::PixelType &pix, int x, int y)
-            {
-                pix=typename I::PixelType();
-                //the following utilizes bitmasks to read the data of each mipmap
-                word64 wPixel=reinterpret_cast<word64>(m_patchMaskMipmap.mipmap(i, j).pixelAbsolute(x, y));
-                word64 w=0x1;
-                for(size_t p=0; p<m_patches.size(); ++p)
-                {
-                    word64 wTmp=w;
-                    if((wTmp&=wPixel)>0)
-                    {
-                        PixelPos patchOrigin = this->patchAt(p).alphaMipmap().originAt(i, j);
-                        int x2=x-patchOrigin[0];
-                        int y2=y-patchOrigin[1];
-                        if(x2 < 0)
-                            x2+=mipmap.width();
-                        if(y2 < 0)
-                            y2+=mipmap.height();
 
-                        //choose your content here
-                        pix += this->patchAt(p).contentAt(0).mipmap(i, j).pixelAbsolute(x2, y2);
-                    }
-                    w*=2;
+    auto lmbd_generate1Mipmap = [&] (int k, int l)
+    {
+        I &mipmap = mipmapOutput.mipmap(k, l);
+        mipmap.for_all_pixels([&] (typename I::PixelType &pix, int x, int y)
+        {
+            pix=PatchProcessor<I>::ms_zero;
+            //the following utilizes bitmasks to read the data of each mipmap
+            word64 wPixel=reinterpret_cast<word64>(m_patchMaskMipmap.mipmap(k, l).pixelAbsolute(x, y));
+            word64 w=0x1;
+            for(size_t p=0; p<m_patches.size(); ++p)
+            {
+                word64 wTmp=w;
+                if((wTmp&=wPixel)>0)
+                {
+                    PixelPos patchOrigin = this->patchAt(p).alphaMipmap().originAt(k, l);
+                    int x2=x-patchOrigin[0];
+                    int y2=y-patchOrigin[1];
+                    if(x2 < 0)
+                        x2+=mipmap.width();
+                    if(y2 < 0)
+                        y2+=mipmap.height();
+
+                    //choose your content here
+                    pix += this->patchAt(p).contentAt(0).mipmap(k, l).pixelAbsolute(x2, y2);
                 }
-            });
+                w*=2;
+            }
+        });
+    };
+
+    for(unsigned i=0; i<mipmapOutput.numberMipmapsWidth(); ++i)
+    {
+        if(mipmapOutput.mode()==ANISOTROPIC)
+        {
+            for(unsigned j=0; j<mipmapOutput.numberMipmapsHeight(); ++j)
+            {
+                lmbd_generate1Mipmap(i, j);
+            }
         }
+        else
+        {
+            lmbd_generate1Mipmap(i, i);
+        }
+    }
 
     return mipmapOutput;
 }
@@ -263,19 +284,20 @@ Mipmap<I> PatchProcessor<I>::generate(int textureWidth, int textureHeight) const
 //misc
 
 template<typename I>
-void PatchProcessor<I>::debug_setPatchFromImageRGBd(const ImageRGBd& patchImage)
+template <typename R>
+void PatchProcessor<I>::debug_setPatchFromImageRGB(const ImageCommon<ImageRGBBase<R>, false>& patchImage)
 {
     assert(patchImage.size() == m_texture.size() &&
            "PatchProcessor::debug_setPatchFromImageRGBd: patchImage should have the same size as texture");
-    HistogramRGBd histogramPI(patchImage);
-    assert(histogramPI.binsNumber()<65 &&
-           "PatchProcessor::debug_setPatchFromImageRGBd: there should be up to 64 different colors in the given image");
+    HistogramRGBBase<R> histogramPI(patchImage);
+    assert(histogramPI.binsNumber()<=31 &&
+           "PatchProcessor::debug_setPatchFromImageRGBd: there should be up to 31 different colors in the given image");
     word64 w=0x1;
     ImageMask64 patchMask;
     patchMask.initItk(patchImage.width(), patchImage.height(), true);
     for(auto it=histogramPI.begin(); it!=histogramPI.end(); ++it)
     {
-        patchImage.for_all_pixels([&] (const ImageRGBd::PixelType &pix, int x, int y)
+        patchImage.for_all_pixels([&] (const typename ImageCommon<ImageRGBBase<R>, false>::PixelType &pix, int x, int y)
         {
             if((*it).first==pix)
             {
@@ -285,6 +307,7 @@ void PatchProcessor<I>::debug_setPatchFromImageRGBd(const ImageRGBd& patchImage)
         });
         w*=2;
     }
+
     m_patchMaskMipmap.setTexture(patchMask);
     m_patchMaskMipmap.setMode(ms_defaultMipmapMode);
     m_patchMaskMipmap.generate();
@@ -315,6 +338,85 @@ void PatchProcessor<I>::debug_setRandomContents(unsigned nbContentsPerPatch)
         }
     }
 
+}
+
+template<typename I>
+void PatchProcessor<I>::saveRenderingPack(const std::string &outputDirectory)
+{
+    unsigned i,j,k,l;
+    //saving patch map
+    for(k=0; k<m_patchMaskMipmap.numberMipmapsWidth(); ++k)
+    {
+        if(m_patchMaskMipmap.mode()==ANISOTROPIC)
+            for(l=0; l<m_patchMaskMipmap.numberMipmapsHeight(); ++l)
+            {
+                ImageMask64 im64 = m_patchMaskMipmap.mipmap(k, l);
+                Histogram<ImageMask64>::saveImageToCsv(im64, outputDirectory + "/patchmap_mw" + std::to_string(k) + "_mh" + std::to_string(l) + ".csv");
+            }
+        else
+        {
+            ImageMask64 im64 = m_patchMaskMipmap.mipmap(k, k);
+            Histogram<ImageMask64>::saveImageToCsv(im64, outputDirectory + "/patchmap_mw" + std::to_string(k) + "_mh" + std::to_string(k) + ".csv");
+        }
+
+    }
+    //saving contents
+    for(i=0; i<m_patches.size(); ++i)
+    {
+        const Patch<I> &patch = m_patches[i];
+        for(j=0; j<patch.numberContents(); ++j)
+        {
+            const Content<I> content = patch.contentAt(j);
+            for(k=0; k<content.contentMipmap().numberMipmapsWidth(); ++k)
+            {
+                if(content.contentMipmap().mode() == ANISOTROPIC)
+                {
+                    for(l=0; l<content.contentMipmap().numberMipmapsHeight(); ++l)
+                    {
+                        I im = content.mipmap(k, l);
+                        IO::save01_in_u8(im, outputDirectory + "/p" + std::to_string(i) + "_c" + std::to_string(j) + "_mw" + std::to_string(k) + "_mh" + std::to_string(l) + ".png");
+                    }
+                }
+                else
+                {
+                    I im = content.mipmap(k, k);
+                    IO::save01_in_u8(im, outputDirectory + "/p" + std::to_string(i) + "_c" + std::to_string(j) + "_mw" + std::to_string(k) + "_mh" + std::to_string(k) + ".png");
+                }
+            }
+        }
+    }
+    //saving useful data
+    std::ofstream ofs_data_out(outputDirectory + "/data.csv");
+    ofs_data_out << m_patches.size() << std::endl;
+    ofs_data_out << m_patches[0].numberContents() << std::endl;
+    ofs_data_out << m_patchMaskMipmap.mode() << std::endl;
+    ofs_data_out << m_patchMaskMipmap.numberMipmapsWidth() << std::endl;
+    ofs_data_out << m_patchMaskMipmap.numberMipmapsHeight() << std::endl;
+    ofs_data_out.close();
+
+    //saving origins
+    for(i=0; i<m_patches.size(); ++i)
+    {
+        std::ofstream ofs_origins_out(outputDirectory + "/origin_p" + std::to_string(i) + ".csv");
+        const Patch<I> &patch = m_patches[i];
+
+        for(k=0; k<patch.alphaMipmap().numberMipmapsWidth(); ++k)
+        {
+            if(patch.alphaMipmap().mode()==ANISOTROPIC)
+                for(l=0; l<patch.alphaMipmap().numberMipmapsHeight(); ++l)
+                {
+                    ofs_origins_out << patch.alphaMipmap().originAt(k, l) << " ";
+                }
+            else
+            {
+                ofs_origins_out << patch.alphaMipmap().originAt(k, k);
+            }
+            ofs_origins_out << std::endl;
+
+        }
+
+        ofs_origins_out.close();
+    }
 }
 
 template<typename I>
