@@ -35,6 +35,12 @@ public:
      */
     Histogram(const I &image);
 
+    //static
+
+    static void saveImageToCsv(const I& image, const std::string &out);
+    // v  won't work for RGB/RGBA
+    static void loadImageFromCsv(I& image, const std::string& in);
+
     //types
 
     typedef double                              real;
@@ -206,6 +212,38 @@ template <class I, class Compare>
 Histogram<I, Compare>::Histogram(const I &image) : m_histogram(), m_size(0)
 {
     compute(image);
+}
+
+template <class I, class Compare>
+void Histogram<I, Compare>::saveImageToCsv(const I& image, const std::string& out)
+{
+    std::ofstream ofs_out(out);
+    ofs_out << image.width() << std::endl;
+    ofs_out << image.height() << std::endl;
+    image.for_all_pixels([&] (const typename I::PixelType &pix)
+    {
+        ofs_out << pix << std::endl;
+    });
+    ofs_out.close();
+}
+
+template <class I, class Compare>
+void Histogram<I, Compare>::loadImageFromCsv(I& image, const std::string &in)
+{
+    std::ifstream ifs_in(in);
+    int w, h;
+    double value;
+    if(ifs_in.is_open())
+    {
+        ifs_in >> w >> h;
+        image.initItk(w, h);
+        image.for_all_pixels([&] (typename I::PixelType &pix)
+        {
+            ifs_in >> value;
+            pix = (typename I::PixelType)value;
+        });
+    }
+    ifs_in.close();
 }
 
 template <class I, class Compare>
@@ -525,11 +563,29 @@ public:
     HistogramRGBBase();
     HistogramRGBBase(const ImageCommon<ImageRGBBase<T>, false>& image);
 
+    /**
+     * @brief quantize turns a histogram into a clusterized integer histogram.
+     * @param inf minimum of the pixelType (any value bellow is considered at minimum)
+     * @param sup maximum of the pixelType (any value above is considered at maximum)
+     * @param nb_classes_per_dimension the number of clusters (classes) per dimension.
+     * 0 means it will choose automatically.
+     * @return The clusterized histogram.
+     */
     HistogramRGBBase<int> quantize(PixelType inf, PixelType sup, int nb_classes_per_dimension=0) const;
 
+    /**
+     * @brief updateStatistics updates the statistics mean and covariance.
+     * Generally called automatically, one should still call it after changing manually the histogram data.
+     */
     void updateStatistics();
 
+    /**
+     * @brief compute gets a histogram from an image.
+     * Called automatically after a construction, one should still call it after using the default constructor.
+     * @param image
+     */
     void compute(const ImageCommon<ImageRGBBase<T>, false>& image);
+
 
     const real           mean(int i) const {return m_mean[i];}
     const real&    covariance(int i, int j) const {if(i==j) return m_covariance[i]; else return m_covariance[2 + i + j];}
@@ -537,21 +593,6 @@ public:
     void clear();
 
     PixelType meanPixelType() const;
-
-    //PhD update
-
-    /**
-     * \brief compute the cross covariance between channel1 and channel2 into cc using histogram datas,
-     * normalize the values, fill an image with it. The cross covariance is displayed as such:
-     * each pixel represents the possible values the (finite and whole) t parameter of the cross covariance takes, from 0 to N*M.
-     * This way of visualizing the cross covariance supposes that the input image was procedurally generated with a stationnary random process,
-     * which drastically reduces the number of statistics to compute.
-     * \param [in] image is the image to compute the cross covariance from.
-     * \param channel1 is the first channel index which is counted.
-     * \param channel2 is the second channel index which is counted. If channel1 equals channel2, the autocovariance is computed.
-     * \param [out] cc is the resulting cross covariance, which each pixel representing a translation in the image from the origin.
-     */
-    void computeNormalizedCrossCovariance(const ImageCommon<ImageGrayBase<T>, false>& image, int channel1, int channel2, ImageCommon<ImageRGBBase<T>, false> &cc);
 
 private:
 
@@ -714,26 +755,24 @@ public:
 
     void            clear();
 
+    /**
+     * @brief meanPixelType
+     * @return the mean except it's of the type of the PixelType. (why again?)
+     */
     PixelType       meanPixelType();
 
+    /**
+     * @brief quantize turns a histogram into a clusterized integer histogram.
+     * @param inf minimum of the pixelType (any value bellow is considered at minimum)
+     * @param sup maximum of the pixelType (any value above is considered at maximum)
+     * @param nb_classes the number of clusters (classes). 0 means it will choose automatically.
+     * @return The clusterized histogram.
+     */
     HistogramGrayBase<int> quantize(PixelType inf=PixelType(0), PixelType sup=PixelType(1), unsigned int nb_classes=0) const;
 
     //test of fit
 
     real            fitsNormalChi2() const;
-
-    //PhD update
-
-    /**
-     * \brief compute the autocovariance of image into ac using histogram datas,
-     * normalize the values, fill an image with it. The autocovariance is displayed as such:
-     * each pixel represents the possible values the (finite and whole) t parameter of the autocovariance takes, from 0 to N*M.
-     * This way of visualizing the autocovariance supposes that the input image was procedurally generated with a stationnary random process,
-     * which drastically reduces the number of statistics to compute.
-     * \param [in] image is the image to compute the autocovariance from.
-     * \param [out] ac is the resulting autocovariance, which each pixel representing a translation in the image from the origin.
-     */
-    void computeNormalizedAutoCovariance(const ImageCommon<ImageGrayBase<T>, true>& image, ImageCommon<ImageGrayBase<T>, false> &ac);
 
 private:
 
@@ -844,7 +883,6 @@ void HistogramGrayBase<T>::clear()
 template <typename T>
 typename HistogramGrayBase<T>::PixelType HistogramGrayBase<T>::meanPixelType()
 {
-    //TODO: remember what this was for again?
     PixelType mean;
     mean=(PixelType)m_mean;
     return mean;
@@ -884,22 +922,6 @@ typename HistogramGrayBase<T>::real HistogramGrayBase<T>::fitsNormalChi2() const
         d+=chiNotSquared*chiNotSquared;
     }
     return d;
-}
-
-template <typename T>
-void HistogramGrayBase<T>::computeNormalizedAutoCovariance(const ImageCommon<ImageGrayBase<T>, true> &image, ImageCommon<ImageGrayBase<T>, false> &ac)
-{
-    //TODO: decide whether finishing it or removing it: exists in fourier.hpp
-    if(!ac.is_initialized() || ac.width()!=image.width() || ac.height()!=image.height())
-        ac.initItk(image.width(), image.height());
-
-    for(int i=0; i<ac.width(); ++i)
-    {
-        for(int j=0; j<ac.height(); ++j)
-        {
-            //ac.pixelAbsolute(i, j)=
-        }
-    }
 }
 
 
