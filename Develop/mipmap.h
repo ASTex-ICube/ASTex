@@ -116,13 +116,25 @@ Mipmap<I>::Mipmap(const Mipmap& other):
             m_anisoMipmapsHeight[j].resize(other.numberMipmapsHeight()-1-j);
         }
         for(size_t i=0; i<other.numberMipmapsWidth(); ++i)
-            for(size_t j=0; j<other.numberMipmapsHeight(); ++j)
+        {
+            if(other.mode() == ANISOTROPIC)
             {
-                I& m=this->mipmap(i, j);
-                const I& mOther=other.mipmap(i, j);
+                for(size_t j=0; j<other.numberMipmapsHeight(); ++j)
+                {
+                    I& m=this->mipmap(i, j);
+                    const I& mOther=other.mipmap(i, j);
+                    m.initItk(mOther.width(), mOther.height(), false);
+                    m.copy_pixels(mOther);
+                }
+            }
+            else
+            {
+                I& m=this->mipmap(i, i);
+                const I& mOther=other.mipmap(i, i);
                 m.initItk(mOther.width(), mOther.height(), false);
                 m.copy_pixels(mOther);
             }
+        }
     }
 }
 
@@ -439,13 +451,92 @@ template <class I>
 void Mipmap<I>::filterDivide2Full(const I& texture, I& result)
 {
     result.initItk(texture.width()/2, texture.height()/2);
-    result.for_all_pixels([&] (typename I::PixelType &pix, int x, int y)
+
+    //if scalar type and non floating (ex: ImageGrayu8)
+    if(std::is_scalar<typename I::PixelType>::value && !std::is_floating_point<typename I::DataType>::value)
     {
-        pix=(texture.pixelAbsolute(2*x, 2*y)
-             + texture.pixelAbsolute(2*x + 1, 2*y)
-             + texture.pixelAbsolute(2*x, 2*y + 1)
-             + texture.pixelAbsolute(2*x + 1, 2*y + 1)) * 0.25;
-    });
+        result.for_all_pixels([&] (typename I::PixelType &pix, int x, int y)
+        {
+            uint64_t pixi=0, pix4;
+
+            typename I::PixelType p0, p1, p2, p3;
+            p0 = texture.pixelAbsolute(2*x, 2*y);
+            p1 = texture.pixelAbsolute(2*x + 1, 2*y);
+            p2 = texture.pixelAbsolute(2*x, 2*y + 1);
+            p3 = texture.pixelAbsolute(2*x + 1, 2*y + 1);
+            std::memcpy(&pix4, &p0, sizeof(typename I::PixelType));
+            pixi += pix4;
+            pix4 = 0;
+            std::memcpy(&pix4, &p1, sizeof(typename I::PixelType));
+            pixi += pix4;
+            pix4 = 0;
+            std::memcpy(&pix4, &p2, sizeof(typename I::PixelType));
+            pixi += pix4;
+            pix4 = 0;
+            std::memcpy(&pix4, &p3, sizeof(typename I::PixelType));
+            pixi += pix4;
+            pix4 = 0;
+
+            pixi = (double)pixi * 0.25;
+            std::memcpy(&pix, &pixi, sizeof(typename I::PixelType));
+        });
+    }
+    //if array type and non floating (ex: ImageRGBu8)
+    else if(!std::is_scalar<typename I::PixelType>::value && !std::is_floating_point<typename I::DataType>::value)
+    {
+        size_t arraySize = sizeof(typename I::PixelType) / sizeof(typename I::DataType);
+        typename I::DataType *pix4 = new typename I::DataType[arraySize];
+        uint64_t *pixi = new uint64_t[arraySize]();
+
+        auto lmbd_addPix4toPixi = [&] ()
+        {
+            for(unsigned i=0; i<arraySize; ++i)
+            {
+                pixi[i] += pix4[i];
+                pix4[i] = 0;
+            }
+        };
+
+        result.for_all_pixels([&] (typename I::PixelType &pix, int x, int y)
+        {
+            typename I::PixelType p0, p1, p2, p3;
+            p0 = texture.pixelAbsolute(2*x, 2*y);
+            p1 = texture.pixelAbsolute(2*x + 1, 2*y);
+            p2 = texture.pixelAbsolute(2*x, 2*y + 1);
+            p3 = texture.pixelAbsolute(2*x + 1, 2*y + 1);
+            std::memcpy(pix4, &p0, sizeof(typename I::PixelType));
+            lmbd_addPix4toPixi();
+            std::memcpy(pix4, &p1, sizeof(typename I::PixelType));
+            lmbd_addPix4toPixi();
+            std::memcpy(pix4, &p2, sizeof(typename I::PixelType));
+            lmbd_addPix4toPixi();
+            std::memcpy(pix4, &p3, sizeof(typename I::PixelType));
+            lmbd_addPix4toPixi();
+
+            for(unsigned i=0; i<arraySize; ++i)
+            {
+                pix4[i]=(typename I::DataType)((double)pixi[i] * 0.25);
+                pixi[i]=0;
+            }
+            std::memcpy(&pix, pix4, sizeof(typename I::PixelType));
+        });
+
+        delete[] pix4;
+        delete[] pixi;
+    }
+    //if floating + scalar or not
+    else
+    {
+        result.for_all_pixels([&] (typename I::PixelType &pix, int x, int y)
+        {
+            typename I::PixelType p0, p1, p2, p3;
+            p0 = texture.pixelAbsolute(2*x, 2*y);
+            p1 = texture.pixelAbsolute(2*x + 1, 2*y);
+            p2 = texture.pixelAbsolute(2*x, 2*y + 1);
+            p3 = texture.pixelAbsolute(2*x + 1, 2*y + 1);
+            pix = (p0 + p1 + p2 + p3) * 0.25;
+        });
+    }
 }
 
 using ImageGrayb = ImageCommon<ImageGrayBase<bool>, false>;
