@@ -1,5 +1,5 @@
-#ifndef __CONTENT_H__
-#define __CONTENT_H__
+#ifndef __CTEXCH_CONTENT_H__
+#define __CTEXCH_CONTENT_H__
 
 #include "mipmap.h"
 #include "patch.h"
@@ -17,26 +17,34 @@ class MipmapCEPatch;
 
 template<typename I>
 /**
- * @brief The MipmapContentExchange class is a particular type of mipmap
- * which embodies mipmapped portions of an image.
+ * @brief The MipmapContentExchange class is a particular type of mipmap which embodies mipmapped portions of an image.
  * These portions must have been stored in an image and mipmapped before using this class.
- * Content must have been shifted and emplaced where the patch's default content is
- * in order to fit the size.
+ * Content must have been shifted and emplaced where the patch's default content is in order to fit the size.
+ * One should mostly use the above Content class to access it.
  */
 class MipmapCEContent : public Mipmap<I>
 {
 public:
     /**
      * @brief MipmapCEContent constructor for MipmapCEContent.
-     * Immediately produces the output image.
      * @param contentColor input-sized mipmap containing the content, shifted to the position of the patch.
      * @param patchAlpha input-sized mipmap containing the alpha information of the patch.
      */
     MipmapCEContent();
     MipmapCEContent(const I& content);
 
+    /**
+     * @brief generate generates the content mipmap with settings given by
+     * setTexture(), setMode() and setMaxPowReductionLevel().
+     * @pre setParentPatch must have been called, because patch informations are used to compute it.
+     * It is also expected to be a valid patch, that is, this content was build to fit the parentPatch.
+     */
     void generate();
 
+    /**
+     * @brief setParentPatch provides this class with the parent patch.
+     * @param parentPatch
+     */
     void setParentPatch(const Patch<I> *parentPatch) {m_parentPatch=parentPatch;}
 
 private:
@@ -61,16 +69,8 @@ template<typename I>
 void MipmapCEContent<I>::generate()
 {
     static typename I::PixelType zero;
-    if(!m_parentPatch)
-    {
-        std::cerr << "Warning: MipmapCEContent::generate: parent patch has not been given (try MipmapCEContent::setParentPatch)" << std::endl;
-        return;
-    }
-    if(!this->isTextureSet())
-    {
-        std::cerr << "Warning: MipmapCEContent::generate: no content texture was set" << std::endl;
-        return;
-    }
+    assert(m_parentPatch && "MipmapCEContent::generate: parent patch has not been given (try MipmapCEContent::setParentPatch)");
+    assert(this->isTextureSet() && "MipmapCEContent::generate: no content texture was set (try MipmapCEContent::setTexture)");
 
     //clean content before generating
     const MipmapCEPatch &patchMipmapAlpha = m_parentPatch->alphaMipmap();
@@ -136,7 +136,7 @@ void MipmapCEContent<I>::generate()
         }
     }
 
-    if(this->mode()==ISOTROPIC)
+    if(this->mode()==ISOTROPIC || this->mode()==NO_FILTER)
     for(i=0, j=0; i<maxIterations; ++i, ++j)
         computeMipmap();
 
