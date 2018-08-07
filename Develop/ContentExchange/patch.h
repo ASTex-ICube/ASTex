@@ -1,5 +1,5 @@
-#ifndef __PATCH__H__
-#define __PATCH__H__
+#ifndef __CTEXCH_PATCH__H__
+#define __CTEXCH_PATCH__H__
 
 #include <ASTex/image_gray.h>
 #include "mipmap.h"
@@ -47,7 +47,7 @@ MipmapCEPatch::MipmapCEPatch(const ImageAlphad &patchAlpha):
     m_pixelOriginMap()
 {}
 
-void MipmapCEPatch::generate()
+void MipmapCEPatch::generate(bool periodicity)
 {
     if(!isTextureSet())
     {
@@ -69,8 +69,6 @@ void MipmapCEPatch::generate()
     unsigned i, j;
     int xMin, yMin, xMax, yMax;
     int oldXMin, oldXMax, oldYMax;
-
-    static int fffff=0;
 
     auto emplaceMipmap = [&] ()
     {
@@ -103,50 +101,53 @@ void MipmapCEPatch::generate()
         //Now we need to check if the bounding box is aperiodic in width.
         //TODO: if a bug is found, it could come from this part. It's easy to make a mistake.
         //TODO: this part of the code WILL also be problematic if some periodic boxes take the entire width.
-        if(xMin == 0 && xMax == mipmapAlpha.width()-1)
-        { //this block occurs when the bounding box is suspected to be periodic in width.
-            //check discontinuities in image width (an empty column)
-            oldXMax = xMax;
-            for(int x=xMin; x<=xMax; ++x)
-            {
-                int y;
-                for(y=yMin; y<=yMax && mipmapAlpha.pixelAbsolute(x, y)==0; ++y);
-                if(y>yMax) //discontinuity found
-                    xMax=x-1; //assign xMax to the last full row we found, breaking the loop
-            }
-            if(oldXMax != xMax) //if false, it means the content was simply taking the entire width
-            {
-                //iterate the other way until a discontinuity is found
-                for(int x=oldXMax; x>=xMin; --x)
+        if(periodicity)
+        {
+            if(xMin == 0 && xMax == mipmapAlpha.width()-1)
+            { //this block occurs when the bounding box is suspected to be periodic in width.
+                //check discontinuities in image width (an empty column)
+                oldXMax = xMax;
+                for(int x=xMin; x<=xMax; ++x)
                 {
                     int y;
                     for(y=yMin; y<=yMax && mipmapAlpha.pixelAbsolute(x, y)==0; ++y);
                     if(y>yMax) //discontinuity found
-                        xMin=x+1; //assign xMin to the last full row we found, breaking the loop
+                        xMax=x-1; //assign xMax to the last full row we found, breaking the loop
+                }
+                if(oldXMax != xMax) //if false, it means the content was simply taking the entire width
+                {
+                    //iterate the other way until a discontinuity is found
+                    for(int x=oldXMax; x>=xMin; --x)
+                    {
+                        int y;
+                        for(y=yMin; y<=yMax && mipmapAlpha.pixelAbsolute(x, y)==0; ++y);
+                        if(y>yMax) //discontinuity found
+                            xMin=x+1; //assign xMin to the last full row we found, breaking the loop
+                    }
                 }
             }
-        }
-        //from here onwards, the bounding box shall take periodicity in width in account.
-        //now for the periodicity in height, it's the same iteration, but in height, with y instead of x, and a modulo on x.
-        if(yMin == 0 && yMax == mipmapAlpha.height()-1)
-        {
-            int oldYMax = yMax;
-            //notice the new iterator: we use != to xMax+1 and the iteration is periodic on the width.
-            for(int y=yMin; y<=yMax; ++y)
+            //from here onwards, the bounding box shall take periodicity in width in account.
+            //now for the periodicity in height, it's the same iteration, but in height, with y instead of x, and a modulo on x.
+            if(yMin == 0 && yMax == mipmapAlpha.height()-1)
             {
-                int x;
-                for(x=oldXMin; x<=oldXMax && mipmapAlpha.pixelAbsolute(x, y)==0; ++x);
-                if(x>oldXMax) //discontinuity found (don't use >)
-                    yMax=y-1;
-            }
-            if(oldYMax != yMax)
-            {
-                for(int y=oldYMax; y>=yMin; --y)
+                int oldYMax = yMax;
+                //notice the new iterator: we use != to xMax+1 and the iteration is periodic on the width.
+                for(int y=yMin; y<=yMax; ++y)
                 {
                     int x;
                     for(x=oldXMin; x<=oldXMax && mipmapAlpha.pixelAbsolute(x, y)==0; ++x);
-                    if(x>oldXMax)
-                        yMin=y+1;
+                    if(x>oldXMax) //discontinuity found (don't use >)
+                        yMax=y-1;
+                }
+                if(oldYMax != yMax)
+                {
+                    for(int y=oldYMax; y>=yMin; --y)
+                    {
+                        int x;
+                        for(x=oldXMin; x<=oldXMax && mipmapAlpha.pixelAbsolute(x, y)==0; ++x);
+                        if(x>oldXMax)
+                            yMin=y+1;
+                    }
                 }
             }
         }
