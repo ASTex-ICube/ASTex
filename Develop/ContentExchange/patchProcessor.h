@@ -1,5 +1,5 @@
-#ifndef __PATCH_PROCESSOR_H__
-#define __PATCH_PROCESSOR_H__
+#ifndef __CTEXCH_PATCH_PROCESSOR_H__
+#define __CTEXCH_PATCH_PROCESSOR_H__
 
 #include "histogram.h"
 #include "patch.h"
@@ -17,6 +17,11 @@ using ImageMask64 = ImageGrayu64;
 using word64=uint64_t;
 
 template<typename I>
+/**
+ * @brief The PatchProcessor class is a class made for processing and storing content exchange elements.
+ * Feed it a texture, choose how you want patches and contents to be computed and bake an offline result with
+ * generate(), or export the class for online rendering.
+ */
 class PatchProcessor
 {
 public:
@@ -26,35 +31,156 @@ public:
     //get
 
     const I& texture() const;
+
+    /**
+     * @brief filteringMode
+     * @return the filtering method, between ISOTROPIC, ANISOTROPIC and NO_FILTER.
+     */
+    mipmap_mode_t filteringMode() const;
+
+    /**
+     * @brief patchAt
+     * @param index
+     * @return the patch at index index.
+     */
     const Patch<I>& patchAt(size_t index) const;
     Patch<I> &patchAt(size_t index);
 
+    /**
+     * @brief patchMapMipmap corresponds to the structure used for storing a patch map for each lod.
+     * Each patchmap is an image in 64 bits where each bit corresponds to a patch ID.
+     * You can use shortcut functions such as mipmap() or patchMap() to get directly to sub-structures of the mipmap.
+     * @return the patchmap's mipmap.
+     */
+    const MipmapBitmask<ImageMask64>& patchMapMipmap() const {return m_patchMaskMipmap;}
+
+    /**
+     * @brief mipmap
+     * @param k
+     * @param l
+     * @return patchmapMipmap().mipmap(k, l), which corresponds to the ImageMask64 mipmap of reduction level (k, l).
+     */
+    const ImageMask64& mipmap(unsigned k, unsigned l) const {return m_patchMaskMipmap.mipmap(k, l);}
+
+    /**
+     * @brief patchmap
+     * @return patchmapMipmap().texture(), which corresponds to the highest level of ImageMask64,
+     * as well as the only image there is under the NO_FILTER filtering mode.
+     */
+    const ImageMask64& patchmap() const {return m_patchMaskMipmap.texture();}
+
+    /**
+     * @brief maxMipmapPowReductionLevel
+     * Note that each of the 3 types of mipmaps
+     * (MipmapCEPatch of each patch, MipmapCEContent of each content, and this MipmapBitmask)
+     * are expected to have the same maximum reduction level, making this function alright to bound each of them.
+     * @return the maximum reduction level computed, in power of two.
+     */
+    unsigned maxMipmapPowReductionLevel() const {return m_patchMaskMipmap.maxPowReductionLevel(); }
+
+    /**
+     * @brief numberMipmapsWidth
+     * Note that each of the 3 types of mipmaps
+     * (MipmapCEPatch of each patch, MipmapCEContent of each content, and this MipmapBitmask)
+     * are expected to have the same maximum reduction level, making this function alright to bound each of them.
+     * @return the number of mipmaps reduced in width. Returns 1 under NO_FILTER condition or previous to generate().
+     * Returns the same as numberMipmapsHeight() under ISOTROPIC conditions. Returns 0 if no texture was set.
+     */
+    unsigned numberMipmapsWidth() const {return m_patchMaskMipmap.numberMipmapsWidth(); }
+
+    /**
+     * @brief numberMipmapsHeight
+     * Note that each of the 3 types of mipmaps
+     * (MipmapCEPatch of each patch, MipmapCEContent of each content, and this MipmapBitmask)
+     * are expected to have the same maximum reduction level, making this function alright to bound each of them.
+     * @return the number of mipmaps reduced in height. Returns 1 under NO_FILTER condition or previous to generate().
+     * Returns the same as numberMipmapsWidth() under ISOTROPIC conditions. Returns 0 if no texture was set.
+     */
+    unsigned numberMipmapsHeight() const {return m_patchMaskMipmap.numberMipmapsHeight(); }
+
+
+    /**
+     * @brief nbPatches
+     * @return the number of patches (currently).
+     */
     size_t nbPatches() const {return m_patches.size();}
 
     //set
 
+    /**
+     * @brief setTexture sets the input texture.
+     * @param texture
+     */
     void setTexture(const I& texture);
-    void setFiltering(mipmap_mode_t mipmapMode);
+
+    /**
+     * @brief setFilteringMode changes the filtering mode, between NO_FILTER, ISOTROPIC and ANISOTROPIC.
+     * @pre While not detected, DO NOT call this function with a different parameter between the generation
+     * (or exporting to GPU step) and the initialization, as this would result in undefined behavior.
+     * @param defaultMipmapMode
+     */
+    void setFilteringMode(mipmap_mode_t defaultMipmapMode);
 
     //misc
 
     void initializePatchesRegularGrid(unsigned nbPatches=64);
-    void refinePatchesGI();
+    /**
+     * @brief initializeContents builds the initial contents from the input.
+     */
     void initializeContents();
 
+    /**
+     * @brief generate returns a synthesized output texture + mipmaps (same size as the input).
+     * @param textureWidth expected output width. (TODO)
+     * @param textureHeight expected output height.
+     * @return the output mipmap. Use generate(...).texture() or generate(...).mipmap(0, 0) to get the output texture.
+     */
     Mipmap<I> generate(int textureWidth, int textureHeight) const;
 
-    template<typename R>
-    void debug_setPatchFromImageRGB(const ImageCommon<ImageRGBBase<R>, false> &patchImage);
-    void debug_setRandomContents(unsigned nbContentsPerPatch);
 
+    template<typename R>
+    /**
+     * @brief debug_setPatchFromImageRGB computes patches from an ImageRGB called patchImage.
+     * each color in patchImage represents a patch.
+     * @param patchImage
+     */
+    void debug_setPatchFromImageRGB(const ImageCommon<ImageRGBBase<R>, false> &patchImage);
+
+    /**
+     * @brief debug_setRandomContents chooses and builds nbContentsPerPatch contents for each patches.
+     * Contents are taken from the input. They are chosen with a non-tweaked iid law.
+     * @param nbContentsPerPatch
+     */
+    void debug_setRandomContents(unsigned nbContentsPerPatch, unsigned int seed=0);
+
+    /**
+     * @brief saveRenderingPack saves most of the datas in outputDirectory.
+     * This includes every content of every patch for every level of detail computed, and other
+     * datas necesssary for the loading. This is a WIP and there is no load function. (TODO)
+     * @param outputDirectory
+     */
     void saveRenderingPack(const std::string &outputDirectory);
 
+    /**
+     * @brief analysis_getGPUMemoryCost
+     * TODO: could change easily.
+     * @return the overall memory cost of the datas to be stored in the GPU.
+     */
     size_t analysis_getGPUMemoryCost() const;
-    size_t analysis_getNumberOfTextureAccessForMipmap(unsigned i, unsigned j) const;
+
+    /**
+     * @brief analysis_getNumberOfTextureAccessForMipmap
+     * @param i reduction in width
+     * @param j reduction in height
+     * @return the number of accesses needed to compute an output mipmap of reduction level k, l.
+     */
+    size_t analysis_getNumberOfTextureAccessForMipmap(unsigned k, unsigned l) const;
 
     //iterators
 
+    /**
+     * @brief iterator and const_iterator iterate over the patches.
+     */
     typedef typename std::vector<Patch<I>>::iterator iterator;
     typedef typename std::vector<Patch<I>>::const_iterator const_iterator;
 
@@ -64,10 +190,6 @@ public:
     iterator end() {return m_patches.end();}
     const_iterator end() const {return m_patches.end();}
 
-    //static
-
-    static void setDefaultFilteringMode(mipmap_mode_t defaultMipmapMode) {ms_defaultMipmapMode=defaultMipmapMode;}
-
 private:
 
     std::vector<Patch<I>> m_patches;
@@ -75,12 +197,8 @@ private:
     MipmapBitmask<ImageMask64> m_patchMaskMipmap;
     mipmap_mode_t m_mipmapMode;
 
-    static mipmap_mode_t ms_defaultMipmapMode;
     static typename I::PixelType ms_zero;
 };
-
-template<typename I>
-mipmap_mode_t PatchProcessor<I>::ms_defaultMipmapMode = NO_FILTER;
 
 template<typename I>
 typename I::PixelType PatchProcessor<I>::ms_zero;
@@ -90,7 +208,7 @@ PatchProcessor<I>::PatchProcessor():
     m_patches(),
     m_texture(),
     m_patchMaskMipmap(),
-    m_mipmapMode(ms_defaultMipmapMode)
+    m_mipmapMode(NO_FILTER)
 {}
 
 template<typename I>
@@ -98,7 +216,7 @@ PatchProcessor<I>::PatchProcessor(const I& texture):
     m_patches(),
     m_texture(texture),
     m_patchMaskMipmap(),
-    m_mipmapMode(ms_defaultMipmapMode)
+    m_mipmapMode(NO_FILTER)
 {}
 
 //get
@@ -130,7 +248,7 @@ void PatchProcessor<I>::setTexture(const I& texture)
 }
 
 template<typename I>
-void PatchProcessor<I>::setFiltering(mipmap_mode_t mipmapMode)
+void PatchProcessor<I>::setFilteringMode(mipmap_mode_t mipmapMode)
 {
     m_mipmapMode = mipmapMode;
 }
@@ -159,20 +277,8 @@ void PatchProcessor<I>::initializePatchesRegularGrid(unsigned nbPatches)
     });
 
     m_patchMaskMipmap.setTexture(patchMap);
-    m_patchMaskMipmap.setMode(ms_defaultMipmapMode);
+    m_patchMaskMipmap.setMode(m_mipmapMode);
     m_patchMaskMipmap.generate();
-}
-
-template<typename I>
-void PatchProcessor<I>::refinePatchesGI()
-{
-    assert(m_texture.is_initialized() &&
-           "PatchProcessor::refinePatchesGI: texture uninitialized (use PatchProcessor::setTexture with an initialized texture)");
-    assert(m_patchMaskMipmap.isGenerated() &&
-           "PatchProcessor::refinePatchesGI: patch mask mipmap not generated (use PatchProcessor::initializePatches<Mode> to compute patches)");
-    assert(m_texture.size()==m_patchMaskMipmap.texture().size() &&
-           "PatchProcessor::refinePatchesGI: patch mask must have the same size as texture (texture changed?)");
-
 }
 
 template<typename I>
@@ -216,7 +322,7 @@ void PatchProcessor<I>::initializeContents()
         });
         wTest*=2;
         Patch<I> &patch=(*it);
-        patch.setAlphaMap(alphaMap, ms_defaultMipmapMode);
+        patch.setAlphaMap(alphaMap, m_mipmapMode);
         Content<I> content(m_texture, (*it));
         patch.addContent(content);
     }
@@ -309,30 +415,30 @@ void PatchProcessor<I>::debug_setPatchFromImageRGB(const ImageCommon<ImageRGBBas
     }
 
     m_patchMaskMipmap.setTexture(patchMask);
-    m_patchMaskMipmap.setMode(ms_defaultMipmapMode);
+    m_patchMaskMipmap.setMode(m_mipmapMode);
     m_patchMaskMipmap.generate();
 }
 
 template<typename I>
-void PatchProcessor<I>::debug_setRandomContents(unsigned nbContentsPerPatch)
+void PatchProcessor<I>::debug_setRandomContents(unsigned nbContentsPerPatch, unsigned int seed)
 {
     assert(m_patches.size()>0 && "PatchProcessor::debug_setRandomContents: initialize() must be called before being able to chose contents");
+    srand(seed);
     unsigned i, j;
     int randomShiftX, randomShiftY;
     I shiftedTexture;
     shiftedTexture.initItk(m_texture.width(), m_texture.height());
-
-    for(i=0; i<nbContentsPerPatch; ++i)
+    for(j=0; j<m_patches.size(); ++j)
     {
-        randomShiftX = rand();
-        randomShiftY = rand();
-        shiftedTexture.for_all_pixels([&] (typename I::PixelType &pix, int x, int y)
+        Patch<I> &patch=m_patches[j];
+        for(i=0; i<nbContentsPerPatch; ++i)
         {
-            pix = m_texture.pixelAbsolute((x + randomShiftX)%shiftedTexture.width(), (y + randomShiftY)%shiftedTexture.height());
-        });
-        for(j=0; j<m_patches.size(); ++j)
-        {
-            Patch<I> &patch=m_patches[j];
+            randomShiftX = rand();
+            randomShiftY = rand();
+            shiftedTexture.for_all_pixels([&] (typename I::PixelType &pix, int x, int y)
+            {
+                pix = m_texture.pixelAbsolute((x + randomShiftX)%shiftedTexture.width(), (y + randomShiftY)%shiftedTexture.height());
+            });
             Content<I> c(shiftedTexture, patch);
             patch.addContent(c);
         }
@@ -463,9 +569,9 @@ size_t PatchProcessor<I>::analysis_getGPUMemoryCost() const
 }
 
 template<typename I>
-size_t PatchProcessor<I>::analysis_getNumberOfTextureAccessForMipmap(unsigned i, unsigned j) const
+size_t PatchProcessor<I>::analysis_getNumberOfTextureAccessForMipmap(unsigned k, unsigned l) const
 {
-    const ImageMask64& mipmap=m_patchMaskMipmap.mipmap(i, j);
+    const ImageMask64& mipmap=m_patchMaskMipmap.mipmap(k, l);
     unsigned access = 0; //counts the number of texture access
     mipmap.for_all_pixels([&] (const ImageMask64::PixelType &pix)
     {
@@ -482,12 +588,11 @@ size_t PatchProcessor<I>::analysis_getNumberOfTextureAccessForMipmap(unsigned i,
     });
 
     return access;
-
 }
 
-}
+}//namespace
 
-}
+}//namespace
 
 
 #endif
