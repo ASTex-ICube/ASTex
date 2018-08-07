@@ -11,6 +11,8 @@ namespace ASTex
 namespace ContentExchange
 {
 
+//Contains MipmapCEPatch and Patch classes.
+
 template<typename I>
 class Content;
 
@@ -19,18 +21,40 @@ using ImageAlphad = ImageGrayd;
 
 //Mipmap
 
+/**
+ * @brief The MipmapCEPatch class is a derivation of the mipmap class for alpha,
+ * where origins of each patches in the input textures are computed.
+ * The class expects an "alpha" map, where the pixel is set to 1 if it corresponds to a certain patch, 0 otherwise.
+ * One should mostly use the above Patch class to access it.
+ */
 class MipmapCEPatch : public Mipmap<ImageAlphad>
 {
 public:
 
     typedef itk::Index<2> PixelPos;
 
+    /**
+     * @brief MipmapCEPatch if using this constructor, use setTexture(ImageAlphad) to set a texture.
+     */
     MipmapCEPatch();
     MipmapCEPatch(const ImageAlphad &patchAlpha);
 
-    void generate();
+    /**
+     * @brief generate bakes the mipmap with settings given by setTexture(), setMode() and setMaxPowReductionLevel().
+     * @param periodicity determines if patch bounding boxes is computed across periodic boundaries or not.
+     * This is a critical setting, because it could affect blending as well as what can be pre-computed for the GPU,
+     * since displacement computations are easier in a non-periodic environment, but blending computations aren't.
+     */
+    void generate(bool periodicity = false);
 
-    PixelPos originAt(unsigned xPowReduction, unsigned yPowReduction) const;
+    /**
+     * @brief originAt
+     * @pre generate() MUST have been called before calling this function.
+     * @param xPowReduction specifies the level of reduction on width.
+     * @param yPowReduction specifies the level of reduction on height.
+     * @return the origin of (this) patch, for the given level of reduction.
+     */
+    PixelPos originAt(unsigned k, unsigned l) const;
 
 private:
 
@@ -181,16 +205,14 @@ void MipmapCEPatch::generate(bool periodicity)
             for(j=0; j<numberMipmapsHeight(); ++j)
                 emplaceMipmap();
 
-    ++fffff;
-
     return;
 }
 
-MipmapCEPatch::PixelPos MipmapCEPatch::originAt(unsigned xPowReduction, unsigned yPowReduction) const
+MipmapCEPatch::PixelPos MipmapCEPatch::originAt(unsigned k, unsigned l) const
 {
     size_t xBoundedIndex, yBoundedIndex;
-    xBoundedIndex=std::min((size_t)xPowReduction, numberMipmapsWidth()-1);
-    yBoundedIndex=std::min((size_t)yPowReduction, numberMipmapsHeight()-1);
+    xBoundedIndex=std::min((size_t)k, numberMipmapsWidth()-1);
+    yBoundedIndex=std::min((size_t)l, numberMipmapsHeight()-1);
     return m_pixelOriginMap[xBoundedIndex][yBoundedIndex];
 }
 
@@ -207,15 +229,70 @@ public:
 
     using ImageAlphad = ImageGrayd;
 
-    const ImageAlphad& mipmap(unsigned i, unsigned j) const {return m_alphaMipmap.mipmap(i, j);}
+    /**
+     * @brief mipmap
+     * @param k
+     * @param l
+     * @return the alpha mipmap of reduction level k, l
+     */
+    const ImageAlphad& mipmap(unsigned k, unsigned l) const {return m_alphaMipmap.mipmap(k, l);}
+
+    /**
+     * @brief alphaMap
+     * @param k
+     * @param l
+     * @return the alpha mipmap of reduction level 0, 0
+     */
+    const ImageAlphad& alphaMap() const {return m_alphaMipmap.texture();}
+
+    /**
+     * @brief alphaMipmap
+     * @return the alpha mipmap for this patch.
+     */
     const MipmapCEPatch& alphaMipmap() const {return m_alphaMipmap;}
+
+    /**
+     * @brief contentAt
+     * @param index
+     * @return returns content number index.
+     * @pre contents must have been set by the parent PatchProcessor, or it will produce undefined behavior.
+     */
     const Content<I>& contentAt(size_t index) const {return m_alternativeContents[index];}
     Content<I>& contentAt(size_t index) {return m_alternativeContents[index];}
+
+    /**
+     * @brief originAt
+     * @param k
+     * @param l
+     * @return alphaMipmap().originAt(k, l), which corresponds to the origin of the patch for reduction level (k, l).
+     */
+    PixelPos originAt(unsigned k, unsigned l) const {return m_alphaMipmap.originAt(k, l);}
+
+    /**
+     * @brief numberContents
+     * @return the number of contents. This number bounds contentAt().
+     */
     size_t numberContents() const {return m_alternativeContents.size();}
 
     //set
 
+    /**
+     * @brief setAlphaMap patches are defined by their position in the input.
+     * The alphaMap structure corresponds to a texture entity of the same size as the input, where :
+     * alphaMap(x) = 0 if x doesn't belong to this patch, and 1 if it does.
+     *
+     * This function builds the entire mipmap required with mode mipmapMode.
+     * @param alphaMap
+     * @param mipmapMode
+     */
     void setAlphaMap(const ImageAlphad& alphaMap, mipmap_mode_t mipmapMode=NO_FILTER);
+
+    /**
+     * @brief addContent appends a content to the content collection.
+     * Since ContentExchange was build to store contents, this could be any image,
+     * as long as it fits inside the patch.
+     * @param content
+     */
     void addContent(const Content<I> &content);
 
 private:
