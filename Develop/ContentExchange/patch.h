@@ -45,7 +45,7 @@ public:
      * This is a critical setting, because it could affect blending as well as what can be pre-computed for the GPU,
      * since displacement computations are easier in a non-periodic environment, but blending computations aren't.
      */
-    void generate(bool periodicity = false);
+    void generate(bool periodicity = true);
 
     /**
      * @brief originAt
@@ -272,7 +272,7 @@ public:
      * @brief numberContents
      * @return the number of contents. This number bounds contentAt().
      */
-    size_t numberContents() const {return m_alternativeContents.size();}
+    size_t nbContents() const {return m_alternativeContents.size();}
 
     //set
 
