@@ -6,6 +6,7 @@
 #include "mipmap.h"
 #include "content.h"
 #include "ASTex/easy_io.h"
+#include "Stamping/sampler.h"
 
 namespace ASTex
 {
@@ -13,6 +14,7 @@ namespace ASTex
 namespace ContentExchange
 {
 
+#define CTEXCH_MAX_PATCHES 64
 using ImageMask64 = ImageGrayu64;
 using word64=uint64_t;
 
@@ -121,22 +123,27 @@ public:
      */
     void setFilteringMode(mipmap_mode_t defaultMipmapMode);
 
-    //misc
+                            //////////////////////////////
+                            /////    INITIALIZERS    /////
+                            //////////////////////////////
+    /**
+     * @brief initializePatchesRegularGrid builds patches from a regular grid.
+     * @param nbPatches is the expected number of patches. Will be cropped to the closest integer squared root.
+     * @pre nbPatches <= CTEXCH_MAX_PATCHES
+     */
+    void initializePatchesRegularGrid(unsigned nbPatches=CTEXCH_MAX_PATCHES);
 
-    void initializePatchesRegularGrid(unsigned nbPatches=64);
+    /**
+     * @brief initializePatchesPoisson builds patches from a poisson sample.
+     * @param nbPatches is the number of patches.
+     * @pre nbPatches <= CTEXCH_MAX_PATCHES
+     */
+    void initializePatchesPoissonCircles(unsigned nbPatches);
+
     /**
      * @brief initializeContents builds the initial contents from the input.
      */
     void initializeContents();
-
-    /**
-     * @brief generate returns a synthesized output texture + mipmaps (same size as the input).
-     * @param textureWidth expected output width. (TODO)
-     * @param textureHeight expected output height.
-     * @return the output mipmap. Use generate(...).texture() or generate(...).mipmap(0, 0) to get the output texture.
-     */
-    Mipmap<I> generate(int textureWidth, int textureHeight) const;
-
 
     template<typename R>
     /**
@@ -152,6 +159,20 @@ public:
      * @param nbContentsPerPatch
      */
     void debug_setRandomContents(unsigned nbContentsPerPatch, unsigned int seed=0);
+
+
+                           //////////////////////////////
+                           /////   MISC FUNCTIONS   /////
+                           //////////////////////////////
+
+    /**
+    * @brief generate returns a synthesized output texture + mipmaps (same size as the input).
+    * @param textureWidth expected output width. (TODO)
+    * @param textureHeight expected output height.
+    * @return the output mipmap. Use generate(...).texture() or generate(...).mipmap(0, 0) to get the output texture.
+    */
+    Mipmap<I> generate(int textureWidth, int textureHeight) const;
+
 
     /**
      * @brief saveRenderingPack saves most of the datas in outputDirectory.
@@ -258,8 +279,8 @@ void PatchProcessor<I>::initializePatchesRegularGrid(unsigned nbPatches)
 {
     assert(m_texture.is_initialized() &&
            "PatchProcessor::initializePatches: texture uninitialized (use PatchProcessor::setTexture with an initialized texture)");
-    assert(nbPatches <= 64 &&
-           "PatchProcessor::initializePatches: synthesis cannot allow more than 64 patches ()");
+    assert(nbPatches <= CTEXCH_MAX_PATCHES &&
+           "PatchProcessor::initializePatches: synthesis cannot allow that many patches (max given by CTEXCH_MAX_PATCHES)");
     double nbPixelsInWidthPerPatch, nbPixelsInHeightPerPatch;
     int nbPatchesPerSide = int(std::sqrt(nbPatches));
     nbPatches = nbPatchesPerSide * nbPatchesPerSide;
@@ -279,6 +300,34 @@ void PatchProcessor<I>::initializePatchesRegularGrid(unsigned nbPatches)
     m_patchMaskMipmap.setTexture(patchMap);
     m_patchMaskMipmap.setMode(m_mipmapMode);
     m_patchMaskMipmap.generate();
+}
+
+template<typename I>
+void PatchProcessor<I>::initializePatchesPoissonCircles(unsigned nbPatches)
+{
+    assert(m_texture.is_initialized() &&
+           "PatchProcessor::initializePatches: texture uninitialized (use PatchProcessor::setTexture with an initialized texture)");
+    assert(nbPatches <= CTEXCH_MAX_PATCHES &&
+           "PatchProcessor::initializePatches: synthesis cannot allow that many patches (max given by CTEXCH_MAX_PATCHES)");
+    Stamping::SamplerPoisson sampler(nbPatches);
+    std::vector<Eigen::Vector2f> centroids = sampler.generate();
+    ImageMask64 patchMap;
+    patchMap.initItk(m_texture.width(), m_texture.height());
+    float r = m_texture.width() * m_texture.height() / float(nbPatches*nbPatches);
+    int i = 0;
+    for(std::vector<Eigen::Vector2f>::const_iterator cit = centroids.begin(); cit != centroids.end(); ++cit, ++i)
+    {
+        word64 w=0x1;
+        w <<= i;
+        patchMap.for_all_pixels([&] (ImageMask64::PixelType &pix, int x, int y)
+        {
+            int x0, y0;
+            x0 = (*cit)[0]*m_texture.width();
+            y0 = (*cit)[1]*m_texture.height();
+            if(std::sqrt((x0-x) * (x0-x) + (y0-y) * (y0-y)) < r)
+                reinterpret_cast<word64&>(pix) |= w;
+        });
+    }
 }
 
 template<typename I>
@@ -316,7 +365,7 @@ void PatchProcessor<I>::initializeContents()
         alphaMap.initItk(m_texture.width(), m_texture.height(), true );
         m_patchMaskMipmap.texture().for_all_pixels([&] (ImageMask64::PixelType &pix, int x, int y)
         {
-            if((w|=reinterpret_cast<word64&>(pix))==wTest)
+            if((w|=reinterpret_cast<word64&>(pix)) & wTest)
                 alphaMap.pixelAbsolute(x, y)=1.0;
             w=0x0;
         });
@@ -396,8 +445,8 @@ void PatchProcessor<I>::debug_setPatchFromImageRGB(const ImageCommon<ImageRGBBas
     assert(patchImage.size() == m_texture.size() &&
            "PatchProcessor::debug_setPatchFromImageRGBd: patchImage should have the same size as texture");
     HistogramRGBBase<R> histogramPI(patchImage);
-    assert(histogramPI.binsNumber()<=31 &&
-           "PatchProcessor::debug_setPatchFromImageRGBd: there should be up to 31 different colors in the given image");
+    assert(histogramPI.binsNumber()<=CTEXCH_MAX_PATCHES &&
+           "PatchProcessor::debug_setPatchFromImageRGBd: there should be up to 64 different colors in the given image");
     word64 w=0x1;
     ImageMask64 patchMask;
     patchMask.initItk(patchImage.width(), patchImage.height(), true);
@@ -470,7 +519,7 @@ void PatchProcessor<I>::saveRenderingPack(const std::string &outputDirectory)
     for(i=0; i<m_patches.size(); ++i)
     {
         const Patch<I> &patch = m_patches[i];
-        for(j=0; j<patch.numberContents(); ++j)
+        for(j=0; j<patch.nbContents(); ++j)
         {
             const Content<I> content = patch.contentAt(j);
             for(k=0; k<content.contentMipmap().numberMipmapsWidth(); ++k)
@@ -494,7 +543,7 @@ void PatchProcessor<I>::saveRenderingPack(const std::string &outputDirectory)
     //saving useful data
     std::ofstream ofs_data_out(outputDirectory + "/data.csv");
     ofs_data_out << m_patches.size() << std::endl;
-    ofs_data_out << m_patches[0].numberContents() << std::endl;
+    ofs_data_out << m_patches[0].nbContents() << std::endl;
     ofs_data_out << m_patchMaskMipmap.mode() << std::endl;
     ofs_data_out << m_patchMaskMipmap.numberMipmapsWidth() << std::endl;
     ofs_data_out << m_patchMaskMipmap.numberMipmapsHeight() << std::endl;
@@ -552,7 +601,7 @@ size_t PatchProcessor<I>::analysis_getGPUMemoryCost() const
     for(i=0; i<m_patches.size(); ++i)
     {
         const Patch<I> &patch=m_patches[i];
-        for(j=0; j<patch.numberContents(); ++j)
+        for(j=0; j<patch.nbContents(); ++j)
         {
             const Content<I> &content=patch.contentAt(j);
             for(k=0; k<content.contentMipmap().numberMipmapsWidth(); ++k)
