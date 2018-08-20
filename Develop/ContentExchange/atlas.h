@@ -75,8 +75,8 @@ private:
     const PatchProcessor<I> &m_patchProcessor;
 
     void init_emplaceAlgorithm(int width, int height);
-    bool check_emplace(const I& image, unsigned x, unsigned y); //check if I can be placed on x, y
-    void find_emplace(const I& image, unsigned &x, unsigned &y); //finds x and y such that I can be placed
+    bool check_emplace(const I& image, const ImageAlphad &alpha, unsigned x, unsigned y); //check if I can be placed on x, y
+    void find_emplace(const I& image, const ImageAlphad &alpha, unsigned &x, unsigned &y); //finds x and y such that I can be placed
     void emplaceLevel0(const I& image, const ImageAlphad &alpha, unsigned x, unsigned y, unsigned height); //places I on x, y with a special periodicity
     void emplace(const I& image, const ImageAlphad &alpha, unsigned x, unsigned y); //places I on x, y if alpha(x, y) isn't 0
     void release_emplaceAlgorithm();
@@ -142,7 +142,7 @@ void Atlas<I>::generate(int contentId)
         const Patch<I> &patch = m_patchProcessor.patchAt(n);
         const ImageAlphad &alpha = patch.mipmap(0, 0);
         emplaceLevel0(patch.contentAt(contentId).texture(), alpha, patch.originAt(0, 0)[0], patch.originAt(0, 0)[1],
-                m_patchProcessor.texture().height());
+        m_patchProcessor.texture().height());
     }
     y+=m_patchProcessor.texture().height();
 
@@ -172,7 +172,7 @@ void Atlas<I>::generate(int contentId)
                         x=0;
                         y=m_patchProcessor.texture().height();
                         const ImageAlphad &alpha = patch->mipmap(k, l);
-                        find_emplace(patch->contentAt(contentId).mipmap(k, l), x, y);
+                        find_emplace(patch->contentAt(contentId).mipmap(k, l), alpha, x, y);
                         m_origins[csp.id()][k][l][0] = x;
                         m_origins[csp.id()][k][l][1] = y;
                         emplace(patch->contentAt(contentId).mipmap(k, l), alpha, x, y);
@@ -196,7 +196,7 @@ void Atlas<I>::generate(int contentId)
                     x=0;
                     y=m_patchProcessor.texture().height();
                     const ImageAlphad &alpha = patch->mipmap(k, k);
-                    find_emplace(patch->contentAt(contentId).mipmap(k, k), x, y);
+                    find_emplace(patch->contentAt(contentId).mipmap(k, k), alpha, x, y);
                     m_origins[csp.id()][k][k][0] = x;
                     m_origins[csp.id()][k][k][1] = y;
                     emplace(patch->contentAt(contentId).mipmap(k, k), alpha, x, y);
@@ -230,7 +230,7 @@ void Atlas<I>::init_emplaceAlgorithm(int width, int height)
 }
 
 template<typename I>
-bool Atlas<I>::check_emplace(const I& image, unsigned x, unsigned y)
+bool Atlas<I>::check_emplace(const I& image, const ImageAlphad& alpha, unsigned x, unsigned y)
 {
     if(x + (unsigned)image.width()>(unsigned)m_occupationMap.width())
         return false;
@@ -247,21 +247,20 @@ bool Atlas<I>::check_emplace(const I& image, unsigned x, unsigned y)
 //    if(m_occupationMap.pixelAbsolute(x, y+image.height()-1))
 //        return false;
 
-    unsigned i, j=0;
+    unsigned i, j;
     bool occupied=false;
     for(i=0; i<(unsigned)image.width() && !occupied; ++i)
         for(j=0; j<(unsigned)image.height() && !occupied; ++j)
-            occupied = m_occupationMap.pixelAbsolute(x+i, y+j);
-
+            occupied = m_occupationMap.pixelAbsolute(x+i, y+j) && alpha.pixelAbsolute(i, j)>0.0;
     return !occupied;
 }
 
 template<typename I>
-void Atlas<I>::find_emplace(const I& image, unsigned &x, unsigned &y)
+void Atlas<I>::find_emplace(const I& image, const ImageAlphad& alpha, unsigned &x, unsigned &y)
 {
     //precondition: width and height of images are large enough
-    while(!check_emplace(image, x, y))
-        if(++x >(unsigned)m_occupationMap.width())
+    while(!check_emplace(image, alpha, x, y))
+        if(++x >=(unsigned)m_occupationMap.width())
         {
             x=0;
             ++y;
@@ -304,7 +303,7 @@ void Atlas<I>::release_emplaceAlgorithm()
     while(!fullLineOrLimit)
     {
         for(i=0; i<m_generativeAtlas.width() && !m_occupationMap.pixelAbsolute(i, y); ++i);
-        fullLineOrLimit = i!=m_generativeAtlas.width() || --y==0;
+        fullLineOrLimit = i!=m_generativeAtlas.width() || --y==0 /*debug only TODO*/ || y==1023;
     }
     I temporaryCrop;
     temporaryCrop.initItk(m_generativeAtlas.width(), y+1);
