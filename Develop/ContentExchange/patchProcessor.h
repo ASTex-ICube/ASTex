@@ -38,7 +38,7 @@ public:
      * @brief filteringMode
      * @return the filtering method, between ISOTROPIC, ANISOTROPIC and NO_FILTER.
      */
-    mipmap_mode_t filteringMode() const;
+    mipmap_mode_t filteringMode() const {return m_mipmapMode;}
 
     /**
      * @brief patchAt
@@ -106,6 +106,8 @@ public:
      * @return the number of patches (currently).
      */
     size_t nbPatches() const {return m_patches.size();}
+
+    size_t nbContents() const {return m_patches.size()>0 ? m_patches[0].nbContents() : 0;}
 
     //set
 
