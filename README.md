@@ -98,3 +98,13 @@ There are some original options/values that can be set at the cmake stage:
 * ASTEX\_TEMPO\_PATH path of directory use to store images for test and tuto (copy ASTex/Data into it)
 * ASTEX\_USE\_CPP14 set this to ON if VXL say that you are using a C++ standard version older than the one used ton compile the lib.
 
+# Contributing to ASTex
+
+All contributions to ASTex are welcome and will be examined.
+
+To contribute:
+* you need a github account.
+* fork ASTex repository on your account
+* create a branch from the develop one
+* develop your contribution 
+* do pull-request on ASTex/develop branch

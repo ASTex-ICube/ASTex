@@ -1,0 +1,26 @@
+
+clone_folder: c:\projects\ASTex
+
+# fetch repository as zip archive
+shallow_clone: true                 # default is "false"
+
+# set clone depth
+clone_depth: 1                      # clone entire repository history if not defined
+
+environment:
+    GENERATOR: "Visual Studio 14 Win64"
+    CONFIG: Release
+    IP: "c:/ASTex-Dev/installed-Release/"
+
+install:
+  - cd ../..
+  - mkdir ASTex-Dev
+  - cd ASTex-Dev
+  - ps: Start-FileDownload 'https://mycore.core-cloud.net/index.php/s/16E2PUfIWwfWRvR/download' -Filename itk.zip
+  - 7z x itk.zip
+  - cd ../projects/ASTex
+
+build_script:
+  - cmake "-G%GENERATOR%" -DCMAKE_PREFIX_PATH=%IP% -DZLIB_INCLUDE_DIR=%IP%/include -DZLIB_LIBRARY_RELEASE=%IP%/lib/zlibstatic.lib -DPNG_PNG_INCLUDE_DIR=%ITK_INCLUDES_R%/itkpng -DPNG_LIBRARY_RELEASE=%IP%/lib/itkpng-4.12.lib 
+  - cmake --build . --config "%CONFIG%"
+ 

@@ -1,0 +1,28 @@
+git:
+  depth: 3
+
+language: cpp
+
+dist: trusty
+
+sudo: required
+
+os:
+  - linux
+  - osx
+
+install:
+  - bash .travis_install.sh
+    
+branches:
+  only:
+  - develop
+
+script:
+  - mkdir build
+  - cd build
+  - if [[ "$TRAVIS_OS_NAME" == "linux" ]]; then  cmake .. -DCMAKE_CXX_COMPILER=g++-5 -DCMAKE_C_COMPILER=gcc-5 ; fi
+  - if [[ "$TRAVIS_OS_NAME" == "osx" ]]; then  cmake .. ; fi
+  - make -j2
+
+
