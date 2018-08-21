@@ -10,22 +10,17 @@ cmake -G %JOMGEN% -DCMAKE_BUILD_TYPE=Release -DCMAKE_INSTALL_PREFIX=%INSTALL_REL
 cmake --build . --config Release --target install
 
 cd %ROOT%
-if exist build-ilmbase-dyn-release del /S /Q build-ilmbase-dyn-release
-mkdir build-ilmbase-dyn-release
-cd build-ilmbase-dyn-release
-cmake -G %JOMGEN% -DCMAKE_BUILD_TYPE=Release -DCMAKE_INSTALL_PREFIX=%INSTALL_REL% ^
- -DBUILD_SHARED_LIBS=ON -DNAMESPACE_VERSIONING=OFF %OPENEXR_SRC%/IlmBase
-cmake --build . --config Release --target install
-
-cd %ROOT%
 if exist build-openexr-dyn-release del /S /Q build-openexr-dyn-release
 mkdir build-openexr-dyn-release
 cd build-openexr-dyn-release
-cmake -G %JOMGEN% -DCMAKE_BUILD_TYPE=Release -DCMAKE_INSTALL_PREFIX=%INSTALL_REL% -DCMAKE_PREFIX_PATH=%INSTALL_REL%^
- -DBUILD_SHARED_LIBS=ON -DILMBASE_PACKAGE_PREFIX=%INSTALL_REL% -DNAMESPACE_VERSIONING=OFF %OPENEXR_SRC%/OpenEXR
+cmake -G "NMake Makefiles" -DCMAKE_BUILD_TYPE=Release -DCMAKE_INSTALL_PREFIX=%INSTALL_REL% -DCMAKE_PREFIX_PATH=%INSTALL_REL%^
+ -DILMBASE_PACKAGE_PREFIX=%INSTALL_REL% -DOPENEXR_NAMESPACE_VERSIONING=OFF -DOPENEXR_BUILD_STATIC=OFF -DOPENEXR_BUILD_SHARED=ON^
+ -DOPENEXR_BUILD_ILMBASE=ON -DOPENEXR_BUILD_OPENEXR=ON -DOPENEXR_BUILD_PYTHON_LIBS=OFF -DOPENEXR_BUILD_UTILS=OFF^
+ -DOPENEXR_BUILD_TESTS=OFF -DOPENEXR_BUILD_VIEWERS=OFF  %OPENEXR_SRC%
 cmake --build . --config Release --target install
 
-copy %INSTALL_REL:/=\%\lib\*.dll %INSTALL_REL:/=\%\bin 
+copy OpenEXR\IlmImf\Release\*.dll %INSTALL_REL:/=\%\bin 
+
 
 cd %ROOT%
 if exist build-itk-dyn-release del /S /Q build-itk-dyn-release
