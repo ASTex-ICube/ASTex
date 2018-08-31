@@ -11,8 +11,8 @@
 #include <ASTex/easy_io.h>
 #include <Eigen/Core>
 
-#include <Stamping/stamp.h>
-#include <Stamping/sampler.h>
+#include <ASTex/Stamping/stamp.h>
+#include <ASTex/Stamping/sampler.h>
 
 //TODO: consider removing the const of std::vector<const StampBase<I> *>
 //if you think it should be authorized to modify the stamps given by the caller.

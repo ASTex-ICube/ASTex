@@ -27,6 +27,8 @@
 #ifndef IMAGEVIEWER_H
 #define IMAGEVIEWER_H
 
+#ifdef USE_QWIDGETS
+
 #include <QApplication>
 #include <QMainWindow>
 #include <QImage>
@@ -366,6 +368,6 @@ inline void ImageViewer::set_rgb01(const REAL* ptr, int w, int h, int zoom)
 	m_imageLabel->adjustSize();
 }
 
-
+#endif
 
 #endif	

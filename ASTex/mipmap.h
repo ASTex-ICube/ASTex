@@ -35,6 +35,10 @@ public:
 
     size_t numberMipmapsWidth() const;
     size_t numberMipmapsHeight() const;
+
+    const I& mipmap(unsigned xPowReduction) const;
+    I& mipmap(unsigned xPowReduction);
+
     const I& mipmap(unsigned xPowReduction, unsigned yPowReduction) const;
     I& mipmap(unsigned xPowReduction, unsigned yPowReduction);
 

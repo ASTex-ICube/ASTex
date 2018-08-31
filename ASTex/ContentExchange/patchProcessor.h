@@ -1,12 +1,12 @@
 #ifndef __CTEXCH_PATCH_PROCESSOR_H__
 #define __CTEXCH_PATCH_PROCESSOR_H__
 
-#include "histogram.h"
+#include "ASTex/histogram.h"
 #include "patch.h"
-#include "mipmap.h"
+#include "ASTex/mipmap.h"
 #include "content.h"
 #include "ASTex/easy_io.h"
-#include "Stamping/sampler.h"
+#include "ASTex/Stamping/sampler.h"
 
 namespace ASTex
 {

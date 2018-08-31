@@ -2,7 +2,7 @@
 #define __CTEXCH_PATCH__H__
 
 #include <ASTex/image_gray.h>
-#include "mipmap.h"
+#include "ASTex/mipmap.h"
 //#include "content.h"
 
 namespace ASTex
