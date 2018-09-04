@@ -458,7 +458,7 @@ int test_texton(int argc, char **argv)
 
     //Testing
 
-    Stamping::SamplerUniform sampler;
+    Stamping::SamplerPoisson sampler;
     sampler.setNbPoints(400); //< you can change that
     Stamping::StampDiscrete<ImageRGBd> stamp(im_texton);
     stamp.setInterpolationRule(Stamping::StampDiscrete<ImageRGBd>::BILINEAR); //< you can change that too
@@ -598,12 +598,16 @@ int test_pcts(int argc, char **argv)
     std::cout << "PCTS started" << std::endl;
 
     ImageRGBd image;
+    //set this image and macro PCTS_DEBUG_DIRECTORY in pcts.h
     IO::loadu8_in_01(image, "/home/nlutz/img/dry_riverbed.png");
     ASTex::Pcts<ImageRGBd> pcts;
     pcts.setTexture(image);
     pcts.setWidth(800);
     pcts.setHeight(800);
-    pcts.generate();
+    pcts.setNbSamplesNNM(6);
+    pcts.setNbRefinementsNNM(2);
+    pcts.setRadiusScaleNNM(8);
+    IO::save01_in_u8(pcts.generate(), "/home/nlutz/img/dry_riverbed_pcts.png");
 
     std::cout << "PCTS ended" << std::endl;
     return 0;
