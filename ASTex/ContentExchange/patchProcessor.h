@@ -315,7 +315,7 @@ void PatchProcessor<I>::initializePatchesPoissonCircles(unsigned nbPatches)
     std::vector<Eigen::Vector2f> centroids = sampler.generate();
     ImageMask64 patchMap;
     patchMap.initItk(m_texture.width(), m_texture.height());
-    float r = m_texture.width() * m_texture.height() / float(nbPatches*nbPatches);
+    float r = m_texture.width() * m_texture.height() / float(nbPatches*nbPatches*2);
     int i = 0;
     for(std::vector<Eigen::Vector2f>::const_iterator cit = centroids.begin(); cit != centroids.end(); ++cit, ++i)
     {
@@ -330,6 +330,10 @@ void PatchProcessor<I>::initializePatchesPoissonCircles(unsigned nbPatches)
                 reinterpret_cast<word64&>(pix) |= w;
         });
     }
+
+    m_patchMaskMipmap.setTexture(patchMap);
+    m_patchMaskMipmap.setMode(m_mipmapMode);
+    m_patchMaskMipmap.generate();
 }
 
 template<typename I>
