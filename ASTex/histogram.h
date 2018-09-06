@@ -14,10 +14,6 @@ using namespace ASTex;
 
 /**
  * \brief Histogram base class for building any histogram.
- * If implementing this you should consider 1) see how you can use updateStatistics() on the fly efficiently,
- * 2) modifying the HistogramStruct such that you don't have to use bin.first for the value and bin.second for the frequency, which is painful
- * 3) correcting the chi2 or removing it
- * the rest is up to me now I guess.
  */
 template <class I, class Compare = std::less<typename I::PixelType> >
 class Histogram
@@ -43,9 +39,9 @@ public:
 
     //types
 
-    typedef double                              real;
-    typedef typename I::PixelType               PixelType;
-    typedef std::map<PixelType, int, Compare>   HistogramStruct;
+    using real = double;
+    using PixelType = typename I::PixelType;
+    using HistogramStruct = std::map<PixelType, int, Compare>;
 
     //iterators
 
@@ -65,8 +61,6 @@ public:
 
     /**
      * \brief triggers a routine which updates any statistic stored by the class, such as mean, variance, covariance...
-     * This function could be removed if every call updates correctly these statistics, to be honest,
-     * it shouldn't even be there since all of these are sums of independant variables
      */
     virtual void updateStatistics()=0;
 
@@ -380,16 +374,16 @@ void Histogram<I, Compare>::clear()
 template <class I, class Compare>
 template<typename F_bothExist, typename F_firstExists, typename F_secondExists>
 typename Histogram<I, Compare>::real Histogram<I, Compare>::compareB2BWith(const Histogram<I, Compare>& other,
-                                        F_bothExist &lambdaBothExist,
-                                        F_firstExists &lambdaFirstExists,
-                                        F_secondExists &lambdaSecondExists) const
+                                        F_bothExist &lmbd_matchH1H2,
+                                        F_firstExists &lmbd_matchH1,
+                                        F_secondExists &lmbd_matchH2) const
 {
     real d=0;                   //< distance
 
     if(&other==this)            //in case somebody has fun comparing H1 to H1
         return d;
 
-    Compare lesser;             //< a class to compare the order of two bins
+    Compare lmbd_compare;             //< a class to compare the order of two bins
     PixelType p0, p1;           //< current bins
     int a0, a1;                 //< number of occurences for this bin
     real fa0, fa1;              //< represents a0 and a1 in frequency
@@ -407,19 +401,19 @@ typename Histogram<I, Compare>::real Histogram<I, Compare>::compareB2BWith(const
         fa1=(real)a1/size();
 
         //compare p0 and p1
-        if(lesser(p0, p1)) //no occurence of p0 in H1
+        if(lmbd_compare(p0, p1)) //no occurence of p0 in H1
         {
-            d+=lambdaFirstExists(fa0);
+            d+=lmbd_matchH1(fa0);
             ++std::get<0>(its);
         }
-        else if(lesser(p1, p0)) //no occurence of p1 in H0
+        else if(lmbd_compare(p1, p0)) //no occurence of p1 in H0
         {
-            d+=lambdaSecondExists(fa1);
+            d+=lmbd_matchH2(fa1);
             ++std::get<1>(its);
         }
         else //p0=p1 and they are both in H0 and H1
         {
-            d+=lambdaBothExist(fa0, fa1);
+            d+=lmbd_matchH1H2(fa0, fa1);
             ++std::get<0>(its);
             ++std::get<1>(its);
         }
@@ -429,14 +423,14 @@ typename Histogram<I, Compare>::real Histogram<I, Compare>::compareB2BWith(const
     {
         a0=(*std::get<0>(its)).second;
         fa0=(real)a0/size();
-        d+=lambdaFirstExists(fa0);
+        d+=lmbd_matchH1(fa0);
         ++std::get<0>(its);
     }
     while(std::get<1>(its)!=other.end()) //finish iteration over second histogram if necessary
     {
         a1=(*std::get<1>(its)).second;
         fa1=(real)a1/size();
-        d+=lambdaSecondExists(fa1);
+        d+=lmbd_matchH2(fa1);
         ++std::get<1>(its);
     }
 
@@ -448,58 +442,58 @@ typename Histogram<I, Compare>::real Histogram<I, Compare>::compareIntersectionW
 {
     int sizeOther = other.size();
 
-    auto intersection = [sizeOther](real fa0, real fa1) -> real
+    auto lmbd_intersection_match = [sizeOther](real fa0, real fa1) -> real
     {
         return std::min(fa0, fa1)/sizeOther;
     };
 
-    auto null = [](real) -> real
+    auto lmbd_intersection_noMatch = [](real) -> real
     {
         return 0;
     };
 
-    return 1.0 - compareB2BWith(other, intersection, null, null);
+    return 1.0 - compareB2BWith(other, lmbd_intersection_match, lmbd_intersection_noMatch, lmbd_intersection_noMatch);
 }
 
 template <class I, class Compare>
 template <int L_norm>
 typename Histogram<I, Compare>::real Histogram<I, Compare>::compareMinkowskiWith(const Histogram<I, Compare>& other) const
 {
-    auto minkowski = [](real fa0, real fa1) -> real
+    auto lmbd_minkowski_match = [](real fa0, real fa1) -> real
     {
-        return std::pow((fa0-fa1)*(fa0-fa1), (real)L_norm);
+        return std::pow((fa0-fa1), (real)L_norm);
     };
 
-    auto minkowski_noMatch = [](real f) -> real
+    auto lmbd_minkowski_noMatch = [](real f) -> real
     {
-        return f*f;
+        return std::pow(f, (real)L_norm);
     };
 
-    return std::pow(compareB2BWith(other, minkowski, minkowski_noMatch, minkowski_noMatch), 1.0/L_norm) / size();
+    return std::pow(compareB2BWith(other, lmbd_minkowski_match, lmbd_minkowski_noMatch, lmbd_minkowski_noMatch), 1.0/L_norm) / size();
 }
 
 template <class I, class Compare>
 typename Histogram<I, Compare>::real Histogram<I, Compare>::compareChi2With(const Histogram<I, Compare>& other) const
 {
-    auto chi2 = [](real fa0, real fa1) -> real
+    auto lmbd_chi2_match = [](real fa0, real fa1) -> real
     {
         real m_i = (fa0+fa1)/2;
         return (fa0-m_i)*(fa1-m_i)/m_i;
     };
 
-    auto chi2_h1 = [](real f) -> real
+    auto lmbd_chi2_matchH1 = [](real f) -> real
     {
         real m_i = f/2;
         return (f-m_i)*(f-m_i)/m_i;
     };
 
-    auto chi2_h2 = [](real f) -> real
+    auto lmbd_chi2_matchH2 = [](real f) -> real
     {
         real m_i = f/2;
         return m_i;
     };
 
-    return compareB2BWith(other, chi2, chi2_h1, chi2_h2);
+    return compareB2BWith(other, lmbd_chi2_match, lmbd_chi2_matchH1, lmbd_chi2_matchH2);
 }
 
 template <class I, class Compare>
@@ -534,10 +528,10 @@ typename Histogram<I, Compare>::real Histogram<I, Compare>::fitsUniformKS(NUMBER
 //
 
 template <typename T>
-class CompareRGBPixels
+class CompareRGBPixels_lexicographic
 {
 public:
-    CompareRGBPixels() {}
+    CompareRGBPixels_lexicographic() {}
     bool operator()(const typename ImageCommon<ImageRGBBase<T>, false>::PixelType& object, const typename ImageCommon<ImageRGBBase<T>, false>::PixelType& other)
     {
         int i;
@@ -551,14 +545,14 @@ public:
 //
 
 template <typename T>
-class HistogramRGBBase : public Histogram<ImageCommon<ImageRGBBase<T>, false>, CompareRGBPixels<T>>
+class HistogramRGBBase : public Histogram<ImageCommon<ImageRGBBase<T>, false>, CompareRGBPixels_lexicographic<T>>
 {
 public:
 
-    typedef typename Histogram<ImageCommon<ImageRGBBase<T>, false>, CompareRGBPixels<T>>::real real;
-    typedef typename Histogram<ImageCommon<ImageRGBBase<T>, false>, CompareRGBPixels<T>>::PixelType PixelType;
+    typedef typename Histogram<ImageCommon<ImageRGBBase<T>, false>, CompareRGBPixels_lexicographic<T>>::real real;
+    typedef typename Histogram<ImageCommon<ImageRGBBase<T>, false>, CompareRGBPixels_lexicographic<T>>::PixelType PixelType;
 
-    typedef CompareRGBPixels<T> Compare;
+    typedef CompareRGBPixels_lexicographic<T> Compare;
 
     HistogramRGBBase();
     HistogramRGBBase(const ImageCommon<ImageRGBBase<T>, false>& image);
@@ -602,13 +596,13 @@ private:
 
 template <typename T>
 HistogramRGBBase<T>::HistogramRGBBase() :
-    Histogram<ImageCommon<ImageRGBBase<T>, false>, CompareRGBPixels<T>>(), m_mean(), m_covariance()
+    Histogram<ImageCommon<ImageRGBBase<T>, false>, CompareRGBPixels_lexicographic<T>>(), m_mean(), m_covariance()
 {
 }
 
 template <typename T>
 HistogramRGBBase<T>::HistogramRGBBase(const ImageCommon<ImageRGBBase<T>, false>& image) :
-    Histogram<ImageCommon<ImageRGBBase<T>, false>, CompareRGBPixels<T>>(image), m_mean(), m_covariance()
+    Histogram<ImageCommon<ImageRGBBase<T>, false>, CompareRGBPixels_lexicographic<T>>(image), m_mean(), m_covariance()
 {
     compute(image);
 }
@@ -616,7 +610,7 @@ HistogramRGBBase<T>::HistogramRGBBase(const ImageCommon<ImageRGBBase<T>, false>&
 template <typename T>
 void HistogramRGBBase<T>::compute(const ImageCommon<ImageRGBBase<T>, false>& image)
 {
-    Histogram<ImageCommon<ImageRGBBase<T>, false>, CompareRGBPixels<T>>::compute(image);
+    Histogram<ImageCommon<ImageRGBBase<T>, false>, CompareRGBPixels_lexicographic<T>>::compute(image);
 
     updateStatistics();
 
@@ -703,7 +697,7 @@ HistogramRGBBase<int> HistogramRGBBase<T>::quantize(PixelType inf, PixelType sup
 template <typename T>
 void HistogramRGBBase<T>::clear()
 {
-    Histogram<ImageCommon<ImageRGBBase<T>, false>, CompareRGBPixels<T>>::clear();
+    Histogram<ImageCommon<ImageRGBBase<T>, false>, CompareRGBPixels_lexicographic<T>>::clear();
     for(int i=0; i<3; ++i)
     {
         m_mean[i] = 0;
