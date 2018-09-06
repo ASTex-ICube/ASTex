@@ -532,7 +532,7 @@ class CompareRGBPixels_lexicographic
 {
 public:
     CompareRGBPixels_lexicographic() {}
-    bool operator()(const typename ImageCommon<ImageRGBBase<T>, false>::PixelType& object, const typename ImageCommon<ImageRGBBase<T>, false>::PixelType& other)
+    bool operator()(const typename ImageCommon<ImageRGBBase<T>, false>::PixelType& object, const typename ImageCommon<ImageRGBBase<T>, false>::PixelType& other) const
     {
         int i;
         for(i=0; object[i] == other[i] && i<2; ++i);
