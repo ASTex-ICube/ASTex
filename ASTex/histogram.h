@@ -49,8 +49,8 @@ public:
 
     //iterators
 
-    typedef class HistogramStruct::iterator iterator;
-    typedef class HistogramStruct::const_iterator const_iterator;
+	using iterator = typename HistogramStruct::iterator;
+	using const_iterator = typename HistogramStruct::const_iterator ;
 
     iterator begin() {return m_histogram.begin();}
     const_iterator begin() const {return m_histogram.begin();}

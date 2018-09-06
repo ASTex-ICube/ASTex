@@ -367,13 +367,13 @@ typename I::PixelType StampDiscrete<I>::bilinear_interpolation_(typename I::Pixe
 //set
 
 template<typename I>
-void StampDiscrete<I>::setInterpolationRule(StampDiscrete<I>::interpolation_rule_t rule)
+void StampDiscrete<I>::setInterpolationRule(typename StampDiscrete<I>::interpolation_rule_t rule)
 {
     m_rule = rule;
 }
 
 template<typename I>
-void StampDiscrete<I>::setDimensions(StampDiscrete<I>::Dimensions dimensions)
+void StampDiscrete<I>::setDimensions(typename StampDiscrete<I>::Dimensions dimensions)
 {
     assert(dimensions.dimX>0 && dimensions.dimY>0
            && "StampDiscrete::setDimensions: dimensions must be > 0");

@@ -8,12 +8,15 @@
 
 #include <cmath>
 #include <Eigen/Core>
-
+#include <random>
+#include <ctime>
 namespace ASTex
 {
 
 namespace Stamping
 {
+
+//TODO: add iterator for samplers
 
 /**
  * @brief The SamplerBase class is an interface for every Samplers.

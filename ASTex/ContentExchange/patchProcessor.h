@@ -315,7 +315,7 @@ void PatchProcessor<I>::initializePatchesPoissonCircles(unsigned nbPatches)
     std::vector<Eigen::Vector2f> centroids = sampler.generate();
     ImageMask64 patchMap;
     patchMap.initItk(m_texture.width(), m_texture.height());
-    float r = m_texture.width() * m_texture.height() / float(nbPatches*nbPatches);
+    float r = m_texture.width() * m_texture.height() / float(nbPatches*nbPatches*2);
     int i = 0;
     for(std::vector<Eigen::Vector2f>::const_iterator cit = centroids.begin(); cit != centroids.end(); ++cit, ++i)
     {
@@ -330,6 +330,10 @@ void PatchProcessor<I>::initializePatchesPoissonCircles(unsigned nbPatches)
                 reinterpret_cast<word64&>(pix) |= w;
         });
     }
+
+    m_patchMaskMipmap.setTexture(patchMap);
+    m_patchMaskMipmap.setMode(m_mipmapMode);
+    m_patchMaskMipmap.generate();
 }
 
 template<typename I>
@@ -397,7 +401,7 @@ Mipmap<I> PatchProcessor<I>::generate(int textureWidth, int textureHeight) const
         {
             pix=PatchProcessor<I>::ms_zero;
             //the following utilizes bitmasks to read the data of each mipmap
-            word64 wPixel=reinterpret_cast<word64>(m_patchMaskMipmap.mipmap(k, l).pixelAbsolute(x, y));
+            word64 wPixel=word64(m_patchMaskMipmap.mipmap(k, l).pixelAbsolute(x, y));
             word64 w=0x1;
             for(size_t p=0; p<m_patches.size(); ++p)
             {
@@ -627,7 +631,7 @@ size_t PatchProcessor<I>::analysis_getNumberOfTextureAccessForMipmap(unsigned k,
     mipmap.for_all_pixels([&] (const ImageMask64::PixelType &pix)
     {
         //mask analysis
-        word64 wPixel=reinterpret_cast<word64>(pix);
+        word64 wPixel=word64(pix);
         word64 w=0x1;
         for(size_t p=0; p<m_patches.size(); ++p)
         {
