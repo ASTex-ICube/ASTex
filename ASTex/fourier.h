@@ -28,6 +28,7 @@
 
 #include <ASTex/image_gray.h>
 #include <ASTex/image_spectral.h>
+#include <ASTex/image_rgb.h>
 
 /** \file
  * \brief Fourier transforms and functions in frequency domain
@@ -123,6 +124,17 @@ void ASTEX_API welch(const ImageGrayd& input, ImageSpectrald& modulus, uint32_t 
 
 void ASTEX_API welch(const ImageGrayd& input, ImageSpectrald& modulus, uint32_t step, int32_t sp_size);
 
+/**
+ * \brief compute crossCorrelation of the full image
+ * \param [in] input RGB input image
+ * \param [out] acorr cross-correlation
+ * \param [in] mask pairs of pixels are considered iff mask.test(pix) == true for both pixels of the pair.
+ * \pre acorr must be allocated
+ * \pre input and acorr are images of the same size
+ * \return number of pixels used (mask size)
+ */
+template<typename MASK>
+int crossCorrelation_full_size(const ImageRGBd& input, ImageGrayd& acorr, const MASK& mask, int channel1, int channel2);
 
 /**
  * \brief compute autoCorrelation of the full image
