@@ -2,14 +2,14 @@ call installvars.bat
 
 set PATH=%PATH%;%INSTALL_DBG%\lib;%INSTALL_DBG%\bin
 
-cd %ROOT%
+cd /d %ROOT%
 if exist build-zlib-debug del /S /Q build-zlib-debug
 mkdir build-zlib-debug
 cd build-zlib-debug
 cmake -G %JOMGEN% -DCMAKE_BUILD_TYPE=Debug -DCMAKE_INSTALL_PREFIX=%INSTALL_DBG%  %ZLIB_SRC% || exit /b
 cmake --build . --config Debug --target install || exit /b
 
-cd %ROOT%
+cd /d %ROOT%
 if exist build-openexr-dyn-debug del /S /Q build-openexr-dyn-debug
 mkdir build-openexr-dyn-debug
 cd build-openexr-dyn-debug
@@ -19,9 +19,9 @@ cmake -G "NMake Makefiles" -DCMAKE_BUILD_TYPE=Debug -DCMAKE_INSTALL_PREFIX=%INST
  -DOPENEXR_BUILD_TESTS=OFF -DOPENEXR_BUILD_VIEWERS=OFF  %OPENEXR_SRC%  || exit /b
 cmake --build . --config Debug --target install  || exit /b
 
-copy OpenEXR\IlmImf\Debug\*.dll %INSTALL_DBG:/=\%\bin 
+copy OpenEXR\IlmImf\*.dll %INSTALL_DBG:/=\%\bin 
 
-cd %ROOT%
+cd /d %ROOT%
 if exist build-itk-dyn-debug del /S /Q build-itk-dyn-debug
 mkdir build-itk-dyn-debug
 cd build-itk-dyn-debug
@@ -30,7 +30,7 @@ cmake -G %JOMGEN% -DCMAKE_BUILD_TYPE=Debug -DCMAKE_INSTALL_PREFIX=%INSTALL_DBG% 
 cmake --build . --config Debug --target install  || exit /b
 
 
-cd %ROOT%
+cd /d %ROOT%
 if exist build-astex-dyn-debug del /S /Q build-astex-dyn-debug
 mkdir build-astex-dyn-debug
 cd build-astex-dyn-debug
@@ -39,6 +39,9 @@ cmake -G %SOLUTION% -DCMAKE_CONFIGURATION_TYPES="Debug" -DCMAKE_PREFIX_PATH=%INS
  -DCMAKE_INSTALL_PREFIX=%INSTALL_DBG% -DBUILD_SHARED_LIBS=ON %ASTEX_SRC%  || exit /b
 
 copy %ITK_SRC:/=\%\Modules\ThirdParty\PNG\src\itkpng\pnglibconf.h %ITK_INCLUDES_D:/=\%\itkpng\
+
+echo set PATH=%INSTALL_DBG%\bin;%%PATH%% >launch1.bat
+echo call %IDE% ASTex.sln >>launch_vs.bat
 
 echo You can remove build-zlib-debug build-ilmbase-dyn-debug build-openexr-dyn-debug build-itk-dyn-debug
 

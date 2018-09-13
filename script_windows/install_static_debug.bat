@@ -2,14 +2,14 @@ call installvars.bat
 
 set PATH=%PATH%;%INSTALL_DBG%\lib;%INSTALL_DBG%\bin
 
-cd %ROOT%
+cd /d %ROOT%
 if exist build-zlib-debug del /S /Q build-zlib-debug
 mkdir build-zlib-debug
 cd build-zlib-debug
 cmake -G %JOMGEN% -DCMAKE_BUILD_TYPE=Debug -DCMAKE_INSTALL_PREFIX=%INSTALL_DBG%  %ZLIB_SRC% || exit /b
 cmake --build . --config Debug --target install || exit /b
 
-cd %ROOT%
+cd /d %ROOT%
 if exist build-openexr-static-debug del /S /Q build-openexr-static-debug
 mkdir build-openexr-static-debug
 cd build-openexr-static-debug
@@ -20,7 +20,7 @@ cmake -G "NMake Makefiles" -DCMAKE_BUILD_TYPE=Debug -DCMAKE_INSTALL_PREFIX=%INST
 cmake --build . --config Debug --target install || exit /b
 
 
-cd %ROOT%
+cd /d %ROOT%
 if exist build-itk-static-debug del /S /Q build-itk-static-debug
 mkdir build-itk-static-debug
 cd build-itk-static-debug
@@ -29,7 +29,7 @@ cmake -G %JOMGEN% -DCMAKE_BUILD_TYPE=Debug -DCMAKE_INSTALL_PREFIX=%INSTALL_DBG% 
 cmake --build . --config Debug --target install || exit /b
 
 
-cd %ROOT%
+cd /d %ROOT%
 if exist build-astex-static-debug del /S /Q build-astex-static-debug
 mkdir build-astex-static-debug
 cd build-astex-static-debug

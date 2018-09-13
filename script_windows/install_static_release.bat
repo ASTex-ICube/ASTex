@@ -2,14 +2,14 @@ call installvars.bat
 
 set PATH=%PATH%;%INSTALL_REL%\lib;%INSTALL_REL%\bin
 
-cd %ROOT%
+cd /d %ROOT%
 if exist build-zlib-release del /S /Q build-zlib-release
 mkdir build-zlib-release
 cd build-zlib-release
 cmake -G %JOMGEN% -DCMAKE_BUILD_TYPE=Release -DCMAKE_INSTALL_PREFIX=%INSTALL_REL%  %ZLIB_SRC% || exit /b
 cmake --build . --config Release --target install || exit /b
 
-cd %ROOT%
+cd /d %ROOT%
 if exist build-openexr-static-release del /S /Q build-openexr-static-release
 mkdir build-openexr-static-release
 cd build-openexr-static-release
@@ -20,7 +20,7 @@ cmake -G "NMake Makefiles" -DCMAKE_BUILD_TYPE=Release -DCMAKE_INSTALL_PREFIX=%IN
 cmake --build . --config Release --target install || exit /b
 
 
-cd %ROOT%
+cd /d %ROOT%
 del /S /Q build-itk-static-release
 mkdir build-itk-static-release
 cd build-itk-static-release
@@ -28,7 +28,7 @@ cmake -G %JOMGEN% -DCMAKE_BUILD_TYPE=Release -DCMAKE_INSTALL_PREFIX=%INSTALL_REL
  -DZLIB_INCLUDE_DIR=%INSTALL_REL%/include -DZLIB_LIBRARY_RELEASE=%INSTALL_REL%/lib/zlibstatic.lib  %ITK_SRC% || exit /b
 cmake --build . --config Release --target install || exit /b
 
-cd %ROOT%
+cd /d %ROOT%
 del /S /Q build-astex-static-release
 mkdir build-astex-static-release
 cd build-astex-static-release
