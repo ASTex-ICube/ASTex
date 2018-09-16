@@ -8,6 +8,6 @@ set(CMAKE_AUTOMOC ON)
 
 find_package(ASTex REQUIRED)
 
-
-add_executable(wang wang.cpp min_path_cut.h imageviewer.h)
-target_link_libraries(wang ASTex Qt5::Widgets)
+add_executable(wang) 
+target_sources(wang PRIVATE wang.cpp min_path_cut.h imageviewer.h)
+target_link_libraries(wang PRIVATE ASTex Qt5::Widgets)

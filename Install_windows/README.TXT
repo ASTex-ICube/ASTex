@@ -1,0 +1,38 @@
+New easy install & compilation of ASTex (and dependencies) on Window
+
+Requirements:
+- Visual Studio C++ 2017 / 2015
+- CMake
+- git
+- [ninja]
+- 
+
+Use this CMakeLists.txt to automatically
+ - clone & compile zlib
+ - clone & compile openEXR
+ - clone & compile itk
+ - generated ASTex build
+
+Options:
+
+- ASTEX_INSTALL_PREFIX : install dir for deps & ASTex"
+- ASTEX_SOURCE: the source dir of ASTex
+- ASTEX_BUILD : the build dir of ASTex
+- BUILD_SHARED  if checked build dynamic lib else static
+- BUILD_RELEASE if checked build release mode else debug
+- ADD_POST_TO_DIR if checked add _S for static & _rel or _dbg to created path
+
+Usage
+- launch CMake-gui
+- where is the source code : this dir
+- where to build the binary : you choose (WARNING clean dir between each build)
+- Configure
+- set vars
+- Configure
+- Generate
+- Finally open the generated solution (in ASTEX_BUILD)
+
+A launchVS.bat allow to launch VS with path included dll dir.
+
+
+
