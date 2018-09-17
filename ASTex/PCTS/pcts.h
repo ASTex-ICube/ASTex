@@ -249,17 +249,18 @@ I Pcts<I>::generate()
                                 pxpy[1]=py;
                                 updateErrorMin(err2, pxpy, x, y);
                             }
+                            Stamping::SamplerPoisson sp;
+                            sp.setNbPoints(m_nbSamplesNNM);
+                            sp.setGenerateInCircle(true);
                             int radius;
                             for(unsigned n=0; n<m_nbRefinementsNNM &&
                                               (radius=m_radiusScaleNNM*m_neighborhood/pow(2.0, n))>0;
                                 ++n)
                             {
-                                Stamping::SamplerUniform sp;
-                                sp.setNbPoints(m_nbSamplesNNM);
                                 std::vector<Eigen::Vector2f> spResult=sp.generate();
 
                                 itk::Index<2> idPoisson;
-                                for(unsigned i=0; i<m_nbSamplesNNM; ++i)
+                                for(unsigned i=0; i<spResult.size(); ++i)
                                 {
                                     idPoisson[0]=(2*spResult[i][0] - 1)*radius + px;
                                     idPoisson[1]=(2*spResult[i][1] - 1)*radius + py;
