@@ -306,7 +306,7 @@ int test_contentExchangeFiltering(int argc, char **argv)
     //pProcessor.setFilteringMode(ANISOTROPIC);
     pProcessor.setFilteringMode(NO_FILTER);
     //add some patches here
-    pProcessor.debug_setPatchFromImageRGB(im_patches);
+    pProcessor.initializePatchesFromImageRGB(im_patches);
     //patchProcessor.initializePatchesRegularGrid(64);
     pProcessor.initializeContents();
     //add some contents there
@@ -458,7 +458,7 @@ int test_texton(int argc, char **argv)
 
     //Testing
 
-    Stamping::SamplerPoisson sampler;
+    Stamping::SamplerUniform sampler;
     sampler.setNbPoints(400); //< you can change that
     Stamping::StampDiscrete<ImageRGBd> stamp(im_texton);
     stamp.setInterpolationRule(Stamping::StampDiscrete<ImageRGBd>::BILINEAR); //< you can change that too
