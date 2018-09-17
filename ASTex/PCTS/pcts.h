@@ -4,6 +4,7 @@
 #include "ASTex/mipmap.h"
 #include "ASTex/easy_io.h"
 #include "ASTex/Stamping/sampler.h"
+#include "ASTex/utils.h"
 
 #define PCTS_DEBUG_DIRECTORY "/home/nlutz/"
 
@@ -11,36 +12,6 @@ namespace ASTex
 {
 
 using ImageIndex2 = ASTex::ImageRGB32;
-
-double mse(const ImageRGBd& i1, const ImageRGBd& i2, int x1, int y1, int x2, int y2, int v)
-{
-    double error=0.0;
-    static ImageRGBd::PixelType ms_zero;
-    ImageRGBd::PixelType diff=ms_zero;
-
-    unsigned hit=0;
-    for(int dx=-v; dx<=v; ++dx)
-        for(int dy=-v; dy<=v; ++dy)
-        {
-            int xx1 = x1+dx, xx2 = x2+dx;
-            int yy1 = y1+dy, yy2 = y2+dy;
-
-            if(xx1 >= 0 && xx1<i1.width() &&
-               xx2 >= 0 && xx2<i2.width() &&
-               yy1 >= 0 && yy1<i1.height() &&
-               yy2 >= 0 && yy1<i2.height())
-            {
-                for(int i=0; i<3; ++i)
-                {
-                    diff[i] += ((i1.pixelAbsolute(xx1, yy1)[i]) - i2.pixelAbsolute(xx2, yy2)[i]) *
-                                ((i1.pixelAbsolute(xx1, yy1)[i]) - i2.pixelAbsolute(xx2, yy2)[i]);
-                }
-                ++hit;
-            }
-        }
-    assert(hit!=0 && "mse: error with parameters");
-    return error=(diff[0] + diff[1] + diff[2])/3.0/hit;
-}
 
 template<typename I>
 class Pcts
