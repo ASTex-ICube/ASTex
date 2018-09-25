@@ -153,7 +153,7 @@ public:
      * each color in patchImage represents a patch.
      * @param patchImage
      */
-    void debug_setPatchFromImageRGB(const ImageCommon<ImageRGBBase<R>, false> &patchImage);
+    void initializePatchesFromImageRGB(const ImageCommon<ImageRGBBase<R>, false> &patchImage);
 
     /**
      * @brief debug_setRandomContents chooses and builds nbContentsPerPatch contents for each patches.
@@ -311,7 +311,7 @@ void PatchProcessor<I>::initializePatchesPoissonCircles(unsigned nbPatches)
            "PatchProcessor::initializePatches: texture uninitialized (use PatchProcessor::setTexture with an initialized texture)");
     assert(nbPatches <= CTEXCH_MAX_PATCHES &&
            "PatchProcessor::initializePatches: synthesis cannot allow that many patches (max given by CTEXCH_MAX_PATCHES)");
-    Stamping::SamplerPoisson sampler(nbPatches);
+    Stamping::SamplerUniform sampler(nbPatches);
     std::vector<Eigen::Vector2f> centroids = sampler.generate();
     ImageMask64 patchMap;
     patchMap.initItk(m_texture.width(), m_texture.height());
@@ -446,7 +446,7 @@ Mipmap<I> PatchProcessor<I>::generate(int textureWidth, int textureHeight) const
 
 template<typename I>
 template <typename R>
-void PatchProcessor<I>::debug_setPatchFromImageRGB(const ImageCommon<ImageRGBBase<R>, false>& patchImage)
+void PatchProcessor<I>::initializePatchesFromImageRGB(const ImageCommon<ImageRGBBase<R>, false>& patchImage)
 {
     assert(patchImage.size() == m_texture.size() &&
            "PatchProcessor::debug_setPatchFromImageRGBd: patchImage should have the same size as texture");
