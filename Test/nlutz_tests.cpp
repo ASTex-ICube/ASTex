@@ -597,17 +597,44 @@ int test_pcts(int argc, char **argv)
 {
     std::cout << "PCTS started" << std::endl;
 
-    ImageRGBd image;
-    //set this image and macro PCTS_DEBUG_DIRECTORY in pcts.h
-    IO::loadu8_in_01(image, "/home/nlutz/img/dry_riverbed.png");
-    ASTex::Pcts<ImageRGBd> pcts;
+    ImageRGBd image, guid, seg;
+	ImageRGBd mask, Ipos, Ineg, I2pos, I2neg;
+	//set this image and macro PCTS_DEBUG_DIRECTORY in pcts.h
+    IO::loadu8_in_01(image, "E:/developpement/AsTex/AsTex/Data/bricks.png");
+	IO::loadu8_in_01(mask, "E:/developpement/AsTex/AsTex/Data/bricks_mask.png");
+	IO::loadu8_in_01(Ipos, "E:/developpement/AsTex/AsTex/Data/bricks_init_Binary_warped_specific_DT.png");
+	IO::loadu8_in_01(Ineg, "E:/developpement/AsTex/AsTex/Data/bricks_init_Binary_warped_specific_DT_neg.png");
+	seg.initItk(Ipos.width(), Ipos.height());
+	seg.for_all_pixels([&](ImageRGBd::PixelType &pix, int x, int y)
+	{
+		double col[3];
+		col[0] = pow(Ipos.pixelAbsolute(x, y)[0],0.25);
+		col[1] = pow(Ineg.pixelAbsolute(x, y)[0],0.25);
+		col[2] = 0.0;
+		pix = ImageRGBd::PixelType(col);
+	});
+	IO::loadu8_in_01(I2pos, "E:/developpement/AsTex/AsTex/Data/bricks_Binary_warped_specific_DT.png");
+	IO::loadu8_in_01(I2neg, "E:/developpement/AsTex/AsTex/Data/bricks_Binary_warped_specific_DT_neg.png");
+	guid.initItk(I2pos.width(), I2pos.height());
+	guid.for_all_pixels([&](ImageRGBd::PixelType &pix, int x, int y)
+	{
+		double col[3];
+		col[0] = pow(I2pos.pixelAbsolute(x, y)[0],0.25);
+		col[1] = pow(I2neg.pixelAbsolute(x, y)[0],0.25);
+		col[2] = 0.0;
+		pix = ImageRGBd::PixelType(col);
+	});
+
+	ASTex::Pcts<ImageRGBd> pcts;
     pcts.setTexture(image);
-    pcts.setWidth(800);
-    pcts.setHeight(800);
-    pcts.setNbSamplesNNM(6);
+    //pcts.setWidth(800);
+    //pcts.setHeight(800);
+    pcts.setNbSamplesNNM(20);
     pcts.setNbRefinementsNNM(2);
-    pcts.setRadiusScaleNNM(8);
-    IO::save01_in_u8(pcts.generate(), "/home/nlutz/img/dry_riverbed_pcts.png");
+    pcts.setRadiusScaleNNM(15);
+	pcts.setLabel(mask, 0.8);
+	pcts.setGuidance(guid, seg, 0.8, 0.1);
+    IO::save01_in_u8(pcts.generate(), "E:/developpement/AsTex/AsTex/Data/bricks_pcts.png");
 
     std::cout << "PCTS ended" << std::endl;
     return 0;
