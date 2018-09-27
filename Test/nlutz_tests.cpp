@@ -599,11 +599,13 @@ int test_pcts(int argc, char **argv)
 
     ImageRGBd image, guid, seg;
 	ImageRGBd mask, Ipos, Ineg, I2pos, I2neg;
+	ImageRGBd synth, binary, stencil;
 	//set this image and macro PCTS_DEBUG_DIRECTORY in pcts.h
     IO::loadu8_in_01(image, "E:/developpement/AsTex/AsTex/Data/bricks.png");
 	IO::loadu8_in_01(mask, "E:/developpement/AsTex/AsTex/Data/bricks_mask.png");
 	IO::loadu8_in_01(Ipos, "E:/developpement/AsTex/AsTex/Data/bricks_init_Binary_warped_specific_DT.png");
 	IO::loadu8_in_01(Ineg, "E:/developpement/AsTex/AsTex/Data/bricks_init_Binary_warped_specific_DT_neg.png");
+	IO::loadu8_in_01(stencil, "E:/developpement/AsTex/AsTex/Data/bricks_rigidity_RGB.png");
 	seg.initItk(Ipos.width(), Ipos.height());
 	seg.for_all_pixels([&](ImageRGBd::PixelType &pix, int x, int y)
 	{
@@ -624,6 +626,8 @@ int test_pcts(int argc, char **argv)
 		col[2] = 0.0;
 		pix = ImageRGBd::PixelType(col);
 	});
+	IO::loadu8_in_01(synth, "E:/developpement/AsTex/AsTex/Data/C_10.png");
+	IO::loadu8_in_01(binary, "E:/developpement/AsTex/AsTex/Data/C_10_bin.png");
 
 	ASTex::Pcts<ImageRGBd> pcts;
     pcts.setTexture(image);
@@ -632,8 +636,10 @@ int test_pcts(int argc, char **argv)
     pcts.setNbSamplesNNM(20);
     pcts.setNbRefinementsNNM(2);
     pcts.setRadiusScaleNNM(15);
-	pcts.setLabel(mask, 0.8);
-	pcts.setGuidance(guid, seg, 0.8, 0.1);
+	pcts.setLabel(mask, 0.5);
+	pcts.setGuidance(guid, seg, 0.95, 0.01);
+	pcts.setMask(synth, binary);
+	pcts.setStencil(stencil, 1.0); // weight between 0 and 1
     IO::save01_in_u8(pcts.generate(), "E:/developpement/AsTex/AsTex/Data/bricks_pcts.png");
 
     std::cout << "PCTS ended" << std::endl;
