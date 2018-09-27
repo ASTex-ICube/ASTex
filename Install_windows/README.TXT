@@ -4,8 +4,9 @@ Requirements:
 - Visual Studio C++ 2017 / 2015
 - CMake
 - git
-- [ninja]
-- 
+- [ninja] optionnal faster compilation (used by default if found in path)
+- [jom] optionnal faster compilation
+
 
 Use this CMakeLists.txt to automatically
  - clone & compile zlib
@@ -13,9 +14,9 @@ Use this CMakeLists.txt to automatically
  - clone & compile itk
  - generated ASTex build
 
-Options:
 
-- ASTEX_INSTALL_PREFIX : install dir for deps & ASTex"
+Options:
+- ASTEX_INSTALL_PREFIX : install dir for deps & ASTex
 - ASTEX_SOURCE: the source dir of ASTex
 - ASTEX_BUILD : the build dir of ASTex
 - BUILD_SHARED  if checked build dynamic lib else static

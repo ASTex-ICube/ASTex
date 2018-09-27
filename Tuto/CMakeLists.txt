@@ -12,7 +12,7 @@ set( exec_list
  tuto_png_indexed )
 
 foreach(exec ${exec_list})
-	add_executable(${exec})
+	add_executable(${exec} "")
 	target_sources(${exec} PRIVATE ${exec}.cpp)
 	target_link_libraries(${exec} PRIVATE ASTex)
 endforeach(exec)

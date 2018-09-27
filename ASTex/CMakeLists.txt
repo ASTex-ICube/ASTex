@@ -9,7 +9,7 @@ include(${ITK_USE_FILE})
 find_package(OpenMP QUIET)
 
 
-add_library( ${PROJECT_NAME})
+add_library( ${PROJECT_NAME} "")
 
 target_sources (${PROJECT_NAME} PRIVATE 
 	internal.h
@@ -107,9 +107,3 @@ install(FILES ${HEADERS} DESTINATION include/ASTex/)
 install(FILES "${ASTEX_SOURCE_DIR}/cmake/FindOpenEXR.cmake" "${ASTEX_SOURCE_DIR}/cmake/FindFFTW.cmake" DESTINATION lib/cmake/ASTex/)
 
 astex_create_package("${CMAKE_CURRENT_SOURCE_DIR}" "${ASTEX_SOURCE_DIR}" "include" ${ITK_DIR})
-
-#[[
-message(status, "OOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOO")
-get_property(prop TARGET ASTex PROPERTY INTERFACE_LINK_LIBRARIES)
-message(status, ${prop})
-]]

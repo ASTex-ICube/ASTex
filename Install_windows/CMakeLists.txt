@@ -27,8 +27,8 @@ set(CMAKE_CONFIGURATION_TYPES CACHE PATH "")
 set(CMAKE_INSTALL_PREFIX CACHE PATH "")
 
 option(BUILD_DEPS  "clone & build dependencies" ON )
-option(BUILD_SHARED  "build dynamic lib" OFF )
-option(BUILD_RELEASE "build release" OFF )
+option(BUILD_SHARED  "build dynamic lib" ON )
+option(BUILD_RELEASE "build release" ON )
 option(ADD_POST_TO_DIR "Add _S for static & _rel or _dbg to created path" ON )
 
 

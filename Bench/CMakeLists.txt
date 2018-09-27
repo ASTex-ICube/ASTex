@@ -4,7 +4,7 @@ project(ASTexBench LANGUAGES CXX)
 
 find_package(ASTex)
 
-add_executable(bench_traversals)
+add_executable(bench_traversals "")
 target_sources(bench_traversals PRIVATE bench_traversals.cpp)
 target_link_libraries(bench_traversals PRIVATE ASTex)
 
