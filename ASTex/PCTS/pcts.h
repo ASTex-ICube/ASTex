@@ -358,6 +358,7 @@ I Pcts<I>::generate()
 					pix = pyramidSynthesis.mipmap(s, s).pixelAbsolute(x, y);
 				}
 			});
+			IO::save01_in_u8(imageLevel0, std::string(PCTS_DEBUG_DIRECTORY) + "testBlock" + std::to_string(s) + ".png");
 			if (m_labelSet) lmbd_lookupIndexIntoImage(indexImageLevel0, labelLevel0, pyramidLabel, s);
 			if (m_guidanceSet) {
 				lmbd_lookupIndexIntoImage(indexImageLevel0, guidanceLevel0, pyramidGuidance, s);
@@ -500,7 +501,7 @@ I Pcts<I>::generate()
             I imageLevel1;
             imageLevel1.initItk(indexImageLevel1.width(), indexImageLevel1.height());
             lmbd_lookupIndexIntoImage(indexImageLevel1, imageLevel1, pyramidInput, s-1);
-            IO::save01_in_u8(imageLevel1, std::string(PCTS_DEBUG_DIRECTORY) + "testBlock" + std::to_string(s) + ".png");
+            //IO::save01_in_u8(imageLevel1, std::string(PCTS_DEBUG_DIRECTORY) + "testBlock" + std::to_string(s) + ".png");
 
             ImageRGBd fakeColorIndexImageLevel0;
             lmbd_fakeColorIndex(indexImageLevel0, fakeColorIndexImageLevel0);

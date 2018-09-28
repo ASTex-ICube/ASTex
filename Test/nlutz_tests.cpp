@@ -593,7 +593,7 @@ int test_easy(int argc, char **argv)
     return 0;
 }
 
-char *name = "bricks";
+char *name = "snake";
 char fname[256];
 
 int test_pcts(int argc, char **argv)
@@ -652,7 +652,8 @@ int test_pcts(int argc, char **argv)
 	pcts.setGuidance(guid, seg, 0.95, 0.01);
 	pcts.setMask(synth, binary);
 	pcts.setStencil(stencil, 1.0); // weight between 0 and 1
-    IO::save01_in_u8(pcts.generate(), "E:/developpement/AsTex/AsTex/Data/bricks_pcts.png");
+	sprintf(fname, "E:/developpement/AsTex/AsTex/Data/%s_pcts.png", name);
+	IO::save01_in_u8(pcts.generate(), fname);
 
     std::cout << "PCTS ended" << std::endl;
     return 0;
