@@ -593,7 +593,6 @@ int test_easy(int argc, char **argv)
     return 0;
 }
 
-char *name = "bricks";
 char fname[256];
 
 int test_pcts(int argc, char **argv)
@@ -603,17 +602,21 @@ int test_pcts(int argc, char **argv)
     ImageRGBd image, guid, seg;
 	ImageRGBd mask, Ipos, Ineg, I2pos, I2neg;
 	ImageRGBd synth, binary, stencil;
+
+    std::string input_directory = std::string(argv[1]);
+    char *name = argv[2];
+
 	//set this image and macro PCTS_DEBUG_DIRECTORY in pcts.h
-	sprintf(fname, "E:/developpement/AsTex/AsTex/Data/%s.png", name);
+    sprintf(fname, "%s/%s.png", input_directory.c_str(), name);
     IO::loadu8_in_01(image, fname);
-	sprintf(fname, "E:/developpement/AsTex/AsTex/Data/%s_mask.png", name);
+    sprintf(fname, "%s/mask.png", input_directory.c_str());
 	IO::loadu8_in_01(mask, fname);
-	sprintf(fname, "E:/developpement/AsTex/AsTex/Data/%s_init_Binary_warped_specific_DT.png", name);
-	IO::loadu8_in_01(Ipos, fname);
-	sprintf(fname, "E:/developpement/AsTex/AsTex/Data/%s_init_Binary_warped_specific_DT_neg.png", name);
+    sprintf(fname, "%s/init_Binary_warped_specific_DT.png", input_directory.c_str());
+    IO::loadu8_in_01(Ipos, fname);
+    sprintf(fname, "%s/init_Binary_warped_specific_DT_neg.png", input_directory.c_str());
 	IO::loadu8_in_01(Ineg, fname);
-	sprintf(fname, "E:/developpement/AsTex/AsTex/Data/%s_rigidity_RGB.png", name);
-	IO::loadu8_in_01(stencil, fname);
+    sprintf(fname, "%s/rigidity_RGB.png", input_directory.c_str());
+    IO::loadu8_in_01(stencil, fname);
 	seg.initItk(Ipos.width(), Ipos.height());
 	seg.for_all_pixels([&](ImageRGBd::PixelType &pix, int x, int y)
 	{
@@ -623,9 +626,9 @@ int test_pcts(int argc, char **argv)
 		col[2] = 0.0;
 		pix = ImageRGBd::PixelType(col);
 	});
-	sprintf(fname, "E:/developpement/AsTex/AsTex/Data/%s_Binary_warped_specific_DT.png", name);
+    sprintf(fname, "%s/Binary_warped_specific_DT.png", input_directory.c_str());
 	IO::loadu8_in_01(I2pos, fname);
-	sprintf(fname, "E:/developpement/AsTex/AsTex/Data/%s_Binary_warped_specific_DT_neg.png", name);
+    sprintf(fname, "%s/Binary_warped_specific_DT_neg.png", input_directory.c_str());
 	IO::loadu8_in_01(I2neg, fname);
 	guid.initItk(I2pos.width(), I2pos.height());
 	guid.for_all_pixels([&](ImageRGBd::PixelType &pix, int x, int y)
@@ -636,23 +639,47 @@ int test_pcts(int argc, char **argv)
 		col[2] = 0.0;
 		pix = ImageRGBd::PixelType(col);
 	});
-	sprintf(fname, "E:/developpement/AsTex/AsTex/Data/%s_C_10.png", name);
+    sprintf(fname, "%s/%s_C_10.png", input_directory.c_str(), name);
 	IO::loadu8_in_01(synth, fname);
-	sprintf(fname, "E:/developpement/AsTex/AsTex/Data/%s_C_10_bin.png", name);
+    sprintf(fname, "%s/%s_C_10_bin.png", input_directory.c_str(), name);
 	IO::loadu8_in_01(binary, fname);
 
 	ASTex::Pcts<ImageRGBd> pcts;
     pcts.setTexture(image);
     //pcts.setWidth(800);
     //pcts.setHeight(800);
-    pcts.setNbSamplesNNM(20);
-    pcts.setNbRefinementsNNM(2);
-    pcts.setRadiusScaleNNM(15);
-	pcts.setLabel(mask, 0.5);
-	pcts.setGuidance(guid, seg, 0.95, 0.01);
+
+
+    unsigned    seed=0,
+                bs = 4,
+                sl = 5,
+                samples = 60,
+                ref = 1,
+                radius = 30;
+
+     double     labelW = 0.9,
+                guidanceW = 0.8,
+                stencilW = 1.0;
+
+    srand(seed);
+    pcts.setLvl0BlockSize(bs);
+    pcts.setMinimumSizeLog(sl);
+    pcts.setNbSamplesNNM(samples);
+    pcts.setNbRefinementsNNM(ref);
+    pcts.setRadiusScaleNNM(radius);
+    pcts.setLabel(mask, labelW);
+    pcts.setGuidance(guid, seg, guidanceW, 1.0);
 	pcts.setMask(synth, binary);
-	pcts.setStencil(stencil, 1.0); // weight between 0 and 1
-    IO::save01_in_u8(pcts.generate(), "E:/developpement/AsTex/AsTex/Data/bricks_pcts.png");
+    pcts.setStencil(stencil, stencilW); // weight between 0 and 1
+    IO::save01_in_u8(pcts.generate(), input_directory + "/out_pcts_seed" + std::to_string(seed)
+                     + "_bs" + std::to_string(bs)
+                     + "_sl" + std::to_string(sl)
+                     + "_samples" + std::to_string(samples)
+                     + "_ref" + std::to_string(ref)
+                     + "_labelW" + std::to_string(labelW)
+                     + "_guidanceW" + std::to_string(guidanceW)
+                     + "_stencilW" + std::to_string(stencilW)
+                     + ".png");
 
     std::cout << "PCTS ended" << std::endl;
     return 0;
@@ -663,9 +690,9 @@ int main( int argc, char **argv )
     //return test_genet(argc, argv);
     //return test_texton(argc, argv);
     //return test_autoconvolutionSpectrum(argc, argv);
-    //return test_contentExchangeFiltering(argc, argv);
+    return test_contentExchangeFiltering(argc, argv);
     //return test_wendling(argc, argv);
     //return test_getis_gi(argc, argv);
     //return test_easy(argc, argv);
-    return test_pcts(argc, argv);
+    //return test_pcts(argc, argv);
 }
