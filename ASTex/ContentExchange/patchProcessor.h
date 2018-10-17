@@ -7,6 +7,7 @@
 #include "content.h"
 #include "ASTex/easy_io.h"
 #include "ASTex/Stamping/sampler.h"
+#include "old_PatchProcessor.h"
 
 namespace ASTex
 {
@@ -107,14 +108,11 @@ public:
      */
     size_t nbPatches() const {return m_patches.size();}
 
-    size_t nbContents() const {return m_patches.size()>0 ? m_patches[0].nbContents() : 0;}
+    size_t nbContents() const {size_t size=m_patches.size()>0 ? m_patches[0].nbContents() : 0;
+                               return size;}
 
-    //set
+    void setNbContentsPerPatch(unsigned nbContents) {m_nbContentsPerPatch = nbContents;}
 
-    /**
-     * @brief setTexture sets the input texture.
-     * @param texture
-     */
     void setTexture(const I& texture);
 
     /**
@@ -125,9 +123,9 @@ public:
      */
     void setFilteringMode(mipmap_mode_t defaultMipmapMode);
 
-                            //////////////////////////////
-                            /////    INITIALIZERS    /////
-                            //////////////////////////////
+    //////////////////////////////
+    /////    INITIALIZERS    /////
+    //////////////////////////////
     /**
      * @brief initializePatchesRegularGrid builds patches from a regular grid.
      * @param nbPatches is the expected number of patches. Will be cropped to the closest integer squared root.
@@ -142,30 +140,35 @@ public:
      */
     void initializePatchesPoissonCircles(unsigned nbPatches);
 
+    template<typename std::enable_if<std::is_same<I, ASTex::ImageRGBu8>::value>::type* = nullptr >
+    void initializePatchesAndContentsFromOldMethod();
+
+    template<typename R>
+    /**
+                            * @brief debug_setPatchFromImageRGB computes patches from an ImageRGB called patchImage.
+                            * each color in patchImage represents a patch.
+                            * @param patchImage
+                            */
+    void initializePatchesFromImageRGB(const ImageCommon<ImageRGBBase<R>, false> &patchImage);
     /**
      * @brief initializeContents builds the initial contents from the input.
      */
     void initializeContents();
 
-    template<typename R>
-    /**
-     * @brief debug_setPatchFromImageRGB computes patches from an ImageRGB called patchImage.
-     * each color in patchImage represents a patch.
-     * @param patchImage
-     */
-    void initializePatchesFromImageRGB(const ImageCommon<ImageRGBBase<R>, false> &patchImage);
+    void initializePatchesAndContentsByGIOptimization(unsigned int nbPatchesPerDimension=5);
+
 
     /**
      * @brief debug_setRandomContents chooses and builds nbContentsPerPatch contents for each patches.
      * Contents are taken from the input. They are chosen with a non-tweaked iid law.
      * @param nbContentsPerPatch
      */
-    void debug_setRandomContents(unsigned nbContentsPerPatch, unsigned int seed=0);
+    void debug_initializeRandomContents(unsigned int seed=0);
 
 
-                           //////////////////////////////
-                           /////   MISC FUNCTIONS   /////
-                           //////////////////////////////
+    //////////////////////////////
+    /////   MISC FUNCTIONS   /////
+    //////////////////////////////
 
     /**
     * @brief generate returns a synthesized output texture + mipmaps (same size as the input).
@@ -215,6 +218,7 @@ public:
 
 private:
 
+    unsigned m_nbContentsPerPatch;
     std::vector<Patch<I>> m_patches;
     I m_texture;
     MipmapBitmask<ImageMask64> m_patchMaskMipmap;
@@ -475,7 +479,106 @@ void PatchProcessor<I>::initializePatchesFromImageRGB(const ImageCommon<ImageRGB
 }
 
 template<typename I>
-void PatchProcessor<I>::debug_setRandomContents(unsigned nbContentsPerPatch, unsigned int seed)
+template<typename std::enable_if<std::is_same<I, ASTex::ImageRGBu8>::value>::type*>
+void PatchProcessor<I>::initializePatchesAndContentsFromOldMethod()
+{
+    unsigned fragmentMinSize        = 20;
+    unsigned fragmentMaxSize        = 500;
+    unsigned fragmentColorThreshold = 40;
+    unsigned requiredPatchNumber    = 16;
+    unsigned downsamplingMinSize    = 128;
+
+    ContentExchg::FragmentProcessor fProc( m_texture );
+    fProc.createFragments( fragmentMaxSize, fragmentColorThreshold );
+    fProc.cleanupSmallestFragments( fragmentMinSize );
+    fProc.updateFragmentsAttributes();
+
+    // Patches generation from old content exchange
+
+    ContentExchg::PatchProcessor pProc( fProc );
+    pProc.createPatches( int(requiredPatchNumber) );
+    pProc.computePatchBoundaries();
+
+    ASTex::ImageRGBu8::PixelType *idColors = new ASTex::ImageRGBu8::PixelType [ fProc.fragmentCount() ];
+    for( int i=0; i<pProc.patchCount(); ++i )
+    {
+        idColors[i].SetRed  ( uint8_t((i * 255)/pProc.patchCount()-1) );
+        idColors[i].SetGreen( uint8_t((i * 255)/pProc.patchCount()-1) );
+        idColors[i].SetBlue ( uint8_t((i * 255)/pProc.patchCount()-1) );
+    }
+
+    ASTex::ImageRGBu8 *imgPatch = new ASTex::ImageRGBu8( m_texture.width(), m_texture.height() );
+    for( auto &p : pProc.patches() )
+        for( auto &frag : p.fragments )
+            for( auto &pixel : fProc.fragmentById(int(frag)).pixels )
+                imgPatch->pixelAbsolute(pixel) = idColors[p.id];
+
+    //content generation from old content exchange
+
+    std::vector<double> rotations;
+    rotations.push_back( 0.0 );
+
+    std::vector<double> scales;
+    scales.push_back( 1.0000 );
+
+    pProc.findAlternativeContents( rotations, scales, m_nbContentsPerPatch, downsamplingMinSize );
+
+    //translation to new content exchange
+
+    initializePatchesFromImageRGB(*imgPatch);
+    initializeContents();
+    int pId = 0;
+    for(auto &p : pProc.patches())
+    {
+        for(auto &c : p.contents)
+        {
+            I shiftedTexture;
+            shiftedTexture.initItk(m_texture.width(), m_texture.height());
+
+                Patch<I> &patch=m_patches[pId];
+                shiftedTexture.for_all_pixels([&] (typename I::PixelType &pix, int x, int y)
+                {
+                    pix = m_texture.pixelAbsolute(  (x+c.offset[0])%shiftedTexture.width(),
+                                                    (y+c.offset[1])%shiftedTexture.height());
+                });
+                Content<I> content(shiftedTexture, patch);
+                patch.addContent(content);
+            shiftedTexture.initItk(m_texture.width(), m_texture.height());
+        }
+        ++pId;
+    }
+
+    //Debug only
+    for( int i=0; i<pProc.patchCount(); ++i )
+    {
+        idColors[i].SetRed  ( uint8_t((i * 255)/pProc.patchCount()-1) );
+        idColors[i].SetGreen( uint8_t((i * 255)/pProc.patchCount()-1) );
+        idColors[i].SetBlue ( uint8_t((i * 255)/pProc.patchCount()-1) );
+    }
+    for( auto &p : pProc.patches() )
+        for( auto &frag : p.fragments )
+            for( auto &pixel : fProc.fragmentById(int(frag)).pixels )
+                imgPatch->pixelAbsolute(pixel) = idColors[p.id];
+
+    imgPatch->save("/home/nlutz/potatoxd.png");
+
+}
+
+template<typename I>
+void PatchProcessor<I>::initializePatchesAndContentsByGIOptimization(unsigned int nbPatchesPerDimension)
+{
+    ImageMask64 patchMask;
+    patchMask.initItk(m_texture.width(), m_texture.height(), true);
+    patchMask.for_all_pixels([&] (const typename I::PixelType &pix)
+    {
+        word64 &wPixel=reinterpret_cast<word64&>(pix);
+        wPixel = 0x0;
+    });
+
+}
+
+template<typename I>
+void PatchProcessor<I>::debug_initializeRandomContents(unsigned int seed)
 {
     assert(m_patches.size()>0 && "PatchProcessor::debug_setRandomContents: initialize() must be called before being able to chose contents");
     srand(seed);
@@ -486,7 +589,7 @@ void PatchProcessor<I>::debug_setRandomContents(unsigned nbContentsPerPatch, uns
     for(j=0; j<m_patches.size(); ++j)
     {
         Patch<I> &patch=m_patches[j];
-        for(i=0; i<nbContentsPerPatch; ++i)
+        for(i=0; i<m_nbContentsPerPatch; ++i)
         {
             randomShiftX = rand();
             randomShiftY = rand();
@@ -535,13 +638,13 @@ void PatchProcessor<I>::saveRenderingPack(const std::string &outputDirectory)
                     for(l=0; l<content.contentMipmap().numberMipmapsHeight(); ++l)
                     {
                         I im = content.mipmap(k, l);
-                        IO::save01_in_u8(im, outputDirectory + "/p" + std::to_string(i) + "_c" + std::to_string(j) + "_mw" + std::to_string(k) + "_mh" + std::to_string(l) + ".png");
+                        im.save(outputDirectory + "/p" + std::to_string(i) + "_c" + std::to_string(j) + "_mw" + std::to_string(k) + "_mh" + std::to_string(l) + ".png");
                     }
                 }
                 else
                 {
                     I im = content.mipmap(k, k);
-                    IO::save01_in_u8(im, outputDirectory + "/p" + std::to_string(i) + "_c" + std::to_string(j) + "_mw" + std::to_string(k) + "_mh" + std::to_string(k) + ".png");
+                    im.save(outputDirectory + "/p" + std::to_string(i) + "_c" + std::to_string(j) + "_mw" + std::to_string(k) + "_mh" + std::to_string(k) + ".png");
                 }
             }
         }

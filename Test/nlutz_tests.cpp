@@ -292,26 +292,30 @@ int test_contentExchangeFiltering(int argc, char **argv)
         return EXIT_FAILURE;
     }
 
-    ImageRGBd im_in, im_patches;
+    ImageRGBu8 im_in, im_patches;
 
-    if(!IO::loadu8_in_01(im_in, std::string(MY_PATH)+argv[1]))
-        return 1;
-    if(!IO::loadu8_in_01(im_patches, std::string(MY_PATH)+argv[2]))
-        return 1;
+//    if(!IO::loadu8_in_01(im_in, std::string(MY_PATH)+argv[1]))
+//        return 1;
+//    if(!IO::loadu8_in_01(im_patches, std::string(MY_PATH)+argv[2]))
+//        return 1;
+
+    im_in.load(std::string(MY_PATH)+argv[1]);
+    im_patches.load(std::string(MY_PATH)+argv[2]);
 
     std::string out_dir=std::string(MY_PATH)+"contentMipmaps/";
     create_directory(out_dir);
 
-    ContentExchange::PatchProcessor<ImageRGBd> pProcessor(im_in);
+    ContentExchange::PatchProcessor<ImageRGBu8> pProcessor(im_in);
     //pProcessor.setFilteringMode(ANISOTROPIC);
     pProcessor.setFilteringMode(NO_FILTER);
+    pProcessor.setNbContentsPerPatch(3);
     //add some patches here
-    pProcessor.initializePatchesFromImageRGB(im_patches);
-    //patchProcessor.initializePatchesRegularGrid(64);
-    pProcessor.initializeContents();
+//    pProcessor.initializePatchesFromImageRGB(im_patches);
+//    pProcessor.initializeContents();
+    pProcessor.initializePatchesAndContentsFromOldMethod();
     //add some contents there
-    pProcessor.debug_setRandomContents(3);
-    std::cout << "memory cost of one pixel: " << std::to_string(sizeof(ImageRGBd::PixelType)) << std::endl;
+    pProcessor.debug_initializeRandomContents();
+    std::cout << "memory cost of one pixel: " << std::to_string(sizeof(ImageRGBu8::PixelType)) << std::endl;
     std::cout << "total memory cost: " << std::to_string(pProcessor.analysis_getGPUMemoryCost()) << std::endl;
 
     unsigned k=0;
@@ -322,10 +326,10 @@ int test_contentExchangeFiltering(int argc, char **argv)
     //TEST 1: EVERY CONTENTS OF EVERY PATCH, + EVERY ALPHA OF EVERY PATCH, + EVERY POSSIBLE COMBINATION PATCH+CONTENT
 
     if(pProcessor.filteringMode() == ANISOTROPIC)
-    for(typename ContentExchange::PatchProcessor<ImageRGBd>::iterator it=pProcessor.begin(); it!=pProcessor.end(); ++it, ++k)
+    for(typename ContentExchange::PatchProcessor<ImageRGBu8>::iterator it=pProcessor.begin(); it!=pProcessor.end(); ++it, ++k)
     {
-        ImageRGBAd im_out;
-        typename ContentExchange::Patch<ImageRGBd> &patch=(*it);
+        ImageRGBAu8 im_out;
+        typename ContentExchange::Patch<ImageRGBu8> &patch=(*it);
         for(unsigned i=0; i<pProcessor.numberMipmapsWidth(); ++i)
             for(unsigned j=0; j<pProcessor.numberMipmapsHeight(); ++j)
             {
@@ -333,20 +337,20 @@ int test_contentExchangeFiltering(int argc, char **argv)
                                  + "_mw" + std::to_string(i) + "_mh" + std::to_string(j) + ".png");
                 for(unsigned l=0; l<patch.nbContents(); ++l)
                 {
-                    const ImageRGBd &contentMipmap=patch.contentAt(l).mipmap(i, j);
-                    IO::save01_in_u8(contentMipmap, out_dir + "content_p" + std::to_string(k) + "_c" + std::to_string(l)
+                    const ImageRGBu8 &contentMipmap=patch.contentAt(l).mipmap(i, j);
+                    contentMipmap.save(out_dir + "content_p" + std::to_string(k) + "_c" + std::to_string(l)
                                      + "_mw" + std::to_string(i) + "_mh" + std::to_string(j) + ".png");
                     im_out.initItk(contentMipmap.width(), contentMipmap.height(), true);
-                    contentMipmap.for_all_pixels([&] (const ImageRGBd::PixelType &pix, int x, int y)
+                    contentMipmap.for_all_pixels([&] (const ImageRGBu8::PixelType &pix, int x, int y)
                     {
-                        ImageRGBAd::PixelType p;
+                        ImageRGBAu8::PixelType p;
                         p.SetRed(pix.GetRed());
                         p.SetGreen(pix.GetGreen());
                         p.SetBlue(pix.GetBlue());
                         p.SetAlpha(patch.mipmap(i, j).pixelAbsolute(x, y));
                         im_out.pixelAbsolute(x, y)=p;
                     });
-                    IO::save01_in_u8(im_out, out_dir + "mipmap_p" + std::to_string(k) + "_c" + std::to_string(l)
+                    im_out.save(out_dir + "mipmap_p" + std::to_string(k) + "_c" + std::to_string(l)
                                      + "_mw" + std::to_string(i) + "_mh" + std::to_string(j) + ".png");
                 }
             }
@@ -354,14 +358,14 @@ int test_contentExchangeFiltering(int argc, char **argv)
 
     //TEST 2 : OUTPUT MIPMAP WITH EVERY DEFAULT CONTENTS
 
-    ImageRGBd im_out;
-    Mipmap<ImageRGBd> outputMipmap(pProcessor.generate(512, 512));
+    ImageRGBu8 im_out;
+    Mipmap<ImageRGBu8> outputMipmap(pProcessor.generate(512, 512));
 
     size_t s=0;
     for(unsigned m=0; m<outputMipmap.numberMipmapsWidth(); ++m)
     {
         if(outputMipmap.mode()==ISOTROPIC)
-            s+=outputMipmap.mipmap(m, m).width()*outputMipmap.mipmap(m, m).height()*sizeof(ImageRGBd::PixelType);
+            s+=outputMipmap.mipmap(m, m).width()*outputMipmap.mipmap(m, m).height()*sizeof(ImageRGBu8::PixelType);
         else
             for(unsigned l=0; l<outputMipmap.numberMipmapsHeight(); ++l)
             {
@@ -371,24 +375,36 @@ int test_contentExchangeFiltering(int argc, char **argv)
                 std::cout << "The number of texture access for computing this mipmap is " << std::to_string(access)
                           << ", which means there are " << std::to_string(access/(double(outputMipmap.mipmap(m, l).width()*outputMipmap.mipmap(m, l).height())))
                           << " reads per pixel, in mean." << std::endl;
-                s+=outputMipmap.mipmap(m, l).width()*outputMipmap.mipmap(m, l).height()*sizeof(ImageRGBd::PixelType);
+                s+=outputMipmap.mipmap(m, l).width()*outputMipmap.mipmap(m, l).height()*sizeof(ImageRGBu8::PixelType);
             }
     }
 
     std::cout << "Classic mipmap's memory cost: " << s << std::endl;
 
     outputMipmap.fullMipmap(im_out);
-    IO::save01_in_u8(im_out, std::string(MY_PATH)+"contentMipmaps/_fullMipmap.png");
+//    IO::save01_in_u8(im_out, std::string(MY_PATH)+"contentMipmaps/_fullMipmap.png");
+//    outputMipmap.setTexture(im_in);
+//    outputMipmap.generate();
+//    outputMipmap.fullMipmap(im_out);
+//    IO::save01_in_u8(im_out, std::string(MY_PATH)+"contentMipmaps/_fullMipmapOfInput.png");
+
+//    ContentExchange::Atlas<ImageRGBu8> atlas(pProcessor);
+//    atlas.generate(1);
+//    im_out = atlas.generatedImage();
+
+//    IO::save01_in_u8(im_out, std::string(MY_PATH) + "contentMipmaps/_atlasOffline.png");
+
+    im_out.save(std::string(MY_PATH)+"contentMipmaps/_fullMipmap.png");
     outputMipmap.setTexture(im_in);
     outputMipmap.generate();
     outputMipmap.fullMipmap(im_out);
-    IO::save01_in_u8(im_out, std::string(MY_PATH)+"contentMipmaps/_fullMipmapOfInput.png");
 
-    ContentExchange::Atlas<ImageRGBd> atlas(pProcessor);
+    im_out.save(std::string(MY_PATH)+"contentMipmaps/_fullMipmapOfInput.png");
+    ContentExchange::Atlas<ImageRGBu8> atlas(pProcessor);
     atlas.generate(1);
     im_out = atlas.generatedImage();
 
-    IO::save01_in_u8(im_out, std::string(MY_PATH) + "contentMipmaps/_atlasOffline.png");
+    im_out.save(std::string(MY_PATH) + "contentMipmaps/_atlasOffline.png");
 
     return 0;
 }
