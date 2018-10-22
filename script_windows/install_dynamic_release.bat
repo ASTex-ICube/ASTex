@@ -41,8 +41,14 @@ cmake -G %SOLUTION% -DCMAKE_CONFIGURATION_TYPES="Release" -DCMAKE_PREFIX_PATH=%I
 
 copy %ITK_SRC:/=\%\Modules\ThirdParty\PNG\src\itkpng\pnglibconf.h %ITK_INCLUDES_R:/=\%\itkpng\
 
+echo set PATH=%INSTALL_REL%\bin;%%PATH%% >launch1.bat
+echo call %IDE% ASTex.sln >>launch_vs.bat
+
+
 echo You can remove build-zlib-release build-ilmbase-dyn-release build-openexr-dyn-release build-itk-dyn-release
 
 cmake-gui . 
 
 pause
+
+
