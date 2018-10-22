@@ -45,7 +45,21 @@ set (LIB_INCLUDE
 	region_growing/neighborhood.h
 	region_growing/region_growing.h
 	saliency/contrast_based_saliency.h
-	saliency/permutohedral_lattice.h
+        saliency/permutohedral_lattice.h
+
+        mipmap.h
+        histogram.h
+        rpn_utils.h
+        texton_io.h
+        imageviewer.h
+        ContentExchange/atlas.h
+        ContentExchange/content.h
+        ContentExchange/patch.h
+        ContentExchange/patchProcessor.h
+        Stamping/sampler.h
+        Stamping/stamp.h
+        Stamping/stamper.h
+        PCTS/pcts.h
 )
 
 set (LIB_SRC
@@ -62,6 +76,10 @@ set (LIB_SRC
 	distances_maps.cpp
 	pca.cpp
 	thread_pool.cpp
+
+        texton_io.cpp
+        Stamping/sampler.cpp
+        rpn_utils.cpp
 )
 
 add_library( ${PROJECT_NAME} ${LIB_INCLUDE} ${LIB_SRC})

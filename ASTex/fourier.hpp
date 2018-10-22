@@ -183,6 +183,40 @@ void randomPhase(ImageSpectrald& phase, const MASK& mask, bool call_srand)
 }
 
 
+template<typename MASK>
+int crossCorrelation_full_size(const ImageRGBd& input, ImageGrayd& acorr, const MASK& mask, int channel1, int channel2)
+{
+    const int im_w = input.width();
+    const int im_h = input.height();
+    const int T = acorr.height();
+    assert (T==acorr.width() && T==acorr.height() && T==input.width() && T==input.height());
+
+    long int mask_size = 0;
+    for (int y = 0; y < im_h; ++y)
+        for (int x=0; x < im_w; ++x)
+            if (mask(x,y))
+                ++mask_size;
+
+    // compute cross-correlation
+    acorr.for_all_pixels([&] (double& P, int dx, int dy)
+    {
+        double v = 0;
+
+        input.for_all_pixels([&] (int x, int y)
+        {
+            if(mask(x,y) && mask((x+dx)%im_w,(y+dy)%im_h))
+            {
+                v += input.pixelAbsolute(x,y)[channel1]
+                  *  input.pixelAbsolute((x+dx)%im_w,(y+dy)%im_h)[channel2];
+            }
+        });
+
+        P = v / mask_size * T;
+    });
+
+    return mask_size;
+}
+
 
 template<typename MASK>
 int autoCorrelation_full_size(const ImageGrayd& input, ImageGrayd& acorr, const MASK& mask)
