@@ -745,7 +745,7 @@ void app_key_pressed(int /*code*/, char /*key*/,int /*id*/)
 bool test_overlap()
 {
 	ImageRGBu8 im;
-	im.load("/tmp/melon.png");
+	im.load("/tmp/ASTex_data/quilting_input8.png");
 	im.copy_pixels(gen_index(100,10), im, gen_region(10,10,20,200));
 	im.copy_pixels(gen_index(130,10), im, gen_region(10,10,20,200));
 	im.copy_pixels(gen_index(160,10), im, gen_region(10,10,20,200));
@@ -807,7 +807,7 @@ int main(int argc, char** argv)
 	QApplication app(argc, argv);
 
 	ImageRGBu8 im;
-	im.load("/tmp/melon.png");
+	im.load("/tmp/ASTex_data/quilting_input8.png");
 
 
 	auto start_chrono = std::chrono::system_clock::now();
