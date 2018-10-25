@@ -9,12 +9,9 @@ include(${ITK_USE_FILE})
 find_package(OpenMP QUIET)
 
 
-set ( ASTEX_LIBRARIES ${ITK_LIBRARIES} ${FFTW_LIBRARIES} ${PNG_LIBRARIES} ${OPENEXR_LIBRARIES} )
-if (NOT(MSVC OR APPLE))
-	set ( ASTEX_LIBRARIES ${ASTEX_LIBRARIES} -pthread )
-endif()
+add_library( ${PROJECT_NAME} "")
 
-set (LIB_INCLUDE
+target_sources (${PROJECT_NAME} PRIVATE 
 	internal.h
 	image_common.h
 	image_gray.h
@@ -27,7 +24,8 @@ set (LIB_INCLUDE
 	colorspace_filters.h
 	mask.h
 	easy_io.h
-	fourier.h fourier.hpp
+	fourier.h
+	fourier.hpp
 	region_traversor.h
 	local_spectrum.h
 	utils.h
@@ -39,15 +37,30 @@ set (LIB_INCLUDE
 	pca.h
 	dll.h
 	thread_pool.h
+	store.h
 	slic.h
 	region_growing/connected_components.h
 	region_growing/neighborhood.h
 	region_growing/region_growing.h
 	saliency/contrast_based_saliency.h
-	saliency/permutohedral_lattice.h
+        saliency/permutohedral_lattice.h
+
+        mipmap.h
+        histogram.h
+        rpn_utils.h
+        texton_io.h
+        imageviewer.h
+        ContentExchange/atlas.h
+        ContentExchange/content.h
+        ContentExchange/patch.h
+        ContentExchange/patchProcessor.h
+        Stamping/sampler.h
+        Stamping/stamp.h
+        Stamping/stamper.h
+        PCTS/pcts.h
 )
 
-set (LIB_SRC
+target_sources (${PROJECT_NAME} PRIVATE
 	png_indexed_io.cpp
 	mask.cpp
 	easy_io.cpp
@@ -61,9 +74,21 @@ set (LIB_SRC
 	distances_maps.cpp
 	pca.cpp
 	thread_pool.cpp
+
+        texton_io.cpp
+        Stamping/sampler.cpp
+        rpn_utils.cpp
 )
 
-add_library( ${PROJECT_NAME} ${LIB_INCLUDE} ${LIB_SRC})
+target_include_directories(${PROJECT_NAME} PUBLIC ${ITK_INCLUDE_DIRS} ${PNG_INCLUDE_DIRS} ${OPENEXR_INCLUDE_DIRS} ${FFTW_INCLUDES})
+target_include_directories(${PROJECT_NAME} PUBLIC $<INSTALL_INTERFACE:include> $<BUILD_INTERFACE:${ASTEX_SOURCE_DIR}>)
+
+
+set ( ASTEX_LIBRARIES ${ITK_LIBRARIES} ${FFTW_LIBRARIES} ${PNG_LIBRARIES} ${OPENEXR_LIBRARIES} )
+if (NOT(MSVC OR APPLE))
+	set ( ASTEX_LIBRARIES ${ASTEX_LIBRARIES} -pthread )
+endif()
+
 
 if(MSVC)
   target_compile_definitions(${PROJECT_NAME} PUBLIC -D_USE_MATH_DEFINES -D_SCL_SECURE_NO_WARNINGS -D_CRT_SECURE_NO_WARNINGS -D_SECURE_SCL=0 -D_SECURE_SCL_THROWS=0)
@@ -81,8 +106,9 @@ else()
   if (${OpenMP_CXX_FLAGS})
       target_compile_options(${PROJECT_NAME} PUBLIC ${OpenMP_CXX_FLAGS})
   endif()
-#  target_compile_options(${PROJECT_NAME} PUBLIC -Wall -Wextra -Wno-unknown-pragmas -Wno-missing-braces -Wno-deprecated-register -fPIC )
-target_compile_options(${PROJECT_NAME} PUBLIC -Wall -Wextra -Wno-unknown-pragmas -Wno-missing-braces -fPIC )
+
+  target_compile_options(${PROJECT_NAME} PUBLIC -Wall -Wextra -Wno-unknown-pragmas -Wno-missing-braces -fPIC )
+  
   if (${ASTEX_USE_CPP14})
       target_compile_options(${PROJECT_NAME} PUBLIC -std=c++14 )
   else()
@@ -93,22 +119,7 @@ endif()
 
 target_compile_definitions(${PROJECT_NAME} PUBLIC "${PNG_DEFINITION}")
 
-
-#set_target_properties(${PROJECT_NAME} PROPERTIES DEBUG_POSTFIX "_d")
-
-
-target_include_directories( ${PROJECT_NAME}  BEFORE PUBLIC ${ITK_INCLUDE_DIRS} )
-
-target_include_directories(${PROJECT_NAME} PUBLIC
-$<INSTALL_INTERFACE:include>
-${PNG_INCLUDE_DIRS} ${OPENEXR_INCLUDE_PATHS} ${FFTW_INCLUDES})
-
-# put local ASTex separate and before to ensure use of local before installed
-target_include_directories(${PROJECT_NAME} BEFORE PUBLIC
-$<BUILD_INTERFACE:${ASTEX_SOURCE_DIR}>)
-
 target_link_libraries(${PROJECT_NAME} PUBLIC ${ASTEX_LIBRARIES})
-
 
 file(GLOB HEADERS "." "*.h" "*.hpp")
 install(FILES ${HEADERS} DESTINATION include/ASTex/)

@@ -45,3 +45,4 @@ echo You can remove build-zlib-debug build-ilmbase-static-debug build-openexr-st
 cmake-gui . 
 
 pause
+

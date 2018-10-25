@@ -32,6 +32,20 @@
 
 namespace ASTex
 {
+
+template <typename PIX>
+inline auto NICE(const PIX& p) -> typename std::enable_if<pixel_traits<PIX>::dim ==4, typename Eigen::Matrix<double,1,pixel_traits<PIX>::dim>>::type
+{
+	return eigenPixel<double>(p).transpose();
+}
+
+template <typename PIX>
+inline auto NICE(const PIX& p) -> typename std::enable_if<pixel_traits<PIX>::dim == 1, PIX>::type
+{
+  return double(p);
+}
+
+
 namespace IO
 {
 

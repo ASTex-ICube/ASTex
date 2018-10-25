@@ -34,6 +34,10 @@
 #include<windows.h>
 #endif
 
+#include <ASTex/image_gray.h>
+#include <ASTex/image_rgb.h>
+#include <ASTex/image_rgba.h>
+
 namespace ASTex
 {
 
@@ -153,25 +157,25 @@ void image_expo (const ISRC& src, IDST& dst, double dev)
 }
 
 template <typename IMG, typename MASK>
-typename IMG::ASTexPixelType compute_mean(const IMG& img, const MASK& mask)
+typename IMG::PixelType compute_mean(const IMG& img, const MASK& mask)
 {
-	using Pix = typename IMG::ASTexPixelType;
+	using Pix = typename IMG::DoublePixelEigen;
 
 	Pix mean(0);
 	long int nbpix = 0;
 
 	img.for_all_pixels([&] (const Pix& p)
 	{
-		mean += p;
+		mean += eigenPixel<double>(p);
 		nbpix++;
 	}, mask);
 
 	mean /= nbpix;
-	return mean;
+	return IMG::itkPixel(mean);
 }
 
 template <typename IMG>
-typename IMG::ASTexPixelType compute_mean(const IMG& img)
+typename IMG::PixelType compute_mean(const IMG& img)
 {
 	return compute_mean(img,[](int,int){return true;});
 }
@@ -182,9 +186,9 @@ typename IMG::ASTexPixelType compute_mean(const IMG& img)
 
 template <typename IMG, typename MASK, typename SUP>
 auto compute_max(const IMG& img, const MASK& mask, const SUP& sup) ->
-		typename IMG::ASTexPixelType
+		typename IMG::PixelType
 {
-	using Pix = typename IMG::ASTexPixelType;
+	using Pix = typename IMG::PixelType;
 
 	Pix max_val = img.pixelAbsolute(0,0);
 	img.for_all_pixels([&](const Pix& p)
@@ -199,16 +203,16 @@ auto compute_max(const IMG& img, const MASK& mask, const SUP& sup) ->
 
 template <typename IMG, typename MASK>
 auto compute_max(const IMG& img, const MASK& mask) ->
-		typename std::enable_if<std::is_arithmetic<typename IMG::ASTexPixelType>::value, typename IMG::ASTexPixelType>::type
+		typename std::enable_if<std::is_arithmetic<typename IMG::PixelType>::value, typename IMG::PixelType>::type
 {
-	using Pix = typename IMG::ASTexPixelType;
+	using Pix = typename IMG::PixelType;
 	return compute_max(img, mask, [](const Pix& p, const Pix& q){return p>q;});
 }
 
 template <typename IMG>
-typename IMG::ASTexPixelType compute_max(const IMG& img)
+typename IMG::PixelType compute_max(const IMG& img)
 {
-	using Pix = typename IMG::ASTexPixelType;
+	using Pix = typename IMG::PixelType;
 	return compute_max(img,
 					[](int,int){return true;},
 					[](const Pix& p, const Pix& q){return p>q;});
@@ -220,9 +224,9 @@ typename IMG::ASTexPixelType compute_max(const IMG& img)
 
 template <typename IMG, typename MASK, typename SUP>
 auto compute_min(const IMG& img, const MASK& mask, const SUP& inf) ->
-		typename IMG::ASTexPixelType
+		typename IMG::PixelType
 {
-	using Pix = typename IMG::ASTexPixelType;
+	using Pix = typename IMG::PixelType;
 
 	Pix min_val = img.pixelAbsolute(0,0);
 	img.for_all_pixels([&](const Pix& p)
@@ -239,14 +243,14 @@ template <typename IMG, typename MASK>
 auto compute_min(const IMG& img, const MASK& mask) ->
 		typename std::enable_if<std::is_arithmetic<typename IMG::ASTexPixelType>::value, typename IMG::ASTexPixelType>::type
 {
-	using Pix = typename IMG::ASTexPixelType;
+	using Pix = typename IMG::PixelType;
 	return compute_min(img, mask, [](const Pix& p, const Pix& q){return p<q;});
 }
 
 template <typename IMG>
-typename IMG::ASTexPixelType compute_min(const IMG& img)
+typename IMG::PixelType compute_min(const IMG& img)
 {
-	using Pix = typename IMG::ASTexPixelType;
+	using Pix = typename IMG::PixelType;
 	return compute_min(img,
 					[](int,int){return true;},
 					[](const Pix& p, const Pix& q){return p<q;});

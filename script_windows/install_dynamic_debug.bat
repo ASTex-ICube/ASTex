@@ -35,13 +35,18 @@ if exist build-astex-dyn-debug del /S /Q build-astex-dyn-debug
 mkdir build-astex-dyn-debug
 cd build-astex-dyn-debug
 cmake -G %SOLUTION% -DCMAKE_CONFIGURATION_TYPES="Debug" -DCMAKE_PREFIX_PATH=%INSTALL_DBG% ^
- -DPNG_PNG_INCLUDE_DIR=%ITK_INCLUDES_R%/itkpng -DPNG_LIBRARY_DBGEASE=%INSTALL_DBG%/lib/itkpng-%ITK_VER%.lib ^
+ -DPNG_PNG_INCLUDE_DIR=%ITK_INCLUDES_D%/itkpng -DPNG_LIBRARY_DEBUG=%INSTALL_DBG%/lib/itkpng-%ITK_VER%.lib ^
  -DCMAKE_INSTALL_PREFIX=%INSTALL_DBG% -DBUILD_SHARED_LIBS=ON %ASTEX_SRC%  || exit /b
 
-copy %ITK_SRC:/=\%\Modules\ThirdParty\PNG\src\itkpng\pnglibconf.h %ITK_INCLUDES_R:/=\%\itkpng\
+copy %ITK_SRC:/=\%\Modules\ThirdParty\PNG\src\itkpng\pnglibconf.h %ITK_INCLUDES_D:/=\%\itkpng\
+
+echo set PATH=%INSTALL_DBG%\bin;%%PATH%% >launch1.bat
+echo call %IDE% ASTex.sln >>launch_vs.bat
 
 echo You can remove build-zlib-debug build-ilmbase-dyn-debug build-openexr-dyn-debug build-itk-dyn-debug
 
 cmake-gui . 
 
 pause
+
+
