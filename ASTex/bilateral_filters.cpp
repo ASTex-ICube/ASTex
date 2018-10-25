@@ -175,7 +175,7 @@ void ASTEX_API frequency_bilateral_filter(const ImageRGBd& input, ImageRGBd& out
 	input.for_all_pixels([&] (int i, int j)
 	{
 		double sumWeight = 0;
-		RGBd sum_col(0,0,0);
+		ImageRGBd::DoublePixelEigen sum_col(0,0,0);
 
 		for(int y = left_step; y <= right_step; y++)
 		{
@@ -194,12 +194,12 @@ void ASTEX_API frequency_bilateral_filter(const ImageRGBd& input, ImageRGBd& out
 					currWeight *= std::exp(-(freqDist/(cd*cd*2)));
 
 					sumWeight += currWeight;
-					sum_col += input.pixelAbsolute(i+x,j+y) * currWeight;
+					sum_col += ImageRGBd::DoublePixelEigen(input.pixelEigenAbsolute(i+x,j+y)) * currWeight;
 				}
 			}
 		}
 		sum_col /=sumWeight;
-		output.pixelAbsolute(i,j) = sum_col;
+		output.pixelEigenAbsolute(i,j) = sum_col;
 	});
 
 }

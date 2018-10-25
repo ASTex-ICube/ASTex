@@ -48,3 +48,5 @@ echo You can remove build-zlib-debug build-ilmbase-dyn-debug build-openexr-dyn-d
 cmake-gui . 
 
 pause
+
+

@@ -37,12 +37,27 @@ target_sources (${PROJECT_NAME} PRIVATE
 	pca.h
 	dll.h
 	thread_pool.h
+	store.h
 	slic.h
 	region_growing/connected_components.h
 	region_growing/neighborhood.h
 	region_growing/region_growing.h
 	saliency/contrast_based_saliency.h
-	saliency/permutohedral_lattice.h
+        saliency/permutohedral_lattice.h
+
+        mipmap.h
+        histogram.h
+        rpn_utils.h
+        texton_io.h
+        imageviewer.h
+        ContentExchange/atlas.h
+        ContentExchange/content.h
+        ContentExchange/patch.h
+        ContentExchange/patchProcessor.h
+        Stamping/sampler.h
+        Stamping/stamp.h
+        Stamping/stamper.h
+        PCTS/pcts.h
 )
 
 target_sources (${PROJECT_NAME} PRIVATE
@@ -59,6 +74,10 @@ target_sources (${PROJECT_NAME} PRIVATE
 	distances_maps.cpp
 	pca.cpp
 	thread_pool.cpp
+
+        texton_io.cpp
+        Stamping/sampler.cpp
+        rpn_utils.cpp
 )
 
 target_include_directories(${PROJECT_NAME} PUBLIC ${ITK_INCLUDE_DIRS} ${PNG_INCLUDE_DIRS} ${OPENEXR_INCLUDE_DIRS} ${FFTW_INCLUDES})

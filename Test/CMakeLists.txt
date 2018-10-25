@@ -8,6 +8,7 @@ set(exec_list
 	test_exr_io
 	test_super_pixel
 	test_saliency
+	nlutz_tests
 	)
 
 foreach(exec ${exec_list})

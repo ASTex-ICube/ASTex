@@ -38,10 +38,11 @@ cmake -G %SOLUTION% -DCMAKE_CONFIGURATION_TYPES="Debug" -DCMAKE_PREFIX_PATH=%INS
  -DPNG_PNG_INCLUDE_DIR=%ITK_INCLUDES_D%/itkpng -DPNG_LIBRARY_DEBUG=%INSTALL_DBG%/lib/itkpng-%ITK_VER%.lib ^
  -DCMAKE_INSTALL_PREFIX=%INSTALL_DBG% %ASTEX_SRC% || exit /b
 
-copy %ITK_SRC:/=\%\Modules\ThirdParty\PNG\src\itkpng\pnglibconf.h %ITK_INCLUDES_D:/=\%\itkpng\
+copy %ITK_SRC:/=\%\Modules\ThirdParty\PNG\src\itkpng\pnglibconf.h %ITK_INCLUDES_R:/=\%\itkpng\
 
 echo You can remove build-zlib-debug build-ilmbase-static-debug build-openexr-static-debug build-itk-static-debug
 
 cmake-gui . 
 
 pause
+

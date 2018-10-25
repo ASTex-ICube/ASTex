@@ -50,3 +50,5 @@ echo You can remove build-zlib-release build-ilmbase-dyn-release build-openexr-d
 cmake-gui . 
 
 pause
+
+

@@ -152,8 +152,7 @@ int main(int argc, char** argv)
     std::string source_dir = argv[1];
 
     // Get the name of the file without extention en creation the folder for the res
-    std::string name_file = ASTex::IO::remove_ext(ASTex::IO::remove_path(source_dir));
-    std::string out_dir = name_file+"_perio_smooth/";
+	std::string out_dir = ASTex::IO::remove_ext(source_dir) +"_perio_smooth/";
 
     ASTex::create_directory(out_dir);
 

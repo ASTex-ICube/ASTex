@@ -29,10 +29,87 @@
 
 namespace ASTex
 {
+
+
+template <typename IMG>
+inline double ssd_error_pixel(const typename IMG::PixelType& A, const typename IMG::PixelType& B)
+{
+	auto pA = IMG::template normalized<double>(A);
+	auto pB = IMG::template normalized<double>(B);
+	return (pB-pA).squaredNorm();
+}
+
+
+
+template <typename IMG, typename EF>
+auto computeErrorOverlap(const IMG& imgA, const Region& rA, const IMG& imgB, const Region& rB, const EF& error_func)
+-> typename std::enable_if<(function_traits<EF>::arity==2), double>::type
+{
+	assert_msg(rA.GetSize() == rB.GetSize(),"computeErrorOverlap: regions must have same size");
+
+	// shift between rA & rB
+	int dx = rB.GetIndex()[0] - rA.GetIndex()[0];
+	int dy = rB.GetIndex()[1] - rA.GetIndex()[1];
+
+	// mysterious bug // version is very slow with clang & VS
+#ifdef __GNUG__
+	// one error sum for each thread
+	std::vector<double> totals(nb_launched_threads(),0.0);
+	imgA.parallel_for_region_pixels(rA, [&imgB, &totals, dx, dy, &error_func] (const typename IMG::PixelType& P,int x, int y, uint16_t t)
+	{
+		const auto& Q = imgB.pixelAbsolute(x+dx,y+dy);
+		totals[t] += error_func(P,Q);
+	});
+	double total=0.0;
+	for(double t: totals)
+		total+= t;
+#else
+	double total=0.0;
+	imgA.for_region_pixels(rA, [&] (const typename IMG::PixelType& P,int x, int y)
+	{
+		const auto& Q = imgB.pixelAbsolute(x+dx,y+dy);
+		total += error_func(P,Q);
+	});
+#endif
+	return total/(rA.GetSize()[0]*rA.GetSize()[1]);
+}
+
+template <typename IMG, typename EF>
+auto computeErrorOverlap(const IMG& imgA, const Region& rA, const IMG& imgB, const Region& rB, const EF& error_func)
+-> typename std::enable_if<(function_traits<EF>::arity==4), double>::type
+{
+	assert_msg(rA.GetSize() == rB.GetSize(),"computeErrorOverlap: regions must have same size");
+
+	int dx = rB.GetIndex()[0] - rA.GetIndex()[0];
+	int dy = rB.GetIndex()[1] - rA.GetIndex()[1];
+
+	// mysterious bug // version is very slow with clang & VS
+#ifdef __GNUG__
+	std::vector<double> totals(nb_launched_threads(),0.0);
+	imgA.parallel_for_region_pixels(rA, [&] (int x, int y, uint16_t t)
+	{
+		totals[t] += error_func(imgA,gen_index(x,y),imgB,gen_index(x+dx,y+dy));
+	});
+	double total=0.0;
+	for(double t: totals)
+		total+= t;
+#else
+	double total=0.0;
+	imgA.for_region_pixels(rA, [&] (int x, int y)
+	{
+		total += error_func(imgA,gen_index(x,y),imgB,gen_index(x+dx,y+dy));
+	});
+#endif
+
+	return total/(rA.GetSize()[0]*rA.GetSize()[1]);
+}
+
+
+
 /**
  *
- *  DIR: 0=Horizontal
- *       1=Vertical
+ *  DIR: 0=Horizontal  -
+ *       1=Vertical    |
  */
 template<typename IMG, int DIR>
 class MinCutBuffer
@@ -40,17 +117,18 @@ class MinCutBuffer
 	using PIX = typename IMG::PixelType;
 	using T = typename IMG::DataType;
 
-	double* data_err_;
-	double* data_err_cum_;
-	int length_;
-	int overlay_;
-
 	const IMG& imA_;
 	const IMG& imB_;
 
+	int length_;
+	int overlay_;
+
+	std::vector<double> data_err_;
+	std::vector<double> data_err_cum_;
+
 	std::vector<int> minPos_;
 
-	std::function<double(const IMG&, const Index&, const IMG&, const Index&)> error_func_;
+	std::function<double(const PIX&, const PIX&)> error_func_;
 
 public:
 	/**
@@ -63,15 +141,15 @@ public:
 	MinCutBuffer(const IMG& imA, const IMG& imB, int tw, int to):
 		imA_(imA), imB_(imB),
 		length_(tw),overlay_(to),
+		data_err_(tw*to),
+		data_err_cum_(tw*to),
 		minPos_(tw)
 	{
-		data_err_ = new double[2*length_*overlay_];
-		data_err_cum_ = data_err_+ length_*overlay_;
+		error_func_ = ssd_error_pixel<IMG>;
 	}
 
 	~MinCutBuffer()
 	{
-		delete[] data_err_;
 	}
 
 	template <typename ERROR_PIX>
@@ -158,28 +236,27 @@ protected:
 		// compute initial error
 		auto dir_index = [] (int i,int j) {if (DIR==1) return gen_index(i,j); else return gen_index(j,i);};
 
-
 		// compute initial error
 
 		for (int j=0; j<length_; ++j)
 			for (int i=0; i<overlay_; ++i)
 			{
 				Index inc = dir_index(i,j);
-				error_local(i,j) = error_func_(imA_,posA+inc ,imB_,posB+inc);
+				error_local(i,j) = error_func_(imA_.pixelAbsolute(posA+inc), imB_.pixelAbsolute(posB+inc));
 			}
 
 		// compute cumulative error
 
 		// first row
-		for(int i=0;i<length_;++i)
+		for(int i=0;i<overlay_;++i)
 			error_cumul(i,0) = error_local(i,0);
 
 		// others rows
-		for(int j=1;j<overlay_;++j)
+		for(int j=1;j<length_;++j)
 		{
 			error_cumul(0,j) = error_local(0,j) + std::min(error_cumul(0,j-1),error_cumul(1,j-1));
 			int i=1;
-			while (i<length_-1)
+			while (i<overlay_-1)
 			{
 				error_cumul(i,j) = error_local(i,j) + std::min( std::min(error_cumul(i-1,j-1),error_cumul(i,j-1)), error_cumul(i+1,j-1)) ;
 				++i;
@@ -188,7 +265,7 @@ protected:
 		}
 
 		// up to store local position of min error cut
-		int i=overlay_-1;
+		int i=length_-1;
 
 		minPos_[i] = minOf(i);
 		while (i>0)
@@ -198,53 +275,67 @@ protected:
 		}
 	}
 
+public:
 	void fusion(const Index& posA, const Index& posB, IMG& dst, const Index& pos)
 	{
 		pathCut(posA, posB);
 
 		auto dir_index = [] (int i,int j) {if (DIR==1) return gen_index(i,j); return gen_index(j,i);};
 
-		int y = pos[DIR];
-		for(int i=0; i<length_;++i)
+		for(int j=0; j<length_;++j)
 		{
-			int x = pos[1-DIR];
-			int j=0;
-			while(j<minPos_[i])
+			int i=0;
+			for(; i< minPos_[j]-2;++i)
+				dst.pixelAbsolute(pos+dir_index(i,j)) = imA_.pixelAbsolute(posA+dir_index(i,j));
+
+			if (i == minPos_[j]-2)
 			{
-				dst.pixel_absolute(dir_index(x,y)) = imA_.pixel_absolute(dir_index(x,y));
-				++x;
-				++j;
+				typename IMG::DoublePixelEigen p = imA_.pixelEigenAbsolute(posA+dir_index(i,j));
+				typename IMG::DoublePixelEigen q = imB_.pixelEigenAbsolute(posB+dir_index(i,j));
+				dst.pixelEigenAbsolute(pos+dir_index(i,j)) = (15*p+q)/16;
+				++i;
 			}
-			dst.pixel_absolute(dir_index(x,y)) = blend(imA_.pixel_absolute(dir_index(x,y)),imB_.pixel_absolute(dir_index(x,y)),0.5);
-			j++;
-			while(j<overlay_)
+
+			if (i == minPos_[j]-1)
 			{
-				dst.pixel_absolute(dir_index(x,y)) = imB_.pixel_absolute(dir_index(x,y));
-				++x;
-				++j;
+				typename IMG::DoublePixelEigen p = imA_.pixelEigenAbsolute(posA+dir_index(i,j));
+				typename IMG::DoublePixelEigen q = imB_.pixelEigenAbsolute(posB+dir_index(i,j));
+				dst.pixelEigenAbsolute(pos+dir_index(i,j)) = (3*p+q)/4;
+				++i;
 			}
+
+			if (i == minPos_[j])
+			{
+				typename IMG::DoublePixelEigen p = imA_.pixelEigenAbsolute(posA+dir_index(i,j));
+				typename IMG::DoublePixelEigen q = imB_.pixelEigenAbsolute(posB+dir_index(i,j));
+				dst.pixelEigenAbsolute(pos+dir_index(i,j)) = (p+q)/2;
+				++i;
+			}
+
+			if (i < overlay_)
+			{
+				typename IMG::DoublePixelEigen p = imA_.pixelEigenAbsolute(posA+dir_index(i,j));
+				typename IMG::DoublePixelEigen q = imB_.pixelEigenAbsolute(posB+dir_index(i,j));
+				dst.pixelEigenAbsolute(pos+dir_index(i,j)) = (p+3*q)/4;
+				++i;
+			}
+
+			if (i < overlay_)
+			{
+				typename IMG::DoublePixelEigen p = imA_.pixelEigenAbsolute(posA+dir_index(i,j));
+				typename IMG::DoublePixelEigen q = imB_.pixelEigenAbsolute(posB+dir_index(i,j));
+				dst.pixelEigenAbsolute(pos+dir_index(i,j)) = (p+15*q)/16;
+				++i;
+			}
+
+			for(; i<overlay_;++i)
+				dst.pixelAbsolute(pos+dir_index(i,j)) = imB_.pixelAbsolute(posB+dir_index(i,j));
 		}
 	}
 
 };
 
 
-
-template <typename IMG>
-inline double ssd_error_pixels(const IMG& imA, const Index& iA, const IMG& imB, const Index& iB)
-{
-	const typename IMG::PixelType& P = imA.pixelAbsolute(iA);
-	const typename IMG::PixelType& Q = imB.pixelAbsolute(iB);
-
-	double sum_err2 = 0.0;
-
-	for (uint32_t i=0; i<IMG::NB_CHANNELS; ++i)
-	{
-		double err = IMG::normalized_value(IMG::channel(P,i)) - IMG::normalized_value(IMG::channel(Q,i));
-		sum_err2 += err*err;
-	}
-	return sum_err2;
-}
 
 
 } // namespace ASTex
