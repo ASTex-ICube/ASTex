@@ -6,6 +6,8 @@ set(ASTEX_VERSION_MAJOR 0)
 set(ASTEX_VERSION_MINOR 9)
 set(ASTEX_VERSION_PATCH 0)
 
+set(ENV{PATH}=${CMAKE_PREFIX_PATH};$ENV{PATH})
+
 set(CMAKE_MODULE_PATH  ${CMAKE_SOURCE_DIR}/cmake)
 list(APPEND CMAKE_PREFIX_PATH "${CMAKE_BINARY_DIR}")
 include ( ${CMAKE_SOURCE_DIR}/cmake/utilities.cmake)
@@ -42,6 +44,8 @@ IF(NOT WIN32)
   ENDIF()
 ENDIF()
 
+
+add_definitions(-DTEMPO_PATH=std::string\(\"${ASTEX_TEMPO_PATH}/\"\) )
 
 add_subdirectory( ${ASTEX_SOURCE_DIR}/ASTex )
 

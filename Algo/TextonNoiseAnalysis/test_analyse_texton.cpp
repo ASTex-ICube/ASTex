@@ -33,20 +33,18 @@
 int main(int argc, char** argv)
 {
 
-	if( argc < 3 )
+	if( argc < 2 )
 	{
             std::cerr << "Usage: " << std::endl;
-            std::cerr << argv[0] << " <Source_file ; Outdir >" << std::endl;
+			std::cerr << argv[0] << " < Source_file >" << std::endl;
             return EXIT_FAILURE;
 	}
 
     // Get the arguments
     std::string source_dir = argv[1];
-    std::string out_dir_base = argv[2];
 
     // Get the name of the file without extention en creation the folder for the res
-    std::string name_file = ASTex::IO::remove_ext(ASTex::IO::remove_path(source_dir));
-    std::string out_dir = out_dir_base+name_file+"/";
+	std::string out_dir = ASTex::IO::remove_ext(source_dir) +"_texton/";
 
     ASTex::create_directory(out_dir);
 
