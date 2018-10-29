@@ -255,7 +255,7 @@ typename IMG::ASTexPixelType compute_min(const IMG& img)
 }
 
 template <typename I>
-double mse(const I& i1, const I& i2, int x1, int y1, int x2, int y2, int neighborhoodRadius)
+double mse(const I& i1, const I& i2, int x1, int y1, int x2, int y2, int neighborhoodRadius, int periodicity=false)
 {
     double error=0.0;
     static typename I::PixelType ms_zero;
@@ -265,11 +265,13 @@ double mse(const I& i1, const I& i2, int x1, int y1, int x2, int y2, int neighbo
                             *a_pixi2 = new typename I::DataType[arraySize];
 
     unsigned hit=0;
-    for(int dx=-neighborhoodRadius; dx<=neighborhoodRadius; ++dx)
-        for(int dy=-neighborhoodRadius; dy<=neighborhoodRadius; ++dy)
+    for(int dy=-neighborhoodRadius; dy<=neighborhoodRadius; ++dy)
+        for(int dx=-neighborhoodRadius; dx<=neighborhoodRadius; ++dx)
         {
-            int xx1 = x1+dx, xx2 = x2+dx;
-            int yy1 = y1+dy, yy2 = y2+dy;
+            int xx1 = periodicity ? (x1+dx)%i1.width() : x1+dx;
+            int xx2 = periodicity ? (x2+dx)%i2.width() : x2+dx;
+            int yy1 = periodicity ? (y1+dy)%i1.height() : y1+dy;
+            int yy2 = periodicity ? (y2+dy)%i2.height() : y2+dy;
 
             if(xx1 >= 0 && xx1<i1.width() &&
                xx2 >= 0 && xx2<i2.width() &&
