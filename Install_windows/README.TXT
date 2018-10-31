@@ -2,10 +2,18 @@ New easy install & compilation of ASTex (and dependencies) on Window
 
 Requirements:
 - Visual Studio C++ 2017 / 2015
-- CMake
-- git
+- CMake (in the path)
+- git (in the path)
 - [ninja] optionnal faster compilation (used by default if found in path)
 - [jom] optionnal faster compilation
+
+
+
+Very easy way: double click on installer, answer to questions, and let omputer compile
+
+A launchVS.bat is generated. It allows to launch VS with path included dll dir.
+
+For CMake users, you can directly use CMake
 
 
 Use this CMakeLists.txt to automatically
@@ -32,8 +40,6 @@ Usage
 - Configure
 - Generate
 - Finally open the generated solution (in ASTEX_BUILD)
-
-A launchVS.bat allow to launch VS with path included dll dir.
 
 
 

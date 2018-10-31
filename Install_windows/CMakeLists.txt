@@ -5,18 +5,17 @@ project(ASTex_win_deps LANGUAGES)
 find_program(NINJA ninja)
 find_program(JOM jom)
 
-if (DEFINED NINJA)
+if (NOT ${NINJA} STREQUAL "NINJA-NOTFOUND" )
 	set (GENERATOR "Ninja")
 else ()
-	if(DEFINED JOM)
+	if (NOT ${JOM} STREQUAL "JOM-NOTFOUND" )
 		set (GENERATOR "NMake Makefiles JOM")
 	else()
 		set (GENERATOR "NMake Makefiles")
+		message (STATUS "using ${GENERATOR} you need to be very patient")
 	endif()
 endif()
-message (STATUS ${NINJA})
-message (STATUS ${JOM})
-message (STATUS ${GENERATOR})
+
 
 include(ExternalProject)
 
@@ -48,7 +47,7 @@ else()
 endif()
 
 if (${ADD_POST_TO_DIR})
-	set(ASTEX_BUILD ${ASTEX_BUILD}_${SUB_PREFIX})
+	set(ASTEX_BUILD ${ASTEX_BUILD}/${SUB_PREFIX})
 	set(ASTEX_INSTALL_PREFIX ${ASTEX_INSTALL_PREFIX}/${SUB_PREFIX})
 endif()
 
@@ -101,7 +100,7 @@ ExternalProject_Add(itk
 	CMAKE_ARGS
 	-DCMAKE_BUILD_TYPE:STRING=${BUILD_TYPE}
 	-DITK_USE_SYSTEM_ZLIB:BOOL=ON
-	-DBUILD_SHARED_LIBS:BOOL=ON
+	-DBUILD_SHARED_LIBS:BOOL=${BUILD_SHARED}
 	-DBUILD_TESTING:BOOL=OFF
 	-DINSTALL_GTEST:BOOL=OFF
 	-DZLIB_INCLUDE_DIR:PATH=<INSTALL_DIR>/include
@@ -146,13 +145,13 @@ if (${BUILD_SHARED})
 	if (${CMAKE_GENERATOR} MATCHES "^Visual Studio 15.*")
 		message(STATUS "Generate VS 2017 launcher")
 		file( WRITE ${ASTEX_BUILD}/launchVS.bat 
-			"set PATH=${ASTEX_INSTALL_PREFIX}/bin\n"
+			"set PATH=%PATH%;${ASTEX_INSTALL_PREFIX}/bin\n"
 			"start \"C:/Program Files (x86)/Microsoft Visual Studio/2017/Community/Common7/IDE/devenv.exe\" ASTex.sln")
 	endif()
 	if (${CMAKE_GENERATOR} MATCHES "^Visual Studio 14.*")
 		message(STATUS "Generate VS 2015 launcher")
 		file( WRITE ${ASTEX_BUILD}/launchVS.bat 
-			"set PATH=${ASTEX_INSTALL_PREFIX}/bin\n"
+			"set PATH=%PATH%;${ASTEX_INSTALL_PREFIX}/bin\n"
 			"start \"C:/Program Files (x86)/Microsoft Visual Studio 14.0/Common7/IDE/devenv.exe\" ASTex.sln")
 	endif()
 endif()
