@@ -2,7 +2,7 @@
 #define __CTEXCH_PATCH__H__
 
 #include <ASTex/image_gray.h>
-#include "ASTex/mipmap.h"
+#include <ASTex/mipmap.h>
 //#include "content.h"
 
 namespace ASTex
@@ -48,13 +48,22 @@ public:
     void generate(bool periodicity = true);
 
     /**
+     * @brief setOriginsSize pre-allocates the origin matrix for manual completion.
+     * @param kMax specifies the maximum level of reduction on width
+     * @param lMax specifies the maximum level of reduction on height
+     */
+    void setOriginsSize(unsigned kMax, unsigned lMax);
+
+    /**
      * @brief originAt
      * @pre generate() MUST have been called before calling this function.
-     * @param xPowReduction specifies the level of reduction on width.
-     * @param yPowReduction specifies the level of reduction on height.
+     * @param k specifies the level of reduction on width.
+     * @param l specifies the level of reduction on height.
      * @return the origin of (this) patch, for the given level of reduction.
      */
-    PixelPos originAt(unsigned k, unsigned l) const;
+    const PixelPos &originAt(unsigned k, unsigned l) const;
+
+    PixelPos &originAt(unsigned k, unsigned l);
 
 private:
 
@@ -208,12 +217,26 @@ void MipmapCEPatch::generate(bool periodicity)
     return;
 }
 
-MipmapCEPatch::PixelPos MipmapCEPatch::originAt(unsigned k, unsigned l) const
+void MipmapCEPatch::setOriginsSize(unsigned kMax, unsigned lMax)
+{
+    m_pixelOriginMap.resize(kMax);
+    for(std::vector<std::vector<PixelPos>>::iterator it=m_pixelOriginMap.begin(); it!=m_pixelOriginMap.end(); ++it)
+    {
+        (*it).resize(lMax);
+    }
+}
+
+const MipmapCEPatch::PixelPos &MipmapCEPatch::originAt(unsigned k, unsigned l) const
 {
     size_t xBoundedIndex, yBoundedIndex;
     xBoundedIndex=std::min((size_t)k, numberMipmapsWidth()-1);
     yBoundedIndex=std::min((size_t)l, numberMipmapsHeight()-1);
     return m_pixelOriginMap[xBoundedIndex][yBoundedIndex];
+}
+
+MipmapCEPatch::PixelPos &MipmapCEPatch::originAt(unsigned k, unsigned l)
+{
+    return const_cast<PixelPos &>(static_cast<const MipmapCEPatch*>(this)->originAt(k, l));
 }
 
 //Patch
@@ -250,6 +273,12 @@ public:
      * @return the alpha mipmap for this patch.
      */
     const MipmapCEPatch& alphaMipmap() const {return m_alphaMipmap;}
+
+    /**
+     * @brief alphaMipmap
+     * @return the alpha mipmap for this patch.
+     */
+    MipmapCEPatch& alphaMipmap() {return m_alphaMipmap;}
 
     /**
      * @brief contentAt

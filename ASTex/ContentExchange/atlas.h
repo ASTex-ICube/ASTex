@@ -42,6 +42,8 @@ public:
     void saveOrigins(const std::string &path);
     void loadOrigins(const std::string &path);
 
+    void generateAndSaveAtlas(std::string directory) const;
+
 private:
     class ComparableScorePatches
     {
@@ -74,6 +76,9 @@ private:
 
     const PatchProcessor<I> &m_patchProcessor;
 
+    void _generateFirstTime(int contentId); //function used when origins were not generated yet (hard)
+    void _regenerate(int contentId); //function used when origins were generated (easy)
+
     void init_emplaceAlgorithm(int width, int height);
     bool check_emplace(const I& image, const ImageAlphad &alpha, unsigned x, unsigned y); //check if I can be placed on x, y
     void find_emplace(const I& image, const ImageAlphad &alpha, unsigned &x, unsigned &y); //finds x and y such that I can be placed
@@ -84,19 +89,32 @@ private:
     I m_generativeAtlas;
     ImageGrayb m_occupationMap;
     std::vector<std::vector<std::vector<PixelPos>>> m_origins;
+    bool m_generatedAtLeastOnce;
 };
 
 template<typename I>
 Atlas<I>::Atlas(const PatchProcessor<I> &patchProcessor) :
-    m_patchProcessor(patchProcessor)
+    m_patchProcessor(patchProcessor),
+    m_generatedAtLeastOnce(false)
 {
 }
 
 template<typename I>
 void Atlas<I>::generate(int contentId)
 {
-    //resize origins vector
+    if(!m_generatedAtLeastOnce)
+    {
+        _generateFirstTime(contentId);
+        m_generatedAtLeastOnce = true;
+    }
+    else
+        _regenerate(contentId);
+}
 
+template<typename I>
+void Atlas<I>::_generateFirstTime(int contentId)
+{
+    //resize origins vector
     m_origins.resize(m_patchProcessor.nbPatches());
     for(std::vector<std::vector<std::vector<PixelPos>>>::iterator it=m_origins.begin(); it!=m_origins.end(); ++it)
     {
@@ -107,7 +125,6 @@ void Atlas<I>::generate(int contentId)
             (*it2).resize(m_patchProcessor.patchMapMipmap().numberMipmapsHeight());
         }
     }
-
     int width = m_patchProcessor.patchMapMipmap().texture().width();
     int height= m_patchProcessor.patchMapMipmap().texture().height();
     //resize image
@@ -149,7 +166,6 @@ void Atlas<I>::generate(int contentId)
     //then emplace the rest
 
     //v nested class used to compare contents' heights so as to sort them by highest height first
-
     for(unsigned k=0; k<m_patchProcessor.patchAt(0).alphaMipmap().numberMipmapsWidth(); ++k)
     {
         if(m_patchProcessor.patchAt(0).alphaMipmap().mode() == ANISOTROPIC)
@@ -201,6 +217,66 @@ void Atlas<I>::generate(int contentId)
                     m_origins[csp.id()][k][k][1] = y;
                     emplace(patch->contentAt(contentId).mipmap(k, k), alpha, x, y);
                     pq.pop();
+                }
+            }
+        }
+    }
+    release_emplaceAlgorithm();
+    m_generatedAtLeastOnce = true;
+}
+
+template<typename I>
+void Atlas<I>::_regenerate(int contentId)
+{
+    int width = m_generativeAtlas.width();
+    int height= m_generativeAtlas.height();
+    //resize image
+
+    init_emplaceAlgorithm(width, height);
+    unsigned x=0, y=0;
+    //first emplace the main image
+    for(unsigned n=0; n<m_patchProcessor.nbPatches(); ++n)
+    {
+        const Patch<I> &patch = m_patchProcessor.patchAt(n);
+        const ImageAlphad &alpha = patch.mipmap(0, 0);
+        emplaceLevel0(patch.contentAt(contentId).texture(), alpha, patch.originAt(0, 0)[0], patch.originAt(0, 0)[1],
+        m_patchProcessor.texture().height());
+    }
+    y+=m_patchProcessor.texture().height();
+
+    //then emplace the rest
+
+    //v nested class used to compare contents' heights so as to sort them by highest height first
+    for(unsigned k=0; k<m_patchProcessor.patchAt(0).alphaMipmap().numberMipmapsWidth(); ++k)
+    {
+        if(m_patchProcessor.patchAt(0).alphaMipmap().mode() == ANISOTROPIC)
+        {
+            for(unsigned l=0; l<m_patchProcessor.patchAt(0).alphaMipmap().numberMipmapsHeight(); ++l)
+            {
+                if(k!=0 || l!=0)
+                {
+                    for(unsigned n=0; n<m_patchProcessor.nbPatches(); ++n)
+                    {
+                        const Patch<I> &patch = m_patchProcessor.patchAt(n);
+                        const ImageAlphad &alpha = patch.mipmap(k, l);
+                        int x = m_origins[n][k][l][0];
+                        int y = m_origins[n][k][l][1];
+                        emplace(patch.contentAt(contentId).mipmap(k, l), alpha, x, y);
+                    }
+                }
+            }
+        }
+        else
+        {
+            if(k!=0)
+            {
+                for(unsigned n=0; n<m_patchProcessor.nbPatches(); ++n)
+                {
+                    const Patch<I> &patch = m_patchProcessor.patchAt(n);
+                    const ImageAlphad &alpha = patch.mipmap(k, k);
+                    int x = m_origins[n][k][k][0];
+                    int y = m_origins[n][k][k][1];
+                    emplace(patch.contentAt(contentId).mipmap(k, k), alpha, x, y);
                 }
             }
         }
@@ -304,6 +380,12 @@ void Atlas<I>::release_emplaceAlgorithm()
     {
         for(i=0; i<m_generativeAtlas.width() && !m_occupationMap.pixelAbsolute(i, y); ++i);
         fullLineOrLimit = i!=m_generativeAtlas.width() || --y==0 /*debug only TODO*/ || y==1023;
+        //again, debug TODO
+        if(y<1023)
+        {
+            y=1023;
+            fullLineOrLimit = true;
+        }
     }
     I temporaryCrop;
     temporaryCrop.initItk(m_generativeAtlas.width(), y+1);
@@ -320,7 +402,7 @@ template<typename I>
 void Atlas<I>::saveOrigins(const std::string &path)
 {
     assert(m_origins.size() > 0 && "ContentExchange::Atlas::saveOrigins: atlas not generated (try using generate())");
-    std::ofstream ofs(path + ".csv");
+    std::ofstream ofs(path);
     ofs << m_origins.size() << std::endl;
     ofs << m_origins[0].size() << std::endl;
     ofs << m_origins[0][0].size() << std::endl;
@@ -334,7 +416,7 @@ void Atlas<I>::saveOrigins(const std::string &path)
 template<typename I>
 void Atlas<I>::loadOrigins(const std::string &path)
 {
-    std::ifstream ifs(path + ".csv");
+    std::ifstream ifs(path);
     unsigned size1, size2, size3;
     ifs >> size1;
     ifs >> size2;
@@ -362,6 +444,17 @@ void Atlas<I>::loadOrigins(const std::string &path)
             }
 
     ifs.close();
+}
+
+template<typename I>
+void Atlas<I>::generateAndSaveAtlas(std::string directory) const
+{
+    for(size_t i=0; i<m_patchProcessor.nbContents(); ++i)
+    {
+        generate(i);
+        m_generativeAtlas.save(directory + "/contentAtlas_" + std::to_string(i) + ".png");
+    }
+    saveOrigins(directory + "/atlasOrigins.csv");
 }
 
 }
