@@ -8,7 +8,8 @@
 #include <ASTex/mask.h>
 #include <type_traits>
 
-using namespace ASTex;
+namespace ASTex
+{
 
 typedef enum {ISOTROPIC=0, ANISOTROPIC=1, NO_FILTER=2} mipmap_mode_t;
 
@@ -785,6 +786,8 @@ void MipmapBitmask<I>::filterDivide2Full(const I& texture, I& result)
             | texture.pixelAbsolute(2*x, 2*y+1)
             | texture.pixelAbsolute(2*x+1, 2*y+1);
     });
+}
+
 }
 
 #endif //__MIPMAP__
