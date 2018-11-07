@@ -55,10 +55,15 @@ set (LIB_INCLUDE
         ContentExchange/content.h
         ContentExchange/patch.h
         ContentExchange/patchProcessor.h
+        ContentExchange/old_PatchProcessor.h
+        ContentExchange/old_FragmentProcessor.h
+        ContentExchange/old_PoissonDiskSampler.h
+        ContentExchange/benchmarker.h
         Stamping/sampler.h
         Stamping/stamp.h
         Stamping/stamper.h
         PCTS/pcts.h
+        filters.h
 )
 
 set (LIB_SRC
@@ -75,6 +80,11 @@ set (LIB_SRC
 	distances_maps.cpp
 	pca.cpp
 	thread_pool.cpp
+
+        ContentExchange/old_PatchProcessor.cpp
+        ContentExchange/old_FragmentProcessor.cpp
+        ContentExchange/old_PoissonDiskSampler.cpp
+        ContentExchange/benchmarker.cpp
 
         texton_io.cpp
         Stamping/sampler.cpp
