@@ -33,6 +33,7 @@ class Atlas
 public:
 
     Atlas(const PatchProcessor<I> &patchProcessor);
+    ~Atlas();
 
     void generate(int contentId);
 
@@ -98,6 +99,10 @@ Atlas<I>::Atlas(const PatchProcessor<I> &patchProcessor) :
     m_generatedAtLeastOnce(false)
 {
 }
+
+template<typename I>
+Atlas<I>::~Atlas()
+{}
 
 template<typename I>
 void Atlas<I>::generate(int contentId)
