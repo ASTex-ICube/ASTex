@@ -120,22 +120,25 @@ int test_contentExchangeRenderingPack(int argc, char **argv)
         return EXIT_FAILURE;
     }
 
-    ImageRGBu8 im_in;
-    im_in.load(std::string(argv[1]));
+    for(int i=1; i<argc; ++i)
+    {
+        ImageRGBu8 im_in;
+        im_in.load(std::string(std::string(MY_PATH)+argv[i]));
 
-    std::string out_dir=std::string(MY_PATH)+"contentExchangeRendering";
-    std::string name_file = IO::remove_path(argv[1]);
-    std::string name_noext = IO::remove_ext(name_file);
-    create_directory(out_dir);
+        std::string out_dir=std::string(MY_PATH)+"contentExchangeRendering";
+        std::string name_file = IO::remove_path(std::string(MY_PATH)+argv[i]);
+        std::string name_noext = IO::remove_ext(name_file);
+        create_directory(out_dir);
 
-    ContentExchange::PatchProcessor<ImageRGBu8> pProcessor(im_in);
-    pProcessor.setFilteringMode(ISOTROPIC);
-    pProcessor.setNbContentsPerPatch(5);
-    pProcessor.fullProcess_oldMethod();
+        ContentExchange::PatchProcessor<ImageRGBu8> pProcessor(im_in);
+        pProcessor.setFilteringMode(ISOTROPIC);
+        pProcessor.setNbContentsPerPatch(10);
+        pProcessor.fullProcess_oldMethod();
 
-    std::string renderingDirectory = out_dir + "/" + name_noext + "_" + std::to_string(std::time(0)) + "/";
-    create_directory(renderingDirectory);
-    pProcessor.saveRenderingPack(renderingDirectory);
+        std::string renderingDirectory = out_dir + "/" + std::to_string(std::time(0)) + "_" + name_noext + "/";
+        create_directory(renderingDirectory);
+        pProcessor.saveRenderingPack(renderingDirectory);
+    }
 
     return 0;
 }
@@ -437,20 +440,20 @@ int test_benchmarkingContentExchange(int argc, char **argv)
     for(int i=1; i<argc; ++i)
     {
         ImageRGBu8 input;
-        input.load(MY_PATH + argv[i]);
+        input.load(std::string("/home/nlutz/img/") + argv[i]);
         std::string name_file = IO::remove_path(argv[i]);
         std::string name_noext = IO::remove_ext(name_file);
         std::string pcts_file = MY_PATH + "pcts_" + name_noext + ".txt";
         ContentExchangeBenchmarker ceb;
         ceb.setInput(input);
 
-        ceb.setNbOutputs(8);
+        ceb.setNbOutputs(3);
         ceb.setOutputSize(1024, 1024);
         ceb.setRoot(std::string("/home/nlutz/ieee2019/") + name_noext);
         ceb.setOutputDirectories("usingOldMethod", "usingRandomPatchesAndContents", "usingGetisGI", "usingPCTS");
-        ceb.setGenerateOld(false);
+        ceb.setGenerateOld(true);
         ceb.setGenerateRandom(false);
-        ceb.setGeneratePCTS(true);
+        ceb.setGeneratePCTS(false);
         ceb.setGenerateGetisGI(false);
         ceb.setPCTSArgumentsFilePath(pcts_file);
 

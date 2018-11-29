@@ -294,8 +294,8 @@ PixelPos Atlas<I>::patchPositionAt(int patchId, size_t mw, size_t mh) const
 {
     assert(patchId < (int)m_patchProcessor.nbPatches() &&
            "ContentExchange::Atlas::patchPositionAt: patch id is out of range (try bounding it by patchProcessor.nbPatches())");
-    mw = std::min(mw, m_origins[0].size()-1);
-    mh = std::min(mh, m_origins[0][0].size()-1);
+    mw = std::min(mw, m_origins[patchId].size()-1);
+    mh = std::min(mh, m_origins[patchId][mw].size()-1);
     return m_origins[patchId][mw][mh];
 }
 
