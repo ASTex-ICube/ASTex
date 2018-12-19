@@ -45,6 +45,8 @@ public:
 
     void generateAndSaveAtlas(std::string directory) const;
 
+    void setStoreHighestLevel(bool b) {m_storeHighestLevel = b;}
+
 private:
     class ComparableScorePatches
     {
@@ -91,12 +93,14 @@ private:
     ImageGrayb m_occupationMap;
     std::vector<std::vector<std::vector<PixelPos>>> m_origins;
     bool m_generatedAtLeastOnce;
+    bool m_storeHighestLevel;
 };
 
 template<typename I>
 Atlas<I>::Atlas(const PatchProcessor<I> &patchProcessor) :
     m_patchProcessor(patchProcessor),
-    m_generatedAtLeastOnce(false)
+    m_generatedAtLeastOnce(false),
+    m_storeHighestLevel(true)
 {
 }
 
@@ -142,7 +146,7 @@ void Atlas<I>::_generateFirstTime(int contentId)
             {
                 for(unsigned l=0; l<patch.alphaMipmap().numberMipmapsHeight(); ++l)
                 {
-                    if(k!=0 || l!=0)
+                    if(k!=0 || l!=0 /*|| !m_patchesDoNotOverlap*/) //In case of emergency, break this comment boundary
                     {
                         height += patch.contentAt(contentId).mipmap(k, l).height();
                     }
@@ -158,15 +162,20 @@ void Atlas<I>::_generateFirstTime(int contentId)
 
     init_emplaceAlgorithm(width, height);
     unsigned x=0, y=0;
-    //first emplace the main image
-    for(unsigned n=0; n<m_patchProcessor.nbPatches(); ++n)
+    unsigned yFindEmplace = 0;
+    //first emplace the main image (if patches do not overlap)
+    if(!m_patchProcessor.patchesOverlap() && m_storeHighestLevel)
     {
-        const Patch<I> &patch = m_patchProcessor.patchAt(n);
-        const ImageAlphad &alpha = patch.mipmap(0, 0);
-        emplaceLevel0(patch.contentAt(contentId).texture(), alpha, patch.originAt(0, 0)[0], patch.originAt(0, 0)[1],
-        m_patchProcessor.texture().height());
+        for(unsigned n=0; n<m_patchProcessor.nbPatches(); ++n)
+        {
+            const Patch<I> &patch = m_patchProcessor.patchAt(n);
+            const ImageAlphad &alpha = patch.mipmap(0, 0);
+            emplaceLevel0(patch.contentAt(contentId).texture(), alpha, patch.originAt(0, 0)[0], patch.originAt(0, 0)[1],
+            m_patchProcessor.texture().height());
+        }
+        y=m_patchProcessor.texture().height();
+        yFindEmplace = y;
     }
-    y+=m_patchProcessor.texture().height();
 
     //then emplace the rest
 
@@ -177,7 +186,7 @@ void Atlas<I>::_generateFirstTime(int contentId)
         {
             for(unsigned l=0; l<m_patchProcessor.patchAt(0).alphaMipmap().numberMipmapsHeight(); ++l)
             {
-                if(k!=0 || l!=0)
+                if(k!=0 || l!=0 || (m_patchProcessor.patchesOverlap() && m_storeHighestLevel))
                 {
                     std::priority_queue<ComparableScorePatches> pq;
                     for(unsigned n=0; n<m_patchProcessor.nbPatches(); ++n)
@@ -191,7 +200,7 @@ void Atlas<I>::_generateFirstTime(int contentId)
                         const ComparableScorePatches &csp = pq.top();
                         const Patch<I> *patch = csp.patch();
                         x=0;
-                        y=m_patchProcessor.texture().height();
+                        y=yFindEmplace;
                         const ImageAlphad &alpha = patch->mipmap(k, l);
                         find_emplace(patch->contentAt(contentId).mipmap(k, l), alpha, x, y);
                         m_origins[csp.id()][k][l][0] = x;
@@ -204,7 +213,7 @@ void Atlas<I>::_generateFirstTime(int contentId)
         }
         else
         {
-            if(k!=0)
+            if(k!=0 || (m_patchProcessor.patchesOverlap() && m_storeHighestLevel) )
             {
                 std::priority_queue<ComparableScorePatches> pq;
                 for(unsigned n=0; n<m_patchProcessor.nbPatches(); ++n)
@@ -215,7 +224,7 @@ void Atlas<I>::_generateFirstTime(int contentId)
                     const ComparableScorePatches &csp = pq.top();
                     const Patch<I> *patch = csp.patch();
                     x=0;
-                    y=m_patchProcessor.texture().height();
+                    y=yFindEmplace;
                     const ImageAlphad &alpha = patch->mipmap(k, k);
                     find_emplace(patch->contentAt(contentId).mipmap(k, k), alpha, x, y);
                     m_origins[csp.id()][k][k][0] = x;
@@ -239,16 +248,16 @@ void Atlas<I>::_regenerate(int contentId)
 
     init_emplaceAlgorithm(width, height);
     unsigned x=0, y=0;
-    //first emplace the main image
-    for(unsigned n=0; n<m_patchProcessor.nbPatches(); ++n)
-    {
-        const Patch<I> &patch = m_patchProcessor.patchAt(n);
-        const ImageAlphad &alpha = patch.mipmap(0, 0);
-        emplaceLevel0(patch.contentAt(contentId).texture(), alpha, patch.originAt(0, 0)[0], patch.originAt(0, 0)[1],
-        m_patchProcessor.texture().height());
-    }
-    y+=m_patchProcessor.texture().height();
-
+    //first emplace the main image, unless patches overlap
+    if(!m_patchProcessor.patchesOverlap() && m_storeHighestLevel)
+        for(unsigned n=0; n<m_patchProcessor.nbPatches(); ++n)
+        {
+            const Patch<I> &patch = m_patchProcessor.patchAt(n);
+            const ImageAlphad &alpha = patch.mipmap(0, 0);
+            emplaceLevel0(patch.contentAt(contentId).texture(), alpha, patch.originAt(0, 0)[0], patch.originAt(0, 0)[1],
+            m_patchProcessor.texture().height());
+        }
+        y+=m_patchProcessor.texture().height();
     //then emplace the rest
 
     //v nested class used to compare contents' heights so as to sort them by highest height first
@@ -258,7 +267,7 @@ void Atlas<I>::_regenerate(int contentId)
         {
             for(unsigned l=0; l<m_patchProcessor.patchAt(0).alphaMipmap().numberMipmapsHeight(); ++l)
             {
-                if(k!=0 || l!=0)
+                if(k!=0 || l!=0 || (m_patchProcessor.patchesOverlap() && m_storeHighestLevel))
                 {
                     for(unsigned n=0; n<m_patchProcessor.nbPatches(); ++n)
                     {
@@ -273,7 +282,7 @@ void Atlas<I>::_regenerate(int contentId)
         }
         else
         {
-            if(k!=0)
+            if(k!=0 || (m_patchProcessor.patchesOverlap() && m_storeHighestLevel))
             {
                 for(unsigned n=0; n<m_patchProcessor.nbPatches(); ++n)
                 {
@@ -384,13 +393,13 @@ void Atlas<I>::release_emplaceAlgorithm()
     while(!fullLineOrLimit)
     {
         for(i=0; i<m_generativeAtlas.width() && !m_occupationMap.pixelAbsolute(i, y); ++i);
-        fullLineOrLimit = i!=m_generativeAtlas.width() || --y==0 /*debug only TODO*/ || y==1023;
+        fullLineOrLimit = i!=m_generativeAtlas.width() || --y==0 /*debug only TODO*//* || y==1023*/;
         //again, debug TODO
-        if(y<1023)
-        {
-            y=1023;
-            fullLineOrLimit = true;
-        }
+//        if(y<1023)
+//        {
+//            y=1023;
+//            fullLineOrLimit = true;
+//        }
     }
     I temporaryCrop;
     temporaryCrop.initItk(m_generativeAtlas.width(), y+1);
@@ -398,7 +407,7 @@ void Atlas<I>::release_emplaceAlgorithm()
     {
         pix = m_generativeAtlas.pixelAbsolute(x, y);
     });
-    m_generativeAtlas.initItk(temporaryCrop.width(), temporaryCrop.height());
+    m_generativeAtlas.initItk(temporaryCrop.width(), temporaryCrop.height(), true);
     m_generativeAtlas.copy_pixels(temporaryCrop);
     m_occupationMap.initItk(1, 1);
 }

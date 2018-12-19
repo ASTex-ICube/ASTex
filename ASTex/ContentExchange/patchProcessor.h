@@ -25,6 +25,9 @@ template<typename I>
 class Atlas;
 
 template<typename I>
+class AlternativeAtlas;
+
+template<typename I>
 /**
  * @brief The PatchProcessor class is a class made for processing and storing content exchange elements.
  * Feed it a texture, choose how you want patches and contents to be computed and bake an offline result with
@@ -60,6 +63,8 @@ public:
     I &atlasContentAt(size_t index);
 
     const Atlas<I> &atlas() const {return *m_atlas;}
+
+    const Eigen::Vector2i contentTranslationAt(unsigned p, unsigned c) const;
 
     /**
      * @brief patchMapMipmap corresponds to the structure used for storing a patch map for each lod.
@@ -172,6 +177,10 @@ public:
     template<typename R>
     void patches_initFromImageGray(const ImageCommon<ImageGrayBase<R>, false> &patchImage);
 
+    void patches_dilate(bool con8=false);
+
+    void patches_fill(unsigned nbPatches);
+
     /**
      * @brief initializeContents builds the initial contents from the input.
      * Mandatory, but can be used in conjonction with other contents_ functions.
@@ -210,7 +219,7 @@ public:
      * datas necesssary for the loading. This is a WIP and there is no load function. (TODO)
      * @param outputDirectory
      */
-    void saveRenderingPack(const std::string &outputDirectory) const;
+    void saveRenderingPack(const std::string &outputDirectory, bool storeLevel0=true) const;
 
     void loadRenderingPack(const std::string &inputDirectory);
 
@@ -228,6 +237,8 @@ public:
      * @return the number of accesses needed to compute an output mipmap of reduction level k, l.
      */
     size_t analysis_getNumberOfTextureAccessForMipmap(unsigned k, unsigned l) const;
+
+    bool patchesOverlap() const {return m_patchesOverlap;}
 
     //iterators
 
@@ -257,6 +268,9 @@ private:
     //For rendering only
     Atlas<I> *m_atlas;
     std::vector<I> m_contentsAtlas;
+    std::vector<Eigen::Vector2i> m_contentTranslations;
+
+    bool m_patchesOverlap;
 
     static typename I::PixelType ms_zero;
 };
@@ -275,7 +289,8 @@ PatchProcessor<I>::PatchProcessor():
     m_outputHeight(512),
     m_seed(0),
     m_atlas(0),
-    m_contentsAtlas()
+    m_contentsAtlas(),
+    m_patchesOverlap(true)
 {}
 
 template<typename I>
@@ -289,7 +304,8 @@ PatchProcessor<I>::PatchProcessor(const I& texture):
     m_outputHeight(512),
     m_seed(0),
     m_atlas(0),
-    m_contentsAtlas()
+    m_contentsAtlas(),
+    m_patchesOverlap(true)
 {}
 
 template<typename I>
@@ -304,6 +320,15 @@ template<typename I>
 const I& PatchProcessor<I>::texture() const
 {
     return m_texture;
+}
+
+template<typename I>
+const Eigen::Vector2i PatchProcessor<I>::contentTranslationAt(unsigned p, unsigned c) const
+{
+    if(c == 0)
+        return Eigen::Vector2i(0, 0);
+    else
+        return m_contentTranslations[p*m_nbContentsPerPatch+c];
 }
 
 template<typename I>
@@ -566,6 +591,70 @@ void PatchProcessor<I>::patches_initFromImageGray(const ImageCommon<ImageGrayBas
     m_patchMapMipmap.generate();
 }
 
+template<typename I>
+void PatchProcessor<I>::patches_dilate(bool con8)
+{
+    m_patchesOverlap = true;
+    ImageMask64 originalPatchmap = m_patchMapMipmap.texture();
+    int width = originalPatchmap.width();
+    int height = originalPatchmap.height();
+    ImageMask64 newPatchmap;
+    newPatchmap.initItk(width, height);
+    newPatchmap.copy_pixels(m_patchMapMipmap.texture());
+    word64 w = 0x1;
+    bool existsPatchw=true;
+
+    for(int i=0; existsPatchw && i<64; ++i, w*=2)
+    {
+        existsPatchw = false;
+        originalPatchmap.for_all_pixels([&](const ImageMask64::PixelType &pix, int x, int y)
+        {
+            if(pix == w)
+            {
+                x+=width;
+                y+=height;
+                existsPatchw = true;
+//                newPatchmap.pixelAbsolute(x%width, (y-1)%height) |= w;
+                newPatchmap.pixelAbsolute(x%width, (y+1)%height) |= w;
+//                newPatchmap.pixelAbsolute((x-1)%width, y%height) |= w;
+                newPatchmap.pixelAbsolute((x+1)%width, y%height) |= w;
+                if(con8)
+                {
+                    newPatchmap.pixelAbsolute((x-1)%width, (y-1)%height) |= w;
+                    newPatchmap.pixelAbsolute((x-1)%width, (y+1)%height) |= w;
+                    newPatchmap.pixelAbsolute((x+1)%width, (y-1)%height) |= w;
+                    newPatchmap.pixelAbsolute((x+1)%width, (y+1)%height) |= w;
+                }
+            }
+        });
+    }
+    m_patchMapMipmap.setTexture(newPatchmap);
+    m_patchMapMipmap.setMode(m_mipmapMode);
+    m_patchMapMipmap.generate();
+}
+
+template<typename I>
+void PatchProcessor<I>::patches_fill(unsigned nbPatches)
+{
+    m_patchesOverlap = true;
+    static ImageMask64::PixelType zero;
+    ImageMask64 patchMap;
+    word64 w=0x1, wFill=0x0;
+    for(unsigned i=0; i<nbPatches; ++i)
+    {
+        wFill |= w;
+        w *= 2;
+    }
+    patchMap.initItk(m_texture.width(), m_texture.height(), true);
+    patchMap.for_all_pixels([&] (ImageMask64::PixelType &pix)
+    {
+        pix = wFill;
+    });
+    m_patchMapMipmap.setTexture(patchMap);
+    m_patchMapMipmap.setMode(m_mipmapMode);
+    m_patchMapMipmap.generate();
+}
+
 //Content initializers
 
 template<typename I>
@@ -604,7 +693,16 @@ void PatchProcessor<I>::contents_initDefault()
         m_patchMapMipmap.texture().for_all_pixels([&] (ImageMask64::PixelType &pix, int x, int y)
         {
             if((w|=reinterpret_cast<word64&>(pix)) & wTest)
-                alphaMap.pixelAbsolute(x, y)=1.0;
+            {
+                //check how many patches there are
+                int n=0;
+                for(int i=0, w = 0x1; i<lg; ++i, w*=2)
+                {
+                    if((w & pix)!=0)
+                        ++n;
+                }
+                alphaMap.pixelAbsolute(x, y)=1.0/n;
+            }
             w=0x0;
         });
         wTest*=2;
@@ -630,13 +728,14 @@ void PatchProcessor<I>::contents_initRandom()
         Patch<I> &patch=m_patches[j];
         for(i=0; i<m_nbContentsPerPatch-1; ++i)
         {
-            randomShiftX = rand();
-            randomShiftY = rand();
+            randomShiftX = rand()%shiftedTexture.width();
+            randomShiftY = rand()%shiftedTexture.height();
             shiftedTexture.for_all_pixels([&] (typename I::PixelType &pix, int x, int y)
             {
                 pix = m_texture.pixelAbsolute((x + randomShiftX)%shiftedTexture.width(), (y + randomShiftY)%shiftedTexture.height());
             });
             Content<I> c(shiftedTexture, patch);
+            c.setTranslationTag(Eigen::Vector2i(randomShiftX, randomShiftY));
             patch.addContent(c);
         }
     }
@@ -760,6 +859,7 @@ void PatchProcessor<I>::fullProcess_oldMethod()
     //translation to new content exchange
 
     patches_initFromImageRGB(*imgPatch);
+    patches_dilate();
     contents_initDefault();
     int pId = 0;
     for(auto &p : pProc.patches())
@@ -881,9 +981,9 @@ Mipmap<I> PatchProcessor<I>::generate() const
 //misc
 
 template<typename I>
-void PatchProcessor<I>::saveRenderingPack(const std::string &outputDirectory) const
+void PatchProcessor<I>::saveRenderingPack(const std::string &outputDirectory, bool storeLevel0) const
 {
-    unsigned i,k,l;
+    unsigned i,j,k,l;
     //saving input
     m_texture.save(outputDirectory + "/input.png");
 
@@ -904,6 +1004,7 @@ void PatchProcessor<I>::saveRenderingPack(const std::string &outputDirectory) co
     }
 
     Atlas<I> atlas(*this);
+    atlas.setStoreHighestLevel(storeLevel0);
     atlas.generateAndSaveAtlas(outputDirectory);
 
     //saving useful data
@@ -944,12 +1045,25 @@ void PatchProcessor<I>::saveRenderingPack(const std::string &outputDirectory) co
     std::ofstream ofs_executable(outputDirectory + "/pack.exch");
     ofs_executable << outputDirectory << std::endl;
     ofs_executable.close();
+
+    //additional: content translations
+    std::ofstream ofs_transformations_out(outputDirectory + "/transformations.csv");
+    for(i = 0; i<m_patches.size(); ++i)
+    {
+        const Patch<I> &patch = m_patches[i];
+        for(j = 1; j<nbContents(); ++j)
+        {
+            ofs_transformations_out << patch.contentAt(j).translationTag()[0] << ' '
+                                    << patch.contentAt(j).translationTag()[1] << std::endl;
+        }
+    }
+    ofs_transformations_out.close();
 }
 
 template<typename I>
 void PatchProcessor<I>::loadRenderingPack(const std::string &inputDirectory)
 {
-    unsigned i,k,l;
+    unsigned i, j, k,l;
 
     //loading input
     m_texture.load(inputDirectory + "/input.png");
@@ -1026,6 +1140,21 @@ void PatchProcessor<I>::loadRenderingPack(const std::string &inputDirectory)
     {
         m_contentsAtlas[i].load(inputDirectory + "/contentAtlas_" + std::to_string(i) + ".png");
     }
+
+    ifs_data_in.open(inputDirectory + "/transformations.csv");
+    m_contentTranslations.resize(0);
+    for(i=0; i<nbPatches; ++i)
+    {
+        m_contentTranslations.push_back(Eigen::Vector2i(0, 0));
+        for(j=1; j<nbContents; ++j)
+        {
+            int x, y;
+            ifs_data_in >> x >> y;
+            m_contentTranslations.push_back(Eigen::Vector2i(x, y));
+        }
+    }
+    ifs_data_in.close();
+
 }
 
 template<typename I>

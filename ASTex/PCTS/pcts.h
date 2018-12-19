@@ -273,40 +273,40 @@ I Pcts<I>::generate()
                         yT=rand()%(std::max(1, int(lvl0mipmap.height()-m_lvl0BlockSize)));
                     }
                     bool do_init = true;
-    //				if (m_guidanceSet)
-    //				{
-    //                    if (kinit == 0)
-    //                    {
-    //                        xT = x;
-    //                        yT = y;
-    //                    }
-    //					float err = 0.0f;
-    //					int count = 0;
-    //					for (unsigned x2 = x; x2 < m_lvl0BlockSize + x && x2 < (unsigned)indexImageLevel0.width(); ++x2)
-    //						for (unsigned y2 = y; y2 < m_lvl0BlockSize + y && y2 < (unsigned)indexImageLevel0.height(); ++y2) //TODO: preconditions
-    //						{
-    //							count++;
-    //							for (int ii = 0; ii < 3; ++ii)
-    //							{
-    //								int indx = xT + x2 - x, indy = yT + y2 - y;
-    //								err += ((pyramidSegmented.mipmap(maxReductionLevel, maxReductionLevel).pixelAbsolute(indx, indy)[ii]) - pyramidGuidance.mipmap(maxReductionLevel, maxReductionLevel).pixelAbsolute(x2, y2)[ii]) *
-    //									((pyramidSegmented.mipmap(maxReductionLevel, maxReductionLevel).pixelAbsolute(indx, indy)[ii]) - pyramidGuidance.mipmap(maxReductionLevel, maxReductionLevel).pixelAbsolute(x2, y2)[ii]);
-    //							}
-    //						}
-    //					err /= (float)count;
-    //					std::cout << "Pass" << kinit << " x=" << x << " y=" << y << "error=" << err <<"\n";
-    //					if (kinit == 0)
-    //					{
-    //                        m_error.pixelAbsolute(x / m_lvl0BlockSize, y / m_lvl0BlockSize)[0] = err;
-    //					}
-    //					else
-    //					{
-    //						float olderr = m_error.pixelAbsolute(x / m_lvl0BlockSize, y / m_lvl0BlockSize)[0];
-    //                        if (err > olderr)
-    //                            do_init = false;
-    //						else m_error.pixelAbsolute(x / m_lvl0BlockSize, y / m_lvl0BlockSize)[0] = err;
-    //					}
-    //				}
+                    if (m_guidanceSet)
+                    {
+                        if (kinit == 0)
+                        {
+                            xT = x;
+                            yT = y;
+                        }
+                        float err = 0.0f;
+                        int count = 0;
+                        for (unsigned x2 = x; x2 < m_lvl0BlockSize + x && x2 < (unsigned)indexImageLevel0.width(); ++x2)
+                            for (unsigned y2 = y; y2 < m_lvl0BlockSize + y && y2 < (unsigned)indexImageLevel0.height(); ++y2) //TODO: preconditions
+                            {
+                                count++;
+                                for (int ii = 0; ii < 3; ++ii)
+                                {
+                                    int indx = xT + x2 - x, indy = yT + y2 - y;
+                                    err += ((pyramidSegmented.mipmap(maxReductionLevel, maxReductionLevel).pixelAbsolute(indx, indy)[ii]) - pyramidGuidance.mipmap(maxReductionLevel, maxReductionLevel).pixelAbsolute(x2, y2)[ii]) *
+                                        ((pyramidSegmented.mipmap(maxReductionLevel, maxReductionLevel).pixelAbsolute(indx, indy)[ii]) - pyramidGuidance.mipmap(maxReductionLevel, maxReductionLevel).pixelAbsolute(x2, y2)[ii]);
+                                }
+                            }
+                        err /= (float)count;
+                        std::cout << "Pass" << kinit << " x=" << x << " y=" << y << "error=" << err <<"\n";
+                        if (kinit == 0)
+                        {
+                            m_error.pixelAbsolute(x / m_lvl0BlockSize, y / m_lvl0BlockSize)[0] = err;
+                        }
+                        else
+                        {
+                            float olderr = m_error.pixelAbsolute(x / m_lvl0BlockSize, y / m_lvl0BlockSize)[0];
+                            if (err > olderr)
+                                do_init = false;
+                            else m_error.pixelAbsolute(x / m_lvl0BlockSize, y / m_lvl0BlockSize)[0] = err;
+                        }
+                    }
                     if (do_init)
                         for(unsigned x2=x; x2<m_lvl0BlockSize+x && x2<(unsigned)indexImageLevel0.width(); ++x2)
                             for(unsigned y2=y; y2<m_lvl0BlockSize+y && y2<(unsigned)indexImageLevel0.height(); ++y2) //TODO: preconditions

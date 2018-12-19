@@ -7,6 +7,7 @@
 #include "ASTex/mipmap.h"
 #include "ASTex/texton_io.h"
 #include "ASTex/imageviewer.h"
+#include "ASTex/ContentExchange/alternativeAtlas.h"
 #include "ASTex/ContentExchange/atlas.h"
 #include "ASTex/PCTS/pcts.h"
 #include "ASTex/filters.h"
@@ -122,6 +123,7 @@ int test_contentExchangeRenderingPack(int argc, char **argv)
 
     for(int i=1; i<argc; ++i)
     {
+        srand(0);
         ImageRGBu8 im_in;
         im_in.load(std::string(std::string(MY_PATH)+argv[i]));
 
@@ -132,12 +134,32 @@ int test_contentExchangeRenderingPack(int argc, char **argv)
 
         ContentExchange::PatchProcessor<ImageRGBu8> pProcessor(im_in);
         pProcessor.setFilteringMode(ISOTROPIC);
-        pProcessor.setNbContentsPerPatch(10);
-        pProcessor.fullProcess_oldMethod();
+        pProcessor.setNbContentsPerPatch(6);
+        //pProcessor.fullProcess_oldMethod(); //for nerds
+        pProcessor.patches_initRandom(32);
+        pProcessor.patches_dilate(false);
+        pProcessor.contents_initDefault();
+        pProcessor.contents_initRandom();
 
-        std::string renderingDirectory = out_dir + "/" + std::to_string(std::time(0)) + "_" + name_noext + "/";
+//        pProcessor.patchAt(1).contentAt(0).mipmap(0, 0).save("/home/nlutz/mipmap1.png");
+//        pProcessor.patchAt(1).contentAt(0).mipmap(1, 1).save("/home/nlutz/mipmap2.png");
+//        pProcessor.patchAt(1).contentAt(0).mipmap(2, 2).save("/home/nlutz/mipmap3.png");
+//        pProcessor.patchAt(1).contentAt(0).mipmap(3, 3).save("/home/nlutz/mipmap4.png");
+
+        std::string renderingDirectory = out_dir + "/" + std::to_string(std::time(0)) + "_random_" + name_noext + "/";
+
+        ImageRGBu8 im_patches;
+        im_patches.initItk(im_in.width(), im_in.height());
+        im_patches.for_all_pixels([&] (ImageRGBu8::PixelType &pix, int x, int y)
+        {
+            ContentExchange::word64 w = pProcessor.patchMapMipmap().texture().pixelAbsolute(x, y);
+            pix = std::ceil(log2(w)) != std::floor(log2(w)) ? 255 : 0;
+        });
+
+        im_patches.save("/home/nlutz/im_seams.png");
+
         create_directory(renderingDirectory);
-        pProcessor.saveRenderingPack(renderingDirectory);
+        pProcessor.saveRenderingPack(renderingDirectory, false);
     }
 
     return 0;
@@ -334,13 +356,37 @@ int test_texton(int argc, char **argv)
 
 int test_easy(int argc, char **argv)
 {
-    std::cout << sizeof(ImageRGBu8::DataType) << std::endl;
-    ImageRGBu8::PixelType pix;
-    pix[0]=17;
-    pix[1]=17;
-    pix[2]=17;
-    std::cout << int(*((unsigned char *)&pix+1)) << std::endl;
-    return 0;
+    const int size = 512;
+    ImageGrayd output;
+    output.initItk(size, size);
+    ImageSpectrald spec_pink, phase_random;
+    spec_pink.initItk(size, size);
+    phase_random.initItk(size, size);
+    Offset center;
+    center[0]=size/2;
+    center[1]=size/2;
+    spec_pink.setCenter(center);
+    double meanHeight = 0.5;
+    spec_pink.for_all_pixels( [&] (ImageSpectrald::PixelType &pix, int x, int y)
+    {
+        double dx2=(x - center[0]) * (x - center[0]), dy2=(y - center[1]) * (y - center[1]);
+        if(dx2 != 0 || dy2 != 0)
+            pix = 1.0/std::sqrt(dx2+dy2);
+        else
+            pix = meanHeight*size;
+    });
+    Fourier::randomPhase(phase_random);
+    rpn_scalar(spec_pink, phase_random, output);
+    output.for_all_pixels([&] (ImageSpectrald::PixelType &pix)
+    {
+        pix = std::min(std::max(0.0, pix), 1.0);
+    });
+    spec_pink.for_all_pixels([&] (ImageSpectrald::PixelType &pix)
+    {
+        pix = std::min(std::max(0.0, pix), 1.0);
+    });
+    IO::save01_in_u8(output, "/home/nlutz/img/pink_noise.png");
+    IO::save01_in_u8(spec_pink, "/home/nlutz/img/spectrum_pink.png");
 }
 
 char fname[256];
@@ -449,7 +495,7 @@ int test_benchmarkingContentExchange(int argc, char **argv)
 
         ceb.setNbOutputs(3);
         ceb.setOutputSize(1024, 1024);
-        ceb.setRoot(std::string("/home/nlutz/ieee2019/") + name_noext);
+        ceb.setRoot(std::string("/home/nlutz/eg2019_contentExchange/") + name_noext);
         ceb.setOutputDirectories("usingOldMethod", "usingRandomPatchesAndContents", "usingGetisGI", "usingPCTS");
         ceb.setGenerateOld(true);
         ceb.setGenerateRandom(false);
@@ -467,10 +513,10 @@ int main( int argc, char **argv )
     //return test_genet(argc, argv);
     //return test_texton(argc, argv);
     //return test_autoconvolutionSpectrum(argc, argv);
-    return test_contentExchangeRenderingPack(argc, argv);
+    //return test_contentExchangeRenderingPack(argc, argv);
     //return test_wendling(argc, argv);
     //return test_getis_gi(argc, argv);
-    //return test_easy(argc, argv);
+    return test_easy(argc, argv);
     //return test_pcts(argc, argv);
     //return test_benchmarkingContentExchange(argc, argv);
 }

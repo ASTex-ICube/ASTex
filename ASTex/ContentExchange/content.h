@@ -3,6 +3,7 @@
 
 #include "ASTex/mipmap.h"
 #include "patch.h"
+#include "Eigen/Eigen"
 
 namespace ASTex
 {
@@ -77,18 +78,32 @@ void MipmapCEContent<I>::generate()
     const ImageGrayd& correspondingPatchAlphaTexture = patchMipmapAlpha.texture();
     PixelPos patchOrigin = patchMipmapAlpha.originAt(0, 0);
     I cleanedTexture;
-    cleanedTexture.initItk(this->m_isoMipmaps[0].width(), this->m_isoMipmaps[0].height(), true); //does not set at 0?? WTF????
+    cleanedTexture.initItk(this->m_isoMipmaps[0].width(), this->m_isoMipmaps[0].height(), true); //TODO: does not set at 0 (current bug)
     cleanedTexture.for_all_pixels([&] (typename I::PixelType &pix)
     {
         pix=zero;
     });
     correspondingPatchAlphaTexture.for_all_pixels([&] (const ImageGrayd::PixelType &pix, int x, int y)
     {
-        if(pix>0)
+        if(pix>0) //delete this idiot
         {
             int xShift=(x+patchOrigin[0])%cleanedTexture.width();
             int yShift=(y+patchOrigin[1])%cleanedTexture.height();
-            cleanedTexture.pixelAbsolute(xShift, yShift) = this->m_isoMipmaps[0].pixelAbsolute(xShift, yShift);
+            if(!std::is_floating_point<typename I::DataType>::value) //TODO: multiplicating RGBu8 with a double yields 0 (current bug)
+            {
+                size_t arraySize = sizeof(typename I::PixelType) / sizeof(typename I::DataType);
+                typename I::DataType *pix2 = new typename I::DataType[arraySize];
+                //uint64_t *pixi = new uint64_t[arraySize]();
+                std::memcpy(pix2, &(this->m_isoMipmaps[0].pixelAbsolute(xShift, yShift)), sizeof(typename I::PixelType));
+                for(size_t i=0; i<arraySize; ++i)
+                {
+                    pix2[i] *= pix;
+                }
+                std::memcpy(&(cleanedTexture.pixelAbsolute(xShift, yShift)), pix2, sizeof(typename I::PixelType));
+                delete[] pix2;
+            }
+            else
+                cleanedTexture.pixelAbsolute(xShift, yShift) = this->m_isoMipmaps[0].pixelAbsolute(xShift, yShift) * pix;
         }
     });
     this->m_isoMipmaps[0].copy_pixels(cleanedTexture);
@@ -155,8 +170,11 @@ public:
     const I& texture() const;
     const I& mipmap(unsigned i, unsigned j) const;
     const MipmapCEContent<I>& contentMipmap() const {return m_explicitContentMipmap;}
+    void setTranslationTag(Eigen::Vector2i translation) {m_translationTag = translation;}
+    Eigen::Vector2i translationTag() const {return m_translationTag;}
 private:
     MipmapCEContent<I> m_explicitContentMipmap;
+    Eigen::Vector2i m_translationTag;
 };
 
 template<typename I>
