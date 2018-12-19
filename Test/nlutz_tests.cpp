@@ -7,7 +7,6 @@
 #include "ASTex/mipmap.h"
 #include "ASTex/texton_io.h"
 #include "ASTex/imageviewer.h"
-#include "ASTex/ContentExchange/alternativeAtlas.h"
 #include "ASTex/ContentExchange/atlas.h"
 #include "ASTex/PCTS/pcts.h"
 #include "ASTex/filters.h"
