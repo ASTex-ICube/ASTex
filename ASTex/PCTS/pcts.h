@@ -43,46 +43,77 @@ public:
 			"Pcts::setLabel: a texture must be set (try using Pcts::setTexture()).");
         assert(m_texture.width()==label.width() && m_texture.height()==label.height() &&
 			"Pcts::setLabel: the label map must match the texture.");
-		m_label = label; m_labelSet = true; m_labelWeight = weight;
+        m_textureLabel = label; m_textureLabelSet = true; m_textureLabelWeight = weight;
 	}
-	void setGuidance(const I& guid, const I& segmented, double weight, double strength) {
+    void setGuidance(const I& guidanceSynthesis, const I& guidanceTexture, double weight, double strength) {
 		assert(m_textureSet &&
 			"Pcts::setGuidance: a texture must be set (try using Pcts::setTexture()).");
-        assert(m_texture.width() == guid.width() && m_texture.height() == guid.height() &&
+        assert(m_texture.width() == guidanceSynthesis.width() && m_texture.height() == guidanceSynthesis.height() &&
             "Pcts::setGuidance: the guidance map must match the texture's size.");
-        assert(m_texture.width() == segmented.width() && m_texture.height() == segmented.height() &&
+        assert(m_texture.width() == guidanceTexture.width() && m_texture.height() == guidanceTexture.height() &&
 			"Pcts::setGuidance: the segmented map must match the texture.");
-		m_guidance = guid; m_segmented = segmented;  m_guidanceSet = true;
+        m_guidanceSynthesis = guidanceSynthesis; m_guidanceTexture = guidanceTexture;  m_guidanceSet = true;
 		m_guidanceWeight = weight; m_strength = strength;
 	}
-	void setMask(const I& synthesis, const I& mask) {
+    void setSynthesis(const I& synthesis, const I& synthesisMask) {
         assert(m_textureSet &&
             "Pcts::setMask: a texture must be set (try using Pcts::setTexture()).");
         assert(m_texture.width() == synthesis.width() && m_texture.height() == synthesis.height() &&
             "Pcts::setMask: the synthesis must match the texture's size.");
-        assert(m_texture.width() == mask.width() && m_texture.height() == mask.height() &&
+        assert(m_texture.width() == synthesisMask.width() && m_texture.height() == synthesisMask.height() &&
             "Pcts::setMask: the mask must match the texture's size.");
-		m_synthesis = synthesis; m_mask = mask;  m_maskSet = true;
+        m_synthesis = synthesis; m_synthesisMask = synthesisMask;  m_synthesisMaskSet = true;
 	}
-	void setStencil(const I& stencil, double w) {
+    void setStencil(const I& inputStencil, double w) {
 		assert(m_textureSet &&
 			"Pcts::setStencil: a texture must be set (try using Pcts::setTexture()).");
-		m_stencil = stencil; m_stencilSet = true; m_stencilWeight = w;
+        m_textureStencil = inputStencil; m_inputStencilSet = true; m_inputStencilWeight = w;
 	}
 	void setWidth(int width) {m_width=width;}
     void setHeight(int height) {m_height=height;}
-    void setSize(int width, int height) {m_width=width; m_height=height;}
 
+    /**
+     * @brief setOutputSize sets the size of the output in case an output is generated.
+     * It is not taken in account if a synthesis texture has been set for resynthesis.
+     */
+    void setOutputSize(int width, int height) {m_width=width; m_height=height;}
+
+    /**
+     * @brief setNbPasses sets the number of correcions (2 or 1 often ideal, 3 or more can grow garbage)
+     */
     void setNbPasses(unsigned nbPasses) {m_nbPasses=nbPasses;}
 
+    /**
+     * @brief setMinimumSizeLog sets the lower bound of the size power of the initialization used by the algorithm.
+     */
     void setMinimumSizeLog(unsigned logValue) {m_minimumSizeLog=logValue;}
 
+    /**
+     * @brief setLvl0BlockSize sets the size of the blocks in the smallest image.
+     * Each block is (supposed to be) computed in parallel.
+     */
     void setLvl0BlockSize(unsigned blockSize) {m_lvl0BlockSize=blockSize;}
 
-    void setCorrectionNeighborhood(unsigned neighborHood) {m_neighborhood=neighborHood;}
+    /**
+     * @brief setCorrectionNeighborhood sets the window radius by which the mse is computed.
+     * Typically 2 is fine, 3 as well but it slows down the process.
+     */
+    void setCorrectionNeighborhood(unsigned neighborhood) {m_neighborhood=neighborhood;}
 
+    /**
+     * @brief setNbSamplesNNM sets the number of samples for the nearest neighbour search
+     * used to correct the output at each resolution.
+     */
     void setNbSamplesNNM(unsigned nbSamples) {m_nbSamplesNNM=nbSamples;}
+
+    /**
+     * @brief setRadiusScaleNNM sets the radius for the nearest neighbour search.
+     */
     void setRadiusScaleNNM(unsigned radiusScale) {m_radiusScaleNNM=radiusScale;}
+
+    /**
+     * @brief setNbRefinementsNNM sets the maximum number of
+     */
     void setNbRefinementsNNM(unsigned nbRefinements) {m_nbRefinementsNNM=nbRefinements;}
 
     void setPeriodicity(bool periodicity) {m_periodicity = periodicity;}
@@ -96,11 +127,11 @@ public:
 
 private:
 
-    I m_texture, m_label, m_guidance, m_segmented, m_synthesis, m_mask, m_stencil;
+    I m_texture, m_textureLabel, m_guidanceSynthesis, m_guidanceTexture, m_synthesis, m_synthesisMask, m_textureStencil;
 	ImageRGBf m_error;
     int m_width;
     int m_height;
-	double m_labelWeight, m_stencilWeight;
+    double m_textureLabelWeight, m_inputStencilWeight;
 	double m_guidanceWeight, m_strength;
 
     unsigned m_nbPasses;
@@ -114,10 +145,10 @@ private:
     unsigned m_nbRefinementsNNM;
 
     bool m_textureSet;
-	bool m_labelSet;
+    bool m_textureLabelSet;
 	bool m_guidanceSet;
-	bool m_maskSet;
-	bool m_stencilSet;
+    bool m_synthesisMaskSet;
+    bool m_inputStencilSet;
 
     bool m_periodicity;
     bool m_useSynthesisForInit;
@@ -136,14 +167,14 @@ Pcts<I>::Pcts() :
 	m_radiusScaleNNM(5),
 	m_nbRefinementsNNM(2),
 	m_textureSet(false),
-	m_labelSet(false),
-	m_labelWeight(0.0),
+    m_textureLabelSet(false),
+    m_textureLabelWeight(0.0),
 	m_guidanceSet(false),
 	m_guidanceWeight(0.0),
 	m_strength(1.0),
-	m_maskSet(false),
-    m_stencilSet(false),
-    m_stencilWeight(0.0),
+    m_synthesisMaskSet(false),
+    m_inputStencilSet(false),
+    m_inputStencilWeight(0.0),
     m_periodicity(false),
     m_useSynthesisForInit(false)
 {}
@@ -161,14 +192,14 @@ Pcts<I>::Pcts(const I& texture) :
     m_radiusScaleNNM(5),
     m_nbRefinementsNNM(2),
     m_textureSet(true),
-	m_labelSet(false),
-	m_labelWeight(0.0),
+    m_textureLabelSet(false),
+    m_textureLabelWeight(0.0),
 	m_guidanceSet(false),
 	m_guidanceWeight(0.0),
 	m_strength(1.0),
-	m_maskSet(false),
-    m_stencilSet(false),
-    m_stencilWeight(0.0),
+    m_synthesisMaskSet(false),
+    m_inputStencilSet(false),
+    m_inputStencilWeight(0.0),
     m_periodicity(false),
     m_useSynthesisForInit(false)
 {}
@@ -193,27 +224,27 @@ I Pcts<I>::generate()
     pyramidInput.setMode(ISOTROPIC);
     pyramidInput.setMaxPowReductionLevel(maxReductionLevel);
     pyramidInput.generate();
-	if (m_labelSet)
+    if (m_textureLabelSet)
 	{
-		pyramidLabel.setTexture(m_label);
+        pyramidLabel.setTexture(m_textureLabel);
 		pyramidLabel.setMode(ISOTROPIC);
 		pyramidLabel.setMaxPowReductionLevel(maxReductionLevel);
 		pyramidLabel.generate();
 	}
 	if (m_guidanceSet)
 	{
-		pyramidGuidance.setTexture(m_guidance);
+        pyramidGuidance.setTexture(m_guidanceSynthesis);
 		pyramidGuidance.setMode(ISOTROPIC);
 		pyramidGuidance.setMaxPowReductionLevel(maxReductionLevel);
 		pyramidGuidance.generate();
-		pyramidSegmented.setTexture(m_segmented);
+        pyramidSegmented.setTexture(m_guidanceTexture);
 		pyramidSegmented.setMode(ISOTROPIC);
 		pyramidSegmented.setMaxPowReductionLevel(maxReductionLevel);
 		pyramidSegmented.generate();
 	}
-	if (m_maskSet)
+    if (m_synthesisMaskSet)
 	{
-		pyramidMask.setTexture(m_mask);
+        pyramidMask.setTexture(m_synthesisMask);
 		pyramidMask.setMode(ISOTROPIC);
 		pyramidMask.setMaxPowReductionLevel(maxReductionLevel);
 		pyramidMask.generate();
@@ -222,9 +253,9 @@ I Pcts<I>::generate()
 		pyramidSynthesis.setMaxPowReductionLevel(maxReductionLevel);
 		pyramidSynthesis.generate();
 	}
-	if (m_stencilSet)
+    if (m_inputStencilSet)
 	{
-		pyramidStencil.setTexture(m_stencil);
+        pyramidStencil.setTexture(m_textureStencil);
 		pyramidStencil.setMode(ISOTROPIC);
 		pyramidStencil.setMaxPowReductionLevel(maxReductionLevel);
 		pyramidStencil.generate();
@@ -233,8 +264,8 @@ I Pcts<I>::generate()
     const I& lvl0mipmap = pyramidInput.mipmap(maxReductionLevel, maxReductionLevel); //mipmap of the input
     if (m_guidanceSet)
     {
-        m_width = m_guidance.width();
-        m_height = m_guidance.height();
+        m_width = m_guidanceSynthesis.width();
+        m_height = m_guidanceSynthesis.height();
     }
 
     int     widthBlockyImage = m_width/std::pow(2.0, maxReductionLevel), //width of the output initialization
@@ -283,7 +314,7 @@ I Pcts<I>::generate()
                         float err = 0.0f;
                         int count = 0;
                         for (unsigned x2 = x; x2 < m_lvl0BlockSize + x && x2 < (unsigned)indexImageLevel0.width(); ++x2)
-                            for (unsigned y2 = y; y2 < m_lvl0BlockSize + y && y2 < (unsigned)indexImageLevel0.height(); ++y2) //TODO: preconditions
+                            for (unsigned y2 = y; y2 < m_lvl0BlockSize + y && y2 < (unsigned)indexImageLevel0.height(); ++y2)
                             {
                                 count++;
                                 for (int ii = 0; ii < 3; ++ii)
@@ -309,9 +340,9 @@ I Pcts<I>::generate()
                     }
                     if (do_init)
                         for(unsigned x2=x; x2<m_lvl0BlockSize+x && x2<(unsigned)indexImageLevel0.width(); ++x2)
-                            for(unsigned y2=y; y2<m_lvl0BlockSize+y && y2<(unsigned)indexImageLevel0.height(); ++y2) //TODO: preconditions
+                            for(unsigned y2=y; y2<m_lvl0BlockSize+y && y2<(unsigned)indexImageLevel0.height(); ++y2)
                             {
-                                if(!m_maskSet || !I::is_zero(pyramidMask.mipmap(maxReductionLevel,maxReductionLevel).pixelAbsolute(x2, y2)))
+                                if(!m_synthesisMaskSet || !I::is_zero(pyramidMask.mipmap(maxReductionLevel,maxReductionLevel).pixelAbsolute(x2, y2)))
                                 {
                                     //this formula takes periodicity enabled/disabled in account.
                                     indexImageLevel0.pixelAbsolute(x2, y2)[0] = (xT+x2-x + indexImageLevel0.width()) % indexImageLevel0.width();
@@ -372,13 +403,13 @@ I Pcts<I>::generate()
         imageLevel0 = pyramidSynthesis.mipmap(maxReductionLevel, maxReductionLevel);
     else
         lmbd_lookupIndexIntoImage(indexImageLevel0, imageLevel0, pyramidInput, maxReductionLevel);
-    if (m_maskSet)
+    if (m_synthesisMaskSet)
         imageLevel0.parallel_for_all_pixels([&](typename I::PixelType &pix, int x, int y)
         {
             if (I::is_zero(pyramidMask.mipmap(maxReductionLevel, maxReductionLevel).pixelAbsolute(x, y)))
                 pix = pyramidSynthesis.mipmap(maxReductionLevel, maxReductionLevel).pixelAbsolute(x, y);
         });
-	if (m_labelSet) lmbd_lookupIndexIntoImage(indexImageLevel0, labelLevel0, pyramidLabel, maxReductionLevel);
+    if (m_textureLabelSet) lmbd_lookupIndexIntoImage(indexImageLevel0, labelLevel0, pyramidLabel, maxReductionLevel);
 	if (m_guidanceSet) {
 		lmbd_lookupIndexIntoImage(indexImageLevel0, guidanceLevel0, pyramidGuidance, maxReductionLevel);
 		lmbd_lookupIndexIntoImage(indexImageLevel0, segmentedLevel0, pyramidSegmented, maxReductionLevel);
@@ -391,19 +422,19 @@ I Pcts<I>::generate()
         float coeff = pow((float)s / (float)maxReductionLevel, m_strength);
         float gweight = m_guidanceWeight*coeff;
         //Correction
-        for (int npass = 0; npass < m_nbPasses; npass++)
+        for (unsigned npass = 0; npass < m_nbPasses; npass++)
         {
 			std::cout << "level:" << s << " pass:" << npass << "\n";
             if (m_guidanceSet)
                 std::cout << "guidance weight:" << gweight << "\n";
             if(s!=maxReductionLevel) //(already done, and can break the useSynthesisInit option)
                 lmbd_lookupIndexIntoImage(indexImageLevel0, imageLevel0, pyramidInput, s);
-            if (m_maskSet) imageLevel0.parallel_for_all_pixels([&](typename I::PixelType &pix, int x, int y)
+            if (m_synthesisMaskSet) imageLevel0.parallel_for_all_pixels([&](typename I::PixelType &pix, int x, int y)
 			{
                 if (I::is_zero(pyramidMask.mipmap(s, s).pixelAbsolute(x, y)))
                     pix = pyramidSynthesis.mipmap(s, s).pixelAbsolute(x, y);
 			});
-            if (m_labelSet)
+            if (m_textureLabelSet)
                 lmbd_lookupIndexIntoImage(indexImageLevel0, labelLevel0, pyramidLabel, s);
             if (m_guidanceSet)
             {
@@ -415,7 +446,7 @@ I Pcts<I>::generate()
 					for (unsigned x = nx; x<unsigned(indexImageLevel0.width()); x += 2 * m_neighborhood)
 						for (unsigned y = ny; y<unsigned(indexImageLevel0.height()); y += 2 * m_neighborhood)
 						{
-                            if(m_maskSet && I::is_zero(pyramidMask.mipmap(s, s).pixelAbsolute(x, y)))
+                            if(m_synthesisMaskSet && I::is_zero(pyramidMask.mipmap(s, s).pixelAbsolute(x, y)))
                             {
                                 imageLevel0.pixelAbsolute(x, y) = pyramidSynthesis.mipmap(s, s).pixelAbsolute(x, y);
                                 indexImageLevel0.pixelAbsolute(x, y)[0] = x;
@@ -435,14 +466,14 @@ I Pcts<I>::generate()
                                 auto lmbd_updateError = [&] (itk::Index<2> checkedPos, double &checkedError)
                                 {
                                     checkedError = mse(pyramidInput.mipmap(s, s), imageLevel0, checkedPos[0], checkedPos[1], x, y, m_neighborhood, m_periodicity);
-                                    if (m_labelSet)
-                                        checkedError = (1.0- m_labelWeight)*checkedError
-                                                + m_labelWeight * mse(pyramidLabel.mipmap(s, s), labelLevel0, checkedPos[0], checkedPos[1], x, y, m_neighborhood, m_periodicity);
+                                    if (m_textureLabelSet)
+                                        checkedError = (1.0- m_textureLabelWeight)*checkedError
+                                                + m_textureLabelWeight * mse(pyramidLabel.mipmap(s, s), labelLevel0, checkedPos[0], checkedPos[1], x, y, m_neighborhood, m_periodicity);
                                     if (m_guidanceSet)
                                         checkedError = (1.0 - gweight)*checkedError
                                                 + gweight * mse(pyramidGuidance.mipmap(s, s), guidanceLevel0, checkedPos[0], checkedPos[1], x, y, m_neighborhood, m_periodicity);
-                                    if (m_stencilSet)
-                                        checkedError = checkedError*(1.0 + m_stencilWeight*100.0* (1.0 - pyramidStencil.mipmap(s, s).pixelAbsolute(checkedPos[0], checkedPos[1])[0]));
+                                    if (m_inputStencilSet)
+                                        checkedError = checkedError*(1.0 + m_inputStencilWeight*100.0* (1.0 - pyramidStencil.mipmap(s, s).pixelAbsolute(checkedPos[0], checkedPos[1])[0]));
                                 };
 
                                 lmbd_updateError(bestIdErrMin, bestErrMin);
@@ -543,7 +574,7 @@ I Pcts<I>::generate()
                                 indexImageLevel0.pixelAbsolute(x, y)[0] = bestIdErrMin[0];
                                 indexImageLevel0.pixelAbsolute(x, y)[1] = bestIdErrMin[1];
                                 imageLevel0.pixelAbsolute(x, y) = pyramidInput.mipmap(s, s).pixelAbsolute(bestIdErrMin);
-                                if(m_stencilSet && pyramidStencil.mipmap(s, s).pixelAbsolute(bestIdErrMin)[0]==0)
+                                if(m_synthesisMaskSet && m_inputStencilSet && pyramidStencil.mipmap(s, s).pixelAbsolute(bestIdErrMin)[0]==0)
                                     imageLevel0.pixelAbsolute(x, y) = pyramidSynthesis.mipmap(s, s).pixelAbsolute(x, y);
 
                                 //std::cout << "FINAL:=" << besterrMin << "ind=" << bestidErrMin[0] << "," << bestidErrMin[1] << "\n";
