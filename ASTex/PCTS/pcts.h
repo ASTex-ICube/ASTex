@@ -38,7 +38,7 @@ public:
     void setTexture(const I& texture) {m_texture = texture; m_textureSet=true;}
 
 
-	void setLabel(const I& label, double weight) { 
+    void setTextureLabel(const I& label, double weight) {
 		assert(m_textureSet &&
 			"Pcts::setLabel: a texture must be set (try using Pcts::setTexture()).");
         assert(m_texture.width()==label.width() && m_texture.height()==label.height() &&

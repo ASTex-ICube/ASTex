@@ -386,6 +386,8 @@ int test_easy(int argc, char **argv)
     });
     IO::save01_in_u8(output, "/home/nlutz/img/pink_noise.png");
     IO::save01_in_u8(spec_pink, "/home/nlutz/img/spectrum_pink.png");
+
+    return 0;
 }
 
 char fname[256];
@@ -462,9 +464,9 @@ int test_pcts(int argc, char **argv)
     pcts.setNbSamplesNNM(samples);
     pcts.setNbRefinementsNNM(ref);
     pcts.setRadiusScaleNNM(radius);
-    pcts.setLabel(mask, labelW);
+    pcts.setTextureLabel(mask, labelW);
     pcts.setGuidance(guid, seg, guidanceW, 1.0);
-	pcts.setMask(synth, binary);
+    pcts.setSynthesis(synth, binary);
     pcts.setStencil(stencil, stencilW); // weight between 0 and 1
     IO::save01_in_u8(pcts.generate(), input_directory + "/out_pcts_seed" + std::to_string(seed)
                      + "_bs" + std::to_string(bs)

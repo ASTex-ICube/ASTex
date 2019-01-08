@@ -77,7 +77,7 @@ int main(int argc, char **argv)
     pcts.setNbRefinementsNNM(nbRefinementsNNM);
     pcts.setRadiusScaleNNM(radiusNNM);
 
-    pcts.setLabel(inputLabel, labelW);
+    pcts.setTextureLabel(inputLabel, labelW);
 //    pcts.setGuidance(guidanceSynthesis, guidanceInput, guidanceW, 1.0);
 //    pcts.setSynthesis(synthesis, synthesisMask);
     pcts.setStencil(stencil, stencilW); // weight between 0 and 1

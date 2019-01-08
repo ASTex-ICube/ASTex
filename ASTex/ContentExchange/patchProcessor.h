@@ -798,7 +798,7 @@ void PatchProcessor<I>::contents_enhancePCTS(std::string pctsArgFile)
                 }
             }
 //            contentTexture.save(std::string("/home/nlutz/ieee2019/_debug/inputWithContent_p") + std::to_string(i) + "_c" + std::to_string(j) + ".png");
-            pcts.setMask(contentTexture, mask);
+            pcts.setSynthesis(contentTexture, mask);
             contentTexture = pcts.generate();
 //            contentTexture.save(std::string("/home/nlutz/ieee2019/_debug/pctsd_p") + std::to_string(i) + "_c" + std::to_string(j) + ".png");
             Content<I> pctsdContent(contentTexture, p);
