@@ -23,59 +23,63 @@
 
 
 
-#ifndef __ASTEX_IMAGE_EASY_IO__
-#define __ASTEX_IMAGE_EASY_IO__
+#include <iostream>
+#include <chrono>
 
 #include <ASTex/image_gray.h>
 #include <ASTex/image_rgb.h>
-#include <ASTex/image_rgba.h>
+#include <ASTex/store.h>
 
-namespace ASTex
-{
 
-template <typename PIX>
-inline auto NICE(const PIX& p) -> typename std::enable_if<pixel_traits<PIX>::dim ==4, typename Eigen::Matrix<double,1,pixel_traits<PIX>::dim>>::type
+using namespace ASTex;
+
+struct Pix
 {
-	return eigenPixel<double>(p).transpose();
+	uint16_t x;
+	uint16_t y;
+	uint8_t g;
+	inline Pix() {}
+	inline Pix(uint16_t i, uint16_t j, uint8_t c):x(i), y(j), g(c) {}
+};
+
+
+
+int main()
+{
+	ImageRGBu8 image(600,600,true);
+
+	Store<Index> si;
+
+	si << gen_index(1,1);
+	si << gen_index(2,2);
+	si << gen_index(3,1);
+	si << gen_index(4,2);
+
+	for(int i=6 ; i < 295; i+=3)
+		for(int j=1; j<599; ++j)
+			si << gen_index(j,i);
+
+	si.remove(5);
+	si.remove(7);
+	si.remove(9);
+
+	for(const auto& p: si)
+		image.pixelAbsolute(p)= ImageRGBu8::itkPixelNorm(1,0,0);
+
+
+	Store<Pix> sp;
+
+	for(int i=300 ; i < 595; i+=3)
+		for(int j=1; j<599; ++j)
+			sp.emplace_back(j,i,((i*600+j)%255));
+
+
+	for(const auto& p: sp)
+		image.pixelAbsolute(p.x,p.y)= ImageRGBu8::itkPixel(p.g,p.g,p.g);
+
+
+	image.save(TEMPO_PATH+"store_out.png");
+
+	return EXIT_SUCCESS;
 }
 
-template <typename PIX>
-inline auto NICE(const PIX& p) -> typename std::enable_if<pixel_traits<PIX>::dim == 1, PIX>::type
-{
-  return double(p);
-}
-
-
-namespace IO
-{
-
-void ASTEX_API save01_in_u8(const ImageGrayd& img, const std::string& filename);
-
-void ASTEX_API save01_in_u8(const ImageGrayf& img, const std::string& filename);
-
-void ASTEX_API save01_in_u8(const ImageRGBd& img, const std::string& filename);
-
-void ASTEX_API save01_in_u8(const ImageRGBf& img, const std::string& filename);
-
-void ASTEX_API save01_in_u8(const ImageRGBAd& img, const std::string& filename);
-
-void ASTEX_API save01_in_u8(const ImageRGBAf& img, const std::string& filename);
-
-
-
-bool ASTEX_API loadu8_in_01(ImageGrayd& img, const std::string& filename);
-
-bool ASTEX_API loadu8_in_01(ImageGrayf& img, const std::string& filename);
-
-bool ASTEX_API loadu8_in_01(ImageRGBd& img, const std::string& filename);
-
-bool ASTEX_API loadu8_in_01(ImageRGBf& img, const std::string& filename);
-
-bool ASTEX_API loadu8_in_01(ImageRGBAd& img, const std::string& filename);
-
-bool ASTEX_API loadu8_in_01(ImageRGBAf& img, const std::string& filename);
-
-}
-}
-
-#endif

@@ -68,7 +68,7 @@ int main()
 	// Usage of mask is pincipaly to customize traversal
 	image.for_all_pixels([&] (ImageRGBu8::PixelType& pix)
 	{
-		pix=RGBu8(0,0,0);
+		pix=ImageRGBu8::itkPixel(0,0,0);
 	},
 	mb // mask
 	);
