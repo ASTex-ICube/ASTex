@@ -36,6 +36,8 @@
 #include <ASTex/thread_pool.h>
 #include <ASTex/dll.h>
 
+#include <Eigen/Dense>
+
 #include <thread>
 #include <vector>
 #include <algorithm>
@@ -63,6 +65,17 @@ using Offset = itk::Offset<2>;
 inline Index gen_index(int x, int y)
 {
 	return Index({{::itk::IndexValueType(x),::itk::IndexValueType(y)}});
+}
+
+
+inline uint32_t index_to_ui32(const Index& p)
+{
+	return p[0] | p[1]<<16;
+}
+
+inline Index ui32_to_index(uint32_t idx)
+{
+	return gen_index(idx & 0xffff, idx >> 16);
 }
 
 /**
@@ -95,27 +108,226 @@ inline Index operator +(const Index& iA, const Index& iB)
 	return gen_index(iA[0]+iB[0], iA[1]+iB[1]);
 }
 
+
+
+template <typename T>
+inline auto normalized(T v) -> typename std::enable_if<std::is_arithmetic<T>::value, double>::type
+{
+	if (std::is_floating_point<T>::value) //compile time resolved
+		return double(v);
+
+	if (std::is_unsigned<T>::value) //compile time resolved
+		return double(v) / double(std::numeric_limits<T>::max());
+
+	return double(v - std::numeric_limits<T>::lowest()) / (double(std::numeric_limits<T>::max()) - double(std::numeric_limits<T>::lowest()));
+}
+
+template <typename T>
+inline auto unnormalized(double v) -> typename std::enable_if<std::is_arithmetic<T>::value, T>::type
+{
+	if (std::is_floating_point<T>::value) //compile time resolved
+		return T(v);
+
+	if (std::is_unsigned<T>::value) //compile time resolved
+		return T(v * std::numeric_limits<T>::max());
+
+	return T(v*(double(std::numeric_limits<T>::max()) - double(std::numeric_limits<T>::lowest())) + std::numeric_limits<T>::lowest());
+}
+
+
+template <typename T>
+std::true_type astex_check_eigen_type(const Eigen::MatrixBase<T>*);
+std::false_type astex_check_eigen_type(...);
+
+template <typename T>
+struct is_eigen : public decltype(astex_check_eigen_type(std::declval<T*>()))
+{};
+
+template <typename T, typename std::enable_if<is_eigen<T>::value, bool>::type = true>
+struct is_eigen_vector
+{
+	static const bool value = Eigen::internal::traits<T>::ColsAtCompileTime == 1;
+};
+
+
+template <typename T, typename std::enable_if<is_eigen<T>::value, bool>::type = true>
+struct is_eigen_vector_floating
+{
+	static const bool value = Eigen::internal::traits<T>::ColsAtCompileTime == 1 && std::is_floating_point<typename Eigen::internal::traits<T>::Scalar>::value;
+};
+
+
+template <typename T, typename std::enable_if<is_eigen<T>::value, bool>::type = true>
+struct is_eigen_vector3
+{
+	static const bool value = Eigen::internal::traits<T>::ColsAtCompileTime == 1 && Eigen::internal::traits<T>::RowsAtCompileTime == 3;
+};
+
+template <typename T, typename std::enable_if<is_eigen<T>::value, bool>::type = true>
+struct is_eigen_vector4
+{
+	static const bool value = Eigen::internal::traits<T>::ColsAtCompileTime == 1 && Eigen::internal::traits<T>::RowsAtCompileTime == 4;
+};
+
+
+template <typename T>
+std::true_type astex_check_itk_type(const itk::RGBPixel<T>*);
+template <typename T>
+std::true_type astex_check_itk_type(const itk::RGBAPixel<T>*);
+std::false_type astex_check_itk_type(...);
+
+template <typename T>
+struct is_itkPixel : public decltype(astex_check_itk_type(std::declval<T*>()))
+{};
+
+
+
+template <typename T, typename FAKE=void>
+struct pixel_traits;
+
+template <typename T>
+struct pixel_traits<T,typename std::enable_if<is_eigen_vector<T>::value>::type>
+{
+	static const int32_t dim = Eigen::internal::traits<T>::RowsAtCompileTime;
+	using type = typename Eigen::internal::traits<T>::Scalar;
+};
+
+template <typename T>
+struct pixel_traits<T,typename std::enable_if<std::is_arithmetic<T>::value>::type>
+{
+	static const int32_t dim = 1;
+	using type = T;
+};
+
+template <typename T>
+struct pixel_traits<T,typename std::enable_if<is_itkPixel<T>::value>::type>
+{
+	static const int32_t dim = T::Dimension;
+	using type = typename T::ComponentType;
+};
+
+
+
+
+template <typename T>
+inline auto channel(T& p, uint32_t i) -> typename std::enable_if<std::is_arithmetic<T>::value, T&>::type
+{
+	assert(i == 0);
+	std::ignore = i;
+	return p;
+}
+
+template <typename T>
+inline auto channel(T& p, uint32_t i) -> typename std::enable_if<is_eigen_vector<T>::value, typename Eigen::internal::traits<T>::Scalar&>::type
+{
+	assert(i<Eigen::internal::traits<T>::RowsAtCompileTime);
+	return p[i];
+}
+
+template <typename T>
+inline T& channel(itk::RGBPixel<T>& p, uint32_t i)
+{
+	assert(i<3);
+	return p[i];
+}
+
+template <typename T>
+inline T& channel(itk::RGBAPixel<T>& p, uint32_t i)
+{
+	assert(i<4);
+	return p[i];
+}
+
+
+template <typename T>
+inline auto channel(const T& p, uint32_t i) -> typename std::enable_if<std::is_arithmetic<T>::value, const T&>::type
+{
+	assert(i == 0);
+	std::ignore = i;
+	return p;
+}
+
+template <typename T>
+inline auto channel(const T& p, uint32_t i) -> typename std::enable_if<is_eigen_vector<T>::value, const typename Eigen::internal::traits<T>::Scalar&>::type
+{
+	assert(i<Eigen::internal::traits<T>::RowsAtCompileTime);
+	return p[i];
+}
+
+template <typename T>
+inline const T& channel(const itk::RGBPixel<T>& p, uint32_t i)
+{
+	assert(i<3);
+	return p[i];
+}
+
+template <typename T>
+inline const T& channel(const itk::RGBAPixel<T>& p, uint32_t i)
+{
+	assert(i<4);
+	return p[i];
+}
+
+
+template <typename T>
+inline auto channel_long(const T& p, uint32_t i) -> typename std::enable_if<std::is_arithmetic<T>::value && !std::is_floating_point<T>::value, int64_t>::type
+{
+	assert(i == 0);
+	std::ignore = i;
+	return p;
+}
+
+template <typename T>
+inline auto channel_long(T& p, uint32_t i) -> typename std::enable_if<is_eigen_vector_floating<T>::value, typename Eigen::internal::traits<T>::Scalar>::type
+{
+	assert(i<Eigen::internal::traits<T>::RowsAtCompileTime);
+	return p[i];
+}
+
+
+template <typename T>
+inline auto channel_long(const itk::RGBPixel<T>& p, uint32_t i)  -> typename std::enable_if<std::is_arithmetic<T>::value && !std::is_floating_point<T>::value, int64_t>::type
+{
+	assert(i<3);
+	return p[i];
+}
+
+template <typename T>
+inline auto channel_long(const itk::RGBAPixel<T>& p, uint32_t i)  -> typename std::enable_if<std::is_arithmetic<T>::value && !std::is_floating_point<T>::value, int64_t>::type
+{
+	assert(i<4);
+	return p[i];
+}
+
+template <typename T>
+inline auto channel_long(const T& p, uint32_t i) -> typename std::enable_if<std::is_arithmetic<T>::value && std::is_floating_point<T>::value, double>::type
+{
+	assert(i == 0);
+	std::ignore = i;
+	return p;
+}
+
+template <typename T>
+inline auto channel_long(const itk::RGBPixel<T>& p, uint32_t i)  -> typename std::enable_if<std::is_arithmetic<T>::value && std::is_floating_point<T>::value, double>::type
+{
+	assert(i<3);
+	return p[i];
+}
+
+template <typename T>
+inline auto channel_long(const itk::RGBAPixel<T>& p, uint32_t i)  -> typename std::enable_if<std::is_arithmetic<T>::value && std::is_floating_point<T>::value, double>::type
+{
+	assert(i<4);
+	return p[i];
+}
+
+
+
 /**
  * @brief Base class: only for easy type checking
  */
 class ImageBase
 {};
-
-//template <typename T, bool CST>
-//struct CstDcl
-//{};
-
-//template <typename T>
-//struct CstDcl<T,true>
-//{
-//	using type = const T&;
-//};
-
-//template <typename T>
-//struct CstDcl<T,false>
-//{
-//	using type = T&;
-//};
 
 
 /**
@@ -127,63 +339,91 @@ template <typename INHERIT, bool CST >
 class ImageCommon: public INHERIT
 {
 // 2 macros for more readable code
-#define NOT_CONST template <bool PIPOBOOL=true>
-#define RETURNED_TYPE(TYPE_T) typename std::enable_if<PIPOBOOL && !CST,TYPE_T>::type
-
+#define NOT_CONST template <bool B=true>
+#define RETURNED_TYPE(TYPE_T) typename std::enable_if<B && !CST,TYPE_T>::type
 public:
 
-	typedef typename INHERIT::ItkImg               ItkImg;
-	typedef typename INHERIT::IteratorIndexed      IteratorIndexed;
-	typedef typename INHERIT::Iterator             Iterator;
-	typedef typename INHERIT::ConstIteratorIndexed ConstIteratorIndexed;
-	typedef typename INHERIT::ConstIterator        ConstIterator;
+	using Self                 = ImageCommon<INHERIT, CST>;
+	using ItkImg               = typename INHERIT::ItkImg;
+	using IteratorIndexed      = typename INHERIT::IteratorIndexed;
+	using Iterator             = typename INHERIT::Iterator;
+	using ConstIteratorIndexed = typename INHERIT::ConstIteratorIndexed ;
+	using ConstIterator        = typename INHERIT::ConstIterator;
+	using PixelType            = typename INHERIT::PixelType;
+	using DoublePixelEigen     = typename INHERIT::DoublePixelEigen;
+	using LongPixelEigen     = typename INHERIT::LongPixelEigen;
+	using DataType             = typename INHERIT::DataType;
 
-	typedef typename INHERIT::PixelType            PixelType;
-	typedef typename INHERIT::DoublePixelType      DoublePixelType;
-	typedef typename INHERIT::ASTexPixelType       ASTexPixelType;
-	typedef typename INHERIT::DataType             DataType;
 	static const uint32_t NB_CHANNELS = INHERIT::NB_CHANNELS;
 
-	using Self = ImageCommon<INHERIT, CST>;
 
-
-	inline static double normalized_value(DataType v)
+	class EigenProxy
 	{
-		if (std::is_floating_point<DataType>::value) //compile time resolved
-			return double(v);
+		PixelType& pix_;
+	public:
 
-		if (std::is_unsigned<DataType>::value) //compile time resolved
-					return double(v) / double(std::numeric_limits<DataType>::max());
+		inline EigenProxy(PixelType& p): pix_(p) {}
 
-		return double(v - std::numeric_limits<DataType>::lowest()) / (double(std::numeric_limits<DataType>::max()) - double(std::numeric_limits<DataType>::lowest()));
-	}
+		template <typename EP>
+		inline void operator = (const EP& p)
+		{
+			pix_ = INHERIT::itkPixel(p);
+		}
+
+		template <typename S>
+		operator typename INHERIT::template EigenVector<S>() const
+		{
+			return INHERIT::template eigenPixel<S>(pix_);
+		}
+	};
 
 
-	inline static DoublePixelType normalized_pixel(const PixelType& p)
+	class ConstEigenProxy
 	{
-		if (!std::is_arithmetic<PixelType>::value) //compile time resolved
-			return normalized_value(p);
+		const PixelType& pix_;
+	public:
 
-		DoublePixelType q;
-		for (uint32_t i=0; i<INHERIT::NB_CHANNELS; ++i)
-			q[i] = Self::normalized_value(p[i]);
-		return q;
-	}
+		inline ConstEigenProxy(const PixelType& p): pix_(p) {}
 
-	template <bool B=true>
-	inline static auto channel(const PixelType& p, uint32_t i)-> typename std::enable_if<!B || std::is_arithmetic<PixelType>::value , DataType>::type
+		template <typename S>
+		operator typename INHERIT::template EigenVector<S>() const
+		{
+			return INHERIT::template eigenPixel<S>(pix_);
+		}
+	};
+
+
+	class NormalizedEigenProxy
 	{
-		assert(i==0);
-		std::ignore = i;
-		return p;
-	}
+		PixelType& pix_;
+	public:
+		inline NormalizedEigenProxy(PixelType& p): pix_(p) {}
 
-	template <bool B=true>
-	inline static auto channel(const PixelType& p, uint32_t i) -> typename std::enable_if<!B || !std::is_arithmetic<PixelType>::value , DataType>::type
+		template <typename S>
+		inline void operator = (const typename INHERIT::template EigenVector<S>& p)
+		{
+			pix_ = INHERIT::template unnormalized<S>(p);
+		}
+
+		template <typename S>
+		operator typename INHERIT::template EigenVector<S>() const
+		{
+			return INHERIT::template normalized<S>(pix_);
+		}
+	};
+
+	class ConstNormalizedEigenProxy
 	{
-		assert(i<NB_CHANNELS);
-		return p[i];
-	}
+		const PixelType& pix_;
+	public:
+		inline ConstNormalizedEigenProxy(const PixelType& p): pix_(p) {}
+
+		template <typename S>
+		operator typename INHERIT::template EigenVector<S>() const
+		{
+			return INHERIT::template normalized<S>(pix_);
+		}
+	};
 
 
 protected:
@@ -202,8 +442,8 @@ public:
 	 * constructor for non-constant version of class
 	 * second parameter is for SFINAE
 	 */
-	template <bool PIPOBOOL=true>
-	ImageCommon(typename ItkImg::Pointer itk_ptr,typename std::enable_if<PIPOBOOL && !CST>::type* = nullptr):
+	template <bool B=true>
+	ImageCommon(typename ItkImg::Pointer itk_ptr,typename std::enable_if<B && !CST>::type* = nullptr):
 		INHERIT(itk_ptr), center_({{0,0}}), clampvalue_(DataType(0))
 	{}
 
@@ -212,13 +452,13 @@ public:
 	 * constructor for constant version of class
 	 * second parameter is for SFINAE
 	 */
-	template <bool PIPOBOOL=true>
-	ImageCommon(typename ItkImg::ConstPointer itk_ptr, typename std::enable_if<PIPOBOOL && CST>::type* = nullptr):
+	template <bool B=true>
+	ImageCommon(typename ItkImg::ConstPointer itk_ptr, typename std::enable_if<B && CST>::type* = nullptr):
 		INHERIT(typename ItkImg::Pointer(const_cast<ItkImg*>(itk_ptr.GetPointer()))), center_({{0,0}})
 	{}
 
-	template <bool PIPOBOOL = true>
-	ImageCommon(typename ItkImg::Pointer itk_ptr, typename std::enable_if<PIPOBOOL && CST>::type* = nullptr) :
+	template <bool B = true>
+	ImageCommon(typename ItkImg::Pointer itk_ptr, typename std::enable_if<B && CST>::type* = nullptr) :
 		INHERIT(itk_ptr), center_({ { 0,0 } }), clampvalue_(DataType(0))
 	{}
 
@@ -229,7 +469,7 @@ public:
 		initItk(w,h,init_to_zero);
 	}
 
-	NOT_CONST inline auto getPixelsPtr() -> RETURNED_TYPE(ASTexPixelType*)
+	NOT_CONST inline auto getPixelsPtr() -> RETURNED_TYPE(PixelType*)
 	{
 		return INHERIT::getPixelsPtr();
 	}
@@ -240,7 +480,7 @@ public:
 	}
 
 
-	const ASTexPixelType* getPixelsPtr() const
+	const PixelType* getPixelsPtr() const
 	{
 		return INHERIT::getPixelsPtr();
 	}
@@ -289,6 +529,9 @@ public:
 		region.SetSize(1,height);
 		this->itk_img_->SetRegions(region);
 		this->itk_img_->Allocate(init_to_zero);
+
+		for (auto it = this->beginIterator(); !it.IsAtEnd(); ++it)
+			it.Value() = INHERIT::itkPixel(0);
 	}
 
 	NOT_CONST auto initItkValue(int width, int height, const PixelType& value ) -> RETURNED_TYPE(void)
@@ -311,7 +554,6 @@ public:
 		assert(is_initialized_as(im));
 		std::swap(this->itk_img_,im.itk_img_);
 		std::swap(this->center_,im.center_);
-
 	}
 
 	NOT_CONST auto itk() -> RETURNED_TYPE(typename ItkImg::Pointer&)
@@ -354,79 +596,147 @@ public:
 	}
 
 
-	NOT_CONST auto pixelAbsolute(const Index& pos) -> RETURNED_TYPE(PixelType&)
+	template <bool B = true>
+	inline auto pixelAbsolute(const Index& pos) -> typename std::enable_if<B && !CST, PixelType&>::type
 	{
 		return this->itk_img_->GetPixel(pos);
 	}
 
-	const PixelType& pixelAbsolute(const Index& pos) const
-	{
-		return this->itk_img_->GetPixel(pos);
-	}
-
-
-	NOT_CONST auto pixelAbsolute( int i, int j) -> RETURNED_TYPE(PixelType&)
+	template <bool B = true>
+	inline auto pixelAbsolute( int i, int j) -> typename std::enable_if<B && !CST, PixelType&>::type
 	{
 		return this->itk_img_->GetPixel({{ i ,j }});
 	}
 
-	const PixelType& pixelAbsolute(int i, int j) const
+	template <bool B = true>
+	auto pixelRelative( int i, int j) -> typename std::enable_if<B && !CST, PixelType&>::type
+	{
+//		Index pixelIndex = {{ i+center_[0] ,j+center_[1] }};
+		return this->itk_img_->GetPixel({{ i+center_[0] ,j+center_[1] }});
+	}
+
+
+	inline const PixelType& pixelAbsolute(const Index& pos) const
+	{
+		return this->itk_img_->GetPixel(pos);
+	}
+
+	inline const PixelType& pixelAbsolute(int i, int j) const
 	{
 		return this->itk_img_->GetPixel({{i,j}});
 	}
 
-
-	NOT_CONST auto pixelRegion( int i, int j) -> RETURNED_TYPE(PixelType&)
-	{
-		const Index& imgIdx = this->itk_img_->GetLargestPossibleRegion().GetIndex();
-		Index pixelIndex = {{ i+imgIdx[0] ,j+imgIdx[1] }};
-
-		return this->itk_img_->GetPixel(pixelIndex);
-	}
-
-	const PixelType& pixelRegion(int i, int j) const
-	{
-		const Index& imgIdx = this->itk_img_->GetLargestPossibleRegion().GetIndex();
-		Index pixelIndex = {{ i+imgIdx[0] ,j+imgIdx[1] }};
-
-		return this->itk_img_->GetPixel(pixelIndex);
-	}
-
-
-	NOT_CONST auto pixelRelative( int i, int j) -> RETURNED_TYPE(PixelType&)
-	{
-		Index pixelIndex = {{ i+center_[0] ,j+center_[1] }};
-		return this->itk_img_->GetPixel(pixelIndex);
-	}
-
 	const PixelType& pixelRelative(int i, int j) const
 	{
-		Index pixelIndex = {{ i+center_[0] ,j+center_[1] }};
-		return  this->itk_img_->GetPixel(pixelIndex);
+		return  this->itk_img_->GetPixel({{ i+center_[0] ,j+center_[1] }});
 	}
 
 
-	const PixelType& pixelChecked(int i, int j) const
+	template <bool B = true>
+	inline auto pixelEigenAbsolute(const Index& pos)->typename std::enable_if<B && !CST, EigenProxy>::type
 	{
-		if( i < 0 || i >= width()  ||  j < 0 || j >= height() )
-			return clampvalue_;
-
-		Index pixelIndex = {{ i , j }};
-		return  this->itk_img_->GetPixel(pixelIndex);
+		return EigenProxy(this->itk_img_->GetPixel(pos));
 	}
 
-
-	const PixelType& pixelRelativeChecked(int i, int j) const
+	template <bool B = true>
+	inline auto pixelEigenAbsolute(int i,int j)->typename std::enable_if<B && !CST, EigenProxy>::type
 	{
-		int ii = i+center_[0];
-		int jj = j+center_[1];
-
-		if( ii < 0 || ii >= width()  ||  jj < 0 || jj >= height() )
-			return clampvalue_;
-
-		Index pixelIndex = {{ ii , jj }};
-		return  this->itk_img_->GetPixel(pixelIndex);
+		return pixelEigenAbsolute({ { i,j } });
 	}
+
+	template <bool B = true>
+	auto pixelEigenRelative(int i, int j)->typename std::enable_if<B && !CST, EigenProxy>::type
+	{
+		return pixelEigenAbsolute({ { i+center_[0], j+center_[1] } });
+	}
+
+
+	template <bool B = true>
+	inline auto pixelNormEigenAbsolute(const Index& pos)->typename std::enable_if<B && !CST, NormalizedEigenProxy>::type
+	{
+		return NormalizedEigenProxy(this->itk_img_->GetPixel(pos));
+	}
+
+	template <bool B = true>
+	inline auto pixelNormEigenAbsolute(int i,int j)->typename std::enable_if<B && !CST, NormalizedEigenProxy>::type
+	{
+		return pixelNormEigenAbsolute({ { i,j } });
+	}
+
+	template <bool B = true>
+	auto pixelNormEigenRelative(int i, int j)->typename std::enable_if<B && !CST, NormalizedEigenProxy>::type
+	{
+		return pixelNormEigenAbsolute({ { i+center_[0], j+center_[1] } });
+	}
+
+
+	inline ConstEigenProxy pixelEigenAbsolute(const Index& pos) const
+	{
+		return ConstEigenProxy(this->itk_img_->GetPixel(pos));
+	}
+
+	inline ConstEigenProxy pixelEigenAbsolute(int i, int j) const
+	{
+		return pixelEigenAbsolute({ { i,j } });
+	}
+
+	inline ConstEigenProxy pixelEigenRelative(int i, int j) const
+	{
+		return pixelEigenAbsolute({ { i+center_[0], j+center_[1] } });
+	}
+
+
+	inline ConstNormalizedEigenProxy pixelNormEigenAbsolute(const Index& pos) const
+	{
+		return ConstNormalizedEigenProxy(this->itk_img_->GetPixel(pos));
+	}
+
+	inline ConstNormalizedEigenProxy pixelNormEigenAbsolute(int i, int j) const
+	{
+		return pixelNormEigenAbsolute({ { i,j } });
+	}
+
+	inline ConstNormalizedEigenProxy pixelNormEigenRelative(int i, int j) const
+	{
+		return pixelNormEigenAbsolute({ { i+center_[0], j+center_[1] } });
+	}
+
+//	template <bool B = true>
+//	auto pixelEigenRelativeWrite(int i, int j)->typename std::enable_if<B && !CST && std::is_same<DataType, double>::value, DoublePixelEigen&>::type
+//	{
+//		return pixelEigenAbsoluteWrite({ { i+center_[0], j+center_[1] } });
+//	}
+
+//	template <bool B = true>
+//	auto pixelNormEigenRelativeWrite(int i, int j)->typename std::enable_if<B && !CST && std::is_same<DataType, double>::value, DoublePixelEigen&>::type
+//	{
+//		return pixelEigenAbsoluteWrite({ { i+center_[0], j+center_[1] } });
+//	}
+
+//	template <bool B = true>
+//	auto pixelEigenRelative(int i, int j) const -> typename std::enable_if<B && !std::is_same<DataType, double>::value, DoublePixelEigen>::type
+//	{
+//		return pixelEigenAbsolute({ { i+center_[0], j+center_[1] } });
+//	}
+
+//	template <bool B = true>
+//	auto pixelNormEigenRelative(int i, int j) const -> typename std::enable_if<B && !std::is_same<DataType, double>::value, DoublePixelEigen>::type
+//	{
+//		return pixelNormEigenAbsolute({ { i+center_[0], j+center_[1] } });
+//	}
+
+//	template <bool B = true>
+//	auto pixelEigenRelative(int i, int j) const -> typename std::enable_if<B && std::is_same<DataType, double>::value, const DoublePixelEigen&>::type
+//	{
+//		return pixelEigenAbsolute({ { i+center_[0], j+center_[1] } });
+//	}
+
+//	template <bool B = true>
+//	auto pixelNormEigenRelative(int i, int j) const -> typename std::enable_if<B && std::is_same<DataType, double>::value, const DoublePixelEigen&>::type
+//	{
+//		return pixelNormEigenAbsolute({ { i+center_[0], j+center_[1] } });
+//	}
+
 
 	const PixelType& get_clamp_value() const
 	{
@@ -1396,6 +1706,45 @@ IMG create_from_buffer(int w, int h, char * buffer, bool manage_dest)
 }
 
 
+
+template <typename FUNC>
+void parallel_for(int begin, int end, int inc, const FUNC& f)
+{
+	ThreadPool* thread_pool = internal_thread_pool();
+	uint16_t nbt = nb_launched_threads();
+	std::vector<ThreadPool::Future> futures(nbt);
+	int inct = inc*nbt;
+	for (uint16_t i = 0; i<nbt; ++i)
+	{
+		futures[i] = thread_pool->enqueue([inct, begin, end, &f]()
+		{
+			for (int y = begin; y<end; y += inct)
+				f(y);
+		});
+		begin += inc;
+	}
+	for (auto& f : futures)
+		f.wait();
+}
+
+template <typename FUNC>
+void parallel_for(int begin, int end, const FUNC& f)
+{
+	ThreadPool* thread_pool = internal_thread_pool();
+	uint16_t nbt = nb_launched_threads();
+	std::vector<ThreadPool::Future> futures(nbt);
+	for (uint16_t i = 0; i<nbt; ++i)
+	{
+		futures[i] = thread_pool->enqueue([nbt, begin, end, &f]()
+		{
+			for (int y = begin; y<end; y += nbt)
+				f(y);
+		});
+		++begin;
+	}
+	for (auto& f : futures)
+		f.wait();
+}
 
 }
 

@@ -86,13 +86,13 @@ protected:
 		// apply algo on region
 		img_out.for_all_pixels([&] (ImageGrayu8::PixelType& Q, int x, int y)
 		{
-			ImageRGBu8::ASTexPixelType Pa = img_A.pixelAbsolute(x,y);
-			ImageRGBu8::ASTexPixelType Pb = img_B.pixelAbsolute(x,y);
+			ConstImageRGBu8::DoublePixelEigen Pa = img_A.pixelEigenAbsolute(x,y);
+			ConstImageRGBu8::DoublePixelEigen Pb = img_B.pixelEigenAbsolute(x,y);
 			Pa /= 2;
 			Pb /= 2;
-			ImageRGBu8::ASTexPixelType p = Pa+Pb;
+			auto p = Pa+Pb;
 			double d = (p[0] + p[1] + p[2])/3.0;
-			Q = d;
+			Q = ImageGrayu8::itkPixel(d);
 		});
 	}
 
