@@ -502,11 +502,11 @@ public:
 		return this->itk_img_ != nullptr;
 	}
 
-    static bool is_zero(const PixelType &pix)
-    {
-        static PixelType s_zero;
-        return pix==s_zero;
-    }
+	static bool is_zero(const PixelType &pix)
+	{
+		static PixelType s_zero;
+		return pix==s_zero;
+	}
 
 	template <typename IMG>
 	auto is_initialized_as(const IMG& img) const -> typename std::enable_if<std::is_base_of<ImageBase,IMG>::value, bool>::type

@@ -46,12 +46,12 @@ using Point = Eigen::Vector2d;
 class NeighborhoodSearchGrid
 {
 private:
-    Eigen::Vector2d                 cellSize_;
-    ASTex::ImageGray32              cells_;
-    int                             width_;
-    int                             height_;
-    double                          minDistSq_;
-    std::vector<Eigen::Vector2d>    points_;
+	Eigen::Vector2d                 cellSize_;
+	ASTex::ImageGray32              cells_;
+	int                             width_;
+	int                             height_;
+	double                          minDistSq_;
+	std::vector<Eigen::Vector2d>    points_;
 
 public:
 	NeighborhoodSearchGrid( int width, int height, double minDist );
@@ -75,18 +75,18 @@ public:
 
 class PoissonDiskSampler
 {
-    static Point generateRandomPointAround( Eigen::Vector2d &point, double minDist );
+	static Point generateRandomPointAround( Eigen::Vector2d &point, double minDist );
 
 public:
-    /** Generates N seeds over the domain [0,width[x[0,height[ with a Poisson disk sampling.
-     *
-     *  \param width        Domain size along the X axis.
-     *  \param height       Domain size along the Y axis.
-     *  \param samples      Array where to store generated samples.
-     *  \param distMin      Minimum distance allowed between samples.
-     *  \param nNewPoints   Number of new points to generate and check around valid samples for the generation of new ones.
-     */
-    static void generateSamples( int width, int height, std::vector< Eigen::Vector2d > &samples, double minDist, int nNewPoints = 100 );
+	/** Generates N seeds over the domain [0,width[x[0,height[ with a Poisson disk sampling.
+	 *
+	 *  \param width        Domain size along the X axis.
+	 *  \param height       Domain size along the Y axis.
+	 *  \param samples      Array where to store generated samples.
+	 *  \param distMin      Minimum distance allowed between samples.
+	 *  \param nNewPoints   Number of new points to generate and check around valid samples for the generation of new ones.
+	 */
+	static void generateSamples( int width, int height, std::vector< Eigen::Vector2d > &samples, double minDist, int nNewPoints = 100 );
 };
 
 
