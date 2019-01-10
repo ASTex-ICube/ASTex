@@ -46,8 +46,8 @@ set (LIB_INCLUDE
 	saliency/contrast_based_saliency.h
         saliency/permutohedral_lattice.h
 
-#        Sparse/atom.h
-#        Sparse/dictionary.h
+        Sparse/residual.h
+        Sparse/dictionary.h
 
         mipmap.h
         histogram.h
@@ -84,8 +84,8 @@ set (LIB_SRC
 	pca.cpp
 	thread_pool.cpp
 
-#        Sparse/atom.cpp
-#        Sparse/dictionary.cpp
+        Sparse/residual.cpp
+        Sparse/dictionary.cpp
 
         ContentExchange/old_PatchProcessor.cpp
         ContentExchange/old_FragmentProcessor.cpp
