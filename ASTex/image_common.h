@@ -1205,6 +1205,69 @@ public:
 #undef NOT_CONST
 #undef RETURNED_TYPE
 
+	//Some operators
+
+	ImageCommon operator *(const ImageCommon& other) const
+	{
+		assert(this->size() == other.size());
+		ImageCommon output;
+		output.initItk(width(), height(), false);
+		output.for_all_pixels([&] (PixelType &pix, int x, int y)
+		{
+			pix = pixelAbsolute(x, y) * other.pixelAbsolute(x, y);
+		});
+		return output;
+	}
+
+	ImageCommon operator *(const PixelType& other) const
+	{
+		const unsigned pixelSize = sizeof(PixelType)/sizeof(DataType);
+		ImageCommon output;
+		output.initItk(width(), height(), false);
+		output.for_all_pixels([&] (PixelType &pix, int x, int y)
+		{
+			for(unsigned i=0; i<pixelSize; ++i)
+				reinterpret_cast<DataType *>(&pix)[i] =
+					reinterpret_cast<const DataType *>(&pixelAbsolute(x, y))[i]
+				*	reinterpret_cast<const DataType *>(&other)[i];
+		});
+		return output;
+	}
+
+	ImageCommon operator +(const ImageCommon& other) const
+	{
+		assert(this->size() == other.size());
+		ImageCommon output;
+		output.initItk(width(), height(), false);
+		output.for_all_pixels([&] (PixelType &pix, int x, int y)
+		{
+			pix = pixelAbsolute(x, y) + other.pixelAbsolute(x, y);
+		});
+		return output;
+	}
+
+	ImageCommon& operator +=(const ImageCommon& other)
+	{
+		assert(this->size() == other.size());
+		for_all_pixels([&] (PixelType &pix, int x, int y)
+		{
+			pix += other.pixelAbsolute(x, y);
+		});
+		return (*this);
+	}
+
+	ImageCommon operator -(const ImageCommon& other) const
+	{
+		assert(this->size() == other.size());
+		ImageCommon output;
+		output.initItk(width(), height(), false);
+		output.for_all_pixels([&] (PixelType &pix, int x, int y)
+		{
+			pix = pixelAbsolute(x, y) - other.pixelAbsolute(x, y);
+		});
+		return output;
+	}
+
 };
 
 

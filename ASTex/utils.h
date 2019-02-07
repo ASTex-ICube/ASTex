@@ -306,9 +306,6 @@ double mse(const I& i1, const I& i2, int x1, int y1, int x2, int y2, int neighbo
     return error/arraySize/hit;
 }
 
-
-
-
 }
 
 #endif
