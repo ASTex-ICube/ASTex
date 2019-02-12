@@ -9,7 +9,7 @@
 #include "ASTex/imageviewer.h"
 #include "ASTex/ContentExchange/atlas.h"
 #include "ASTex/PCTS/pcts.h"
-#include "ASTex/filters.h"
+//#include "ASTex/filters.h"
 #include "ASTex/ContentExchange/benchmarker.h"
 
 // v define your own
@@ -17,7 +17,7 @@
 
 using namespace ASTex;
 
-int test_getis_gi(int argc, char **argv)
+/*int test_getis_gi(int argc, char **argv)
 {
 	if(argc < 2)
 	{
@@ -49,7 +49,7 @@ int test_getis_gi(int argc, char **argv)
 	IO::save01_in_u8(result, std::string(MY_PATH)+ "gi_translated_" + name_noext + "_" + std::to_string(max_dist) + "_" + std::to_string(variance) + ".png");
 
 	return 0;
-}
+}*/
 
 int test_wendling(int argc, char **argv)
 {
