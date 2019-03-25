@@ -11,6 +11,7 @@
 #include <ASTex/distances_maps.h>
 #include <ASTex/pca.h>
 #include <ASTex/easy_io.h>
+#include "histogram.h"
 
 using namespace ASTex;
 
@@ -20,6 +21,18 @@ inline double log_scale(double d)
     const double x = 1.0 / N;
     return (std::log(d + x) - std::log(x)) / (std::log(1 + x) - std::log(x));
 }
+
+class CompareWeightedPCA
+{
+public:
+	CompareWeightedPCA() {}
+	bool operator()(const typename ImageRGBd::PixelType &object, const typename ImageRGBd::PixelType &other)
+	{
+		return object[0] * weight[0] + object[1] * weight[1] + object[2] * weight[2]
+			<  other[0]  * weight[0] + other[1]  * weight[1] + other[2]  * weight[2];
+	}
+	static double weight[3];
+};
 
 typedef enum{ALL=0, NORMAL=1, ONE_PHASE=2, SAME_PHASE=3, NULL_PHASE=4, SEVERAL_PHASES=5, TEXTON=6, PCA_SYNTHESIS=7, LUMINANCE=8} color_dephasing_mode_t;
 static const std::string color_dephasing_mode_map[]={"all", "normal", "one_phase", "same_phase", "null_phase", "several_phases", "texton", "pca", "luminance"};
@@ -163,13 +176,13 @@ void extract3Channels(const ImageCommon<ImageRGBBase<REAL>, false>& rgbImage,
     };
 
     channel=0;
-    redChannel.parallel_for_all_pixels(channel2gray);
+	redChannel.for_all_pixels(channel2gray);
 
     channel=1;
-    greenChannel.parallel_for_all_pixels(channel2gray);
+	greenChannel.for_all_pixels(channel2gray);
 
     channel=2;
-    blueChannel.parallel_for_all_pixels(channel2gray);
+	blueChannel.for_all_pixels(channel2gray);
 
     return;
 }
@@ -229,14 +242,18 @@ void fold3Channels(ImageCommon<ImageRGBBase<REAL>, false>& channeledImage,
              const ImageCommon<ImageGrayBase<REAL>, false>& channel2,
              const ImageCommon<ImageGrayBase<REAL>, false>& channel3)
 {
+	int width = channel1.width();
+	int height = channel1.height();
+	assert(channel2.width() == width && channel3.width() == width);
+	assert(channel2.height() == height && channel3.height() == height);
     if(!channeledImage.is_initialized() || channeledImage.width()!=channel1.width() || channeledImage.height()!=channel1.height())
         channeledImage.initItk(channel1.width(), channel1.height());
 
-    channeledImage.parallel_for_all_pixels([&channel1, &channel2, &channel3] (typename ImageCommon<ImageRGBBase<REAL>, false>::PixelType& pix, int x, int y)
+	channeledImage.for_all_pixels([&channel1, &channel2, &channel3] (typename ImageCommon<ImageRGBBase<REAL>, false>::PixelType& pix, int x, int y)
     {
         pix[0]=channel1.pixelAbsolute(x, y);
         pix[1]=channel2.pixelAbsolute(x, y);
-        pix[2]=channel3.pixelAbsolute(x, y);
+		pix[2]=channel3.pixelAbsolute(x, y);
     });
 }
 
@@ -373,5 +390,53 @@ void colored_RPN(const ImageRGBd& in, ImageRGBd& out, color_space_t colorSpace=R
                  const ImageSpectrald *phase=NULL);
 
 double compute_crossCorrelation_diff(const ImageRGBd& in1, const ImageRGBd& in2, int channel1, int channel2, ImageGrayd& diff);
+
+void matchImage(ImageRGBd& image, const ImageRGBd& input);
+
+template<typename NUMTYPE>
+void matchImage(ImageCommon<ImageGrayBase<NUMTYPE>, false>& image, const ImageCommon<ImageGrayBase<NUMTYPE>, false>& input)
+{
+	using ImageType = ImageCommon<ImageGrayBase<NUMTYPE>, false>;
+	using HistogramType = HistogramGrayBase<NUMTYPE>;
+	HistogramType histInput(input), cdfImage(image), histHistoryOfImage(image);
+	unsigned count = 0;
+	for(typename HistogramType::iterator itThis=cdfImage.begin(); itThis!=cdfImage.end(); ++itThis)
+	{ //transforms the histogram into a cdf
+		count += (*itThis).second;
+		(*itThis).second = count;
+	}
+
+	//compute translations from a sorted version of image to image
+	ImageRGB32 colorMap;
+	colorMap.initItk(input.width(), input.height());
+	colorMap.for_all_pixels([&] (ImageRGB32::PixelType &pix, int x, int y)
+	{
+		int position = (*cdfImage.find(image.pixelAbsolute(x, y))).second
+				- (*histHistoryOfImage.find(image.pixelAbsolute(x, y))).second--;
+		pix[0] = position%colorMap.width(), pix[1] = position/colorMap.width();
+	});
+
+
+	ImageType orderedInput;
+	orderedInput.initItk(input.width(), input.height());
+	typename HistogramType::iterator itInput = histInput.begin();
+	orderedInput.for_all_pixels([&] (typename ImageType::PixelType &pix)
+	{
+		if((*itInput).second == 0)
+			++itInput;
+		pix = (*itInput).first;
+		--(*itInput).second;
+	});
+
+	ImageType matchedImage;
+	matchedImage.initItk(image.width(), image.height());
+	matchedImage.for_all_pixels([&] (typename ImageType::PixelType &pix, int x, int y)
+	{
+//		std::cout << "(" << x << ", " << y << ") -> " << "x: " << colorMap.pixelAbsolute(x, y)[0] << ", y: " << colorMap.pixelAbsolute(x, y)[1] << std::endl;
+		matchedImage.pixelAbsolute(	x, y ) = orderedInput.pixelAbsolute(colorMap.pixelAbsolute(x, y)[0], colorMap.pixelAbsolute(x, y)[1]);
+	});
+
+	image = matchedImage;
+}
 
 #endif

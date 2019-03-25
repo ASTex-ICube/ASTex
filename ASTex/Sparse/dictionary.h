@@ -5,6 +5,9 @@
 #include "ASTex/image_common.h"
 #include "ASTex/easy_io.h" //TODO: remove when fully debugged
 
+#include "ASTex/histogram.h"
+#include "ASTex/rpn_utils.h"
+
 namespace ASTex
 {
 
@@ -55,6 +58,9 @@ public:
 	void initEmpty(unsigned nbAtoms);
 
 	I operator*(const std::vector<typename I::PixelType> &other) const;
+
+	void save(const std::string &directory) const;
+	void load(const std::string &directory);
 
 private:
 
@@ -223,7 +229,7 @@ I Dictionary<I>::operator*(const std::vector<typename I::PixelType> &other) cons
 	output.for_all_pixels([&] (typename I::PixelType &pix)
 	{
 		pix = pix_zero;
-	}); 	//TODO: remove if initItk fixed
+	}); //TODO: remove if initItk fixed
 	for(unsigned i = 0; i<m_atoms.size(); ++i)
 	{
 		const typename I::PixelType &weight=other[i];
@@ -240,6 +246,38 @@ I Dictionary<I>::operator*(const std::vector<typename I::PixelType> &other) cons
 		}
 	}
 	return output;
+}
+
+template <typename I>
+void Dictionary<I>::save(const std::string &directory) const
+{
+	create_directory(directory);
+	unsigned i=0;
+	for(typename std::vector<Atom<I>>::const_iterator it=m_atoms.begin(); it!=m_atoms.end(); ++it, ++i)
+	{
+		Histogram<I>::saveImageToCsv((*it).content(), std::string(directory) + "/atom" + std::to_string(i) + ".png");
+	}
+	std::ofstream ofs_data_out(directory + "/dictionaryData.csv");
+	ofs_data_out << m_atoms.size() << std::endl;
+	ofs_data_out.close();
+}
+
+template <typename I>
+void Dictionary<I>::load(const std::string &directory)
+{
+	unsigned i=0, sizeAtoms=0;
+
+	std::ifstream ifs_data_in(directory + "/dictionaryData.csv");
+	ifs_data_in >> sizeAtoms;
+	ifs_data_in.close();
+
+	m_atoms.resize(sizeAtoms);
+	for(typename std::vector<Atom<I>>::iterator it=m_atoms.begin(); it!=m_atoms.end(); ++it, ++i)
+	{
+		Histogram<I>::loadImageFromCsv((*it).content(), std::string(directory) + "/atom" + std::to_string(i) + ".png");
+	}
+	m_atomWidth =  (*m_atoms.begin()).content().width();
+	m_atomHeight = (*m_atoms.begin()).content().height();
 }
 
 }

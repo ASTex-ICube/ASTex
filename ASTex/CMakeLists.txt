@@ -48,6 +48,7 @@ set (LIB_INCLUDE
 
         Sparse/dictionary.h
 	Sparse/dictionaryProcessor.h
+	Sparse/benchmarker.h
 
         mipmap.h
         histogram.h

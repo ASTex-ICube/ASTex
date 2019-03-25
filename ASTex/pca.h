@@ -29,6 +29,7 @@
 #include <ASTex/mask.h>
 #include <ASTex/image_gray.h>
 #include <ASTex/image_rgb.h>
+#include <Eigen/Eigen>
 
 namespace ASTex
 {
@@ -72,6 +73,8 @@ public :
 	void project(ImageGrayd& res1, ImageGrayd& res2, ImageGrayd& res3) const;
 
 	void back_project(const ImageGrayd& coord1, const ImageGrayd& coord2, const ImageGrayd& coord3, ImageRGBd& res) const;
+
+	Eigen::Vector3d eigenVector(unsigned int i);
 };
 
 } //ASTex

@@ -140,7 +140,7 @@ namespace ASTex
 	{
 		/*** computing first EigenVector v1 = (a1 = theta, a2= phi in polar) ***/
 		int i;
-		double v [3];
+		double v [3]{};
 		double w [3];
 		double a1=0.0, a2=0.0;
 		for(i=2;i<20;i++)
@@ -213,9 +213,12 @@ namespace ASTex
 
 	void PCA::project(ImageGrayd& res1, ImageGrayd& res2, ImageGrayd& res3) const
 	{
-		assert(m_im.width() == res1.width() && m_im.height() == res1.height());
-		assert(m_im.width() == res2.width() && m_im.height() == res2.height());
-		assert(m_im.width() == res3.width() && m_im.height() == res3.height());
+		if(!res1.is_initialized())
+			res1.initItk(m_im.width(), m_im.height());
+		if(!res2.is_initialized())
+			res2.initItk(m_im.width(), m_im.height());
+		if(!res3.is_initialized())
+			res3.initItk(m_im.width(), m_im.height());
 
 		for (int x = 0; x < m_im.width(); ++x)
 		{
@@ -231,6 +234,8 @@ namespace ASTex
 
 	void PCA::back_project(const ImageGrayd& coord1, const ImageGrayd& coord2, const ImageGrayd& coord3, ImageRGBd& res) const
 	{
+		if(!res.is_initialized())
+			res.initItk(coord1.width(), coord1.height());
 		assert(res.width() == coord1.width() && res.height() == coord1.height());
 		assert(res.width() == coord2.width() && res.height() == coord2.height());
 		assert(res.width() == coord3.width() && res.height() == coord3.height());
@@ -275,6 +280,26 @@ namespace ASTex
 				res.pixelAbsolute(x,y)[2] = m_meancolor[2] + m_A_inverse[2][0]*coord1.pixelAbsolute(x,y) + m_A_inverse[2][1]*coord2.pixelAbsolute(x,y) + m_A_inverse[2][2]*coord3.pixelAbsolute(x,y);
 			}
 		}
+	}
+
+	Eigen::Vector3d PCA::eigenVector(unsigned int i)
+	{
+		Eigen::Vector3d v;
+		switch(i)
+		{
+			case 0:
+				std::memcpy(&v, m_v1, sizeof(Eigen::Vector3d));
+				break;
+			case 1:
+				std::memcpy(&v, m_v2, sizeof(Eigen::Vector3d));
+				break;
+			case 2:
+				std::memcpy(&v, m_v3, sizeof(Eigen::Vector3d));
+				break;
+			default:
+				break;
+		}
+		return v;
 	}
 
 

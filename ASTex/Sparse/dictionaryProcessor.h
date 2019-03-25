@@ -30,22 +30,26 @@ public:
 
 	unsigned nbAtoms() const;
 	unsigned sparsity() const;
+	itk::Size<2> patchSize() const;
+	itk::Size<2> patchOffset() const;
 
 	//step 2
-
-	void readInput();
-
-	//step 3
 
 	template<typename Compare = std::less<PixelType>>
 	void dictionaryLearning(unsigned nbIterations);
 
-	//step 4
+	//step 3
 
-	const DictionaryType &dictionary() const						{return m_dictionary;}
+	const DictionaryType &dictionary() const					{return m_dictionary;}
 	const std::vector<std::vector<PixelType>> &weights() const	{return m_weights;}
 
 	I reconstructInput() const;
+
+	template<typename Compare = std::less<PixelType>>
+	I synthesize(unsigned width, unsigned height, unsigned nbIterations);
+
+	void save(const std::string &directory) const;
+	void load(const std::string &directory);
 
 private:
 
@@ -54,7 +58,11 @@ private:
 								   std::vector<std::vector<PixelType>> &weights);
 	void updateDictionaryApproximateKSVD(size_t atomId);
 
+	void readInput();
+
 	void readImage(I& image, std::vector<std::pair<itk::Index<2>, I>> &patches);
+
+	I reconstructImage(const std::vector<std::vector<PixelType>> &weights, unsigned width, unsigned height);
 
 	DictionaryType m_dictionary;
 	std::vector<std::vector<PixelType>> m_weights;
@@ -121,6 +129,21 @@ unsigned DictionaryProcessor<I>::sparsity() const
 	return m_sparsity;
 }
 
+template<typename I>
+itk::Size<2> DictionaryProcessor<I>::patchSize() const
+{
+	return m_patchSize;
+}
+
+template<typename I>
+itk::Size<2> DictionaryProcessor<I>::patchOffset() const
+{
+	itk::Size<2> offsets;
+	offsets[0] = m_patchOffsetX;
+	offsets[1] = m_patchOffsetY;
+	return offsets;
+}
+
 //step 2
 
 //private but the two following functions go well together
@@ -129,6 +152,9 @@ void DictionaryProcessor<I>::readImage(I& image, std::vector<std::pair<itk::Inde
 {
 	assert(image.is_initialized() && image.width()>=m_patchSize[0] && image.height()>=m_patchSize[1] && "Dictionnary::read: exemplar uninitialized or too small compared to atoms size");
 
+	unsigned int previousPatchSize=patches.size();
+	patches.clear();
+	patches.reserve(previousPatchSize);
 	//modify region dynamically. Store region data into atoms.
 	Region reg;
 	int x, y=0;
@@ -176,12 +202,72 @@ void DictionaryProcessor<I>::readInput()
 	return readImage(m_input, m_patches);
 }
 
+template <typename I>
+I DictionaryProcessor<I>::reconstructImage(const std::vector<std::vector<PixelType> > &weights, unsigned width, unsigned height)
+{
+	static PixelType pix_zero;
+	unsigned pixSize = sizeof(PixelType)/sizeof(DataType);
+	I reconstructedImage;
+	reconstructedImage.initItk(width, height, true);
+	reconstructedImage.parallel_for_all_pixels([&] (PixelType &pix) {pix = pix_zero;}); //TODO: remove when initItk is fixed
+
+	//first compute the hitmap which finds the number of time each texel will be written
+	ASTex::ImageGrayu32 hitmap;
+	hitmap.initItk(width, height, true);
+
+	for(auto &patch : m_patches)
+	{
+		ASTex::Region reg = ASTex::gen_region(patch.first[0], patch.first[1], patch.second.width(), patch.second.height());
+		hitmap.for_region_pixels(reg, [&] (ASTex::ImageGrayu32::PixelType &pix)
+		{
+			++pix;
+		});
+	}
+	unsigned i=0;
+	for(auto &patch : m_patches)
+	{
+		I reconstructedPatch = m_dictionary * weights[i++];
+		reconstructedPatch.for_all_pixels([&] (const typename I::PixelType &pix, int x, int y)
+		{
+			reconstructedImage.pixelAbsolute(patch.first[0]+x, patch.first[1]+y) += pix;
+		});
+	}
+	reconstructedImage.for_all_pixels([&] (typename I::PixelType &pix, int x, int y)
+	{
+		pix = pix*(1.0/hitmap.pixelAbsolute(x, y));
+		for(unsigned k=0; k<pixSize; ++k)
+		{
+			reinterpret_cast<DataType *>(&pix)[k] = std::min(DataType(1.0), std::max(DataType(0.0), reinterpret_cast<DataType *>(&pix)[k]));
+		}
+	});
+	return reconstructedImage;
+}
+
+template<typename I>
+I DictionaryProcessor<I>::reconstructInput() const
+{
+	I reconstructedInput = reconstructImage(m_weights, m_input.width(), m_input.height());
+	PixelType l1Dif{};
+	I imDif = m_input - reconstructedInput;
+	imDif.for_all_pixels([&] (const typename I::PixelType &pix)
+	{
+		l1Dif += pix;
+	});
+	for(unsigned j=0; j<m_weights[0].size(); ++j)
+	{
+		std::cout << "weight: " << m_weights[0][j] << std::endl;
+	}
+	std::cout << "L1 difference between input and reconstructed input: " << l1Dif << std::endl;
+	return reconstructedInput;
+}
+
 //step 3
 
 template<typename I>
 template<typename Compare>
 void DictionaryProcessor<I>::dictionaryLearning(unsigned nbIterations)
 {
+	readInput();
 	assert(m_input.is_initialized()
 		   && m_dictionary.atomWidth()>0 && m_dictionary.atomHeight()>0
 		   && m_patches.size()>0);
@@ -203,10 +289,13 @@ void DictionaryProcessor<I>::orthogonalMatchingPursuit(size_t patchIndex,
 													   const std::vector<std::pair<itk::Index<2>, I>>&patches,
 													   std::vector<std::vector<PixelType>> &weights)
 {
+	static PixelType s_zero;
 	unsigned s = sparsity();
-	m_weights[patchIndex].clear();
-	m_weights[patchIndex].resize(m_dictionary.nbAtoms());
-	const I& patch = m_patches[patchIndex].second;
+	weights[patchIndex].clear();
+	weights[patchIndex].resize(m_dictionary.nbAtoms());
+	for(unsigned i=0; i<m_dictionary.nbAtoms(); ++i)
+		weights[patchIndex][i] = s_zero;
+	const I& patch = patches[patchIndex].second;
 	I residual;
 	residual.initItk(patch.width(), patch.height());
 	residual.copy_pixels(patch);
@@ -218,18 +307,18 @@ void DictionaryProcessor<I>::orthogonalMatchingPursuit(size_t patchIndex,
 
 	while(i++ < s) //customizable stop condition (sparsity constraint)
 	{
-		PixelType bestCorrelation{};
-		PixelType correlation{};
-		PixelType bestDotProduct{};
-		PixelType dotProduct{};
+		PixelType bestCorrelation = s_zero;
+		PixelType correlation = s_zero;
+		PixelType bestDotProduct = s_zero;
+		PixelType dotProduct = s_zero;
 
 		const DataType *operand1, *operand2;
 
 		unsigned bestK=0;
 		for(unsigned k=0; k<m_dictionary.nbAtoms(); ++k)
 		{
-			dotProduct = PixelType{};
-			AtomType &atom = m_dictionary.atom(k);
+			dotProduct = s_zero;
+			const AtomType &atom = m_dictionary.atom(k);
 			residual.for_all_pixels([&] (const PixelType &pix, int x, int y)
 			{
 				operand1 = reinterpret_cast<const DataType *>(&pix);
@@ -254,8 +343,8 @@ void DictionaryProcessor<I>::orthogonalMatchingPursuit(size_t patchIndex,
 				bestDotProduct = dotProduct;
 			}
 		} //best k found: represents the index of the atom that has the biggest absolute dot product with the residual
-		AtomType &atom = m_dictionary.atom(bestK);
-		m_weights[patchIndex][bestK] = m_weights[patchIndex][bestK] + bestDotProduct;
+		const AtomType &atom = m_dictionary.atom(bestK);
+		weights[patchIndex][bestK] = weights[patchIndex][bestK] + bestDotProduct;
 		residual.for_all_pixels([&] (PixelType &pix, int x, int y)
 		{
 			operand1 = reinterpret_cast<const DataType *>(&bestDotProduct);
@@ -355,56 +444,101 @@ void DictionaryProcessor<I>::updateDictionaryApproximateKSVD(size_t atomId)
 }
 
 template<typename I>
-I DictionaryProcessor<I>::reconstructInput() const
+template<typename Compare>
+I DictionaryProcessor<I>::synthesize(unsigned width, unsigned height, unsigned nbIterations)
 {
-	static PixelType pix_zero;
-	unsigned pixSize = sizeof(PixelType)/sizeof(DataType);
-	I reconstructedInput;
-	reconstructedInput.initItk(m_input.width(), m_input.height(), true);
-	reconstructedInput.parallel_for_all_pixels([&] (PixelType &pix) {pix = pix_zero;}); //TODO: remove when initItk is fixed
-
-	//first compute the hitmap which finds the number of time each texel will be written
-	ASTex::ImageGrayu32 hitmap;
-	hitmap.initItk(m_input.width(), m_input.height(), true);
-
-	for(auto &patch : m_patches)
+	I output;
+	std::vector<std::vector<PixelType>> weights;
+	std::vector<std::pair<itk::Index<2>, I>> patches;
+	const unsigned pixelSize = sizeof(PixelType)/sizeof(DataType);
+	output.initItk(width, height);
+	output.for_all_pixels([&] (PixelType &pix)
 	{
-		ASTex::Region reg = ASTex::gen_region(patch.first[0], patch.first[1], patch.second.width(), patch.second.height());
-		hitmap.for_region_pixels(reg, [&] (ASTex::ImageGrayu32::PixelType &pix)
+		for(unsigned i=0; i<pixelSize; ++i)
 		{
-			++pix;
-		});
-	}
-	unsigned i=0;
-	for(auto &patch : m_patches)
-	{
-		I reconstructedPatch = m_dictionary * m_weights[i++];
-		reconstructedPatch.for_all_pixels([&] (const typename I::PixelType &pix, int x, int y)
-		{
-			reconstructedInput.pixelAbsolute(patch.first[0]+x, patch.first[1]+y) += pix;
-		});
-	}
-	reconstructedInput.for_all_pixels([&] (typename I::PixelType &pix, int x, int y)
-	{
-		pix = pix*(1.0/hitmap.pixelAbsolute(x, y));
-		for(unsigned k=0; k<pixSize; ++k)
-		{
-			reinterpret_cast<DataType *>(&pix)[k] = std::min(DataType(1.0), std::max(DataType(0.0), reinterpret_cast<DataType *>(&pix)[k]));
+			reinterpret_cast<DataType *>(&pix)[i] = DataType(std::rand())/RAND_MAX;
 		}
 	});
-
-	PixelType l1Dif{};
-	I imDif = m_input - reconstructedInput;
-	imDif.for_all_pixels([&] (const typename I::PixelType &pix)
+	readImage(output, patches);
+	weights.resize(patches.size());
+	for(unsigned i=0; i<nbIterations; ++i)
 	{
-		l1Dif += pix;
-	});
-	for(unsigned j=0; j<m_weights[0].size(); ++j)
-	{
-		std::cout << "weight: " << m_weights[0][j] << std::endl;
+		for(size_t p=0; p<m_patches.size(); ++p) //2. Sparse coding (update weights)
+		{
+			orthogonalMatchingPursuit<Compare>(p, patches, weights);
+		}
+		output=reconstructImage(weights, output.width(), output.height());
+//		for(unsigned k=0; k<weights.size(); ++k)
+//			for(unsigned l=0; l<weights[k].size(); ++l)
+//				std::cout << "weight (" << k << ", " << l << ": " << weights[k][l] << std::endl;
+		IO::save01_in_u8(output, "/home/nlutz/matchedNotImage.png");
+		matchImage(output, m_input);
+		readImage(output, patches);
 	}
-	std::cout << "L1 difference between input and reconstructed input: " << l1Dif << std::endl;
-	return reconstructedInput;
+	return output;
+}
+
+template<typename I>
+void DictionaryProcessor<I>::save(const std::string &directory) const
+{
+	assert(m_weights.size() > 0);
+	create_directory(directory);
+	Histogram<I>::saveImageToCsv(m_input, directory + "/input.csv");
+
+	std::ofstream ofs_data_out(directory + "/data.csv");
+	ofs_data_out << m_patchOffsetX << std::endl;
+	ofs_data_out << m_patchOffsetY << std::endl;
+	ofs_data_out << m_sparsity << std::endl;
+	ofs_data_out << m_patchSize[0] << ' ' << m_patchSize[1] << std::endl;
+	ofs_data_out.close();
+
+	m_dictionary.save(directory);
+
+	std::ofstream ofs_weights_out(directory + "/weights.csv");
+	ofs_weights_out << m_weights.size() << ' ' << (*m_weights.begin()).size() << std::endl;
+	for(typename std::vector<std::vector<PixelType>>::const_iterator it=m_weights.begin(); it!=m_weights.end(); ++it)
+		for(typename std::vector<PixelType>::const_iterator it2=(*it).begin(); it2!=(*it).end(); ++it2)
+			ofs_weights_out << (*it2) << std::endl;
+}
+
+template<typename I>
+void DictionaryProcessor<I>::load(const std::string &directory)
+{
+	const unsigned pixelSize = sizeof(PixelType)/sizeof(DataType);
+
+
+	Histogram<I>::loadImageFromCsv(m_input, directory + "/input.csv");
+
+	std::ifstream ifs_data_in(directory + "/data.csv");
+	ifs_data_in >> m_patchOffsetX;
+	ifs_data_in >> m_patchOffsetY;
+	ifs_data_in >> m_sparsity;
+	ifs_data_in >> m_patchSize[0] >> m_patchSize[1];
+	ifs_data_in.close();
+
+	readInput();
+
+	m_dictionary.load(directory);
+
+	std::ifstream ifs_weights_in(directory + "/weights.csv");
+	unsigned size1, size2;
+	ifs_weights_in >> size1;
+	ifs_weights_in >> size2;
+
+	m_weights.resize(size1);
+	for(typename std::vector<std::vector<PixelType>>::iterator it=m_weights.begin(); it!=m_weights.end(); ++it)
+	{
+		(*it).resize(size2);
+		for(typename std::vector<PixelType>::iterator it2=(*it).begin(); it2!=(*it).end(); ++it2)
+		{
+			DataType tmpPixel[pixelSize];
+			for(unsigned i=0; i<pixelSize; ++i)
+				ifs_weights_in >> tmpPixel[i];
+			memcpy(&(*it2), &tmpPixel, sizeof(PixelType));
+		}
+	}
+
+	m_nbAtoms = m_dictionary.nbAtoms();
 }
 
 }

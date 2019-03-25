@@ -306,6 +306,37 @@ double mse(const I& i1, const I& i2, int x1, int y1, int x2, int y2, int neighbo
     return error/arraySize/hit;
 }
 
+template<typename I>
+void printImage(const I &image, std::ostream &out_stream, bool show_position = false)
+{
+	image.for_all_pixels([&] (const typename I::PixelType &pix, int x, int y)
+	{
+		if(show_position)
+			out_stream << "(" << x << ", " << y << "): " << pix << std::endl;
+		else
+			out_stream << pix << std::endl;
+	});
+	return;
+}
+
+class Benchmarker
+{
+public:
+	Benchmarker() : m_root("./") {}
+	virtual ~Benchmarker() {}
+
+	void setRoot(const std::string &root)
+	{
+		ASTex::create_directory(root);
+		m_root=root + "/";
+	}
+
+	virtual void generate()=0;
+
+protected:
+	std::string m_root;
+};
+
 }
 
 #endif

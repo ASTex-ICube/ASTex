@@ -33,20 +33,19 @@ public:
 
     //static
 
-    static void saveImageToCsv(const I& image, const std::string &out);
-    // v  won't work for RGB/RGBA
-    static void loadImageFromCsv(I& image, const std::string& in);
+	static bool saveImageToCsv(const I& image, const std::string &out);
+	static bool loadImageFromCsv(I& image, const std::string& in);
 
     //types
 
     using real = double;
     using PixelType = typename I::PixelType;
-    using HistogramStruct = std::map<PixelType, int, Compare>;
+	using MapStruct = std::map<PixelType, int, Compare>;
 
     //iterators
 
-	using iterator = typename HistogramStruct::iterator;
-	using const_iterator = typename HistogramStruct::const_iterator ;
+	using iterator = typename MapStruct::iterator;
+	using const_iterator = typename MapStruct::const_iterator;
 
     iterator begin() {return m_histogram.begin();}
     const_iterator begin() const {return m_histogram.begin();}
@@ -62,7 +61,7 @@ public:
     /**
      * \brief triggers a routine which updates any statistic stored by the class, such as mean, variance, covariance...
      */
-    virtual void updateStatistics()=0;
+	virtual void updateStatistics();
 
     /**
      * \brief get the number of pixels in the histogram.
@@ -186,7 +185,8 @@ protected:
                         F_firstExists &lambdaFirstExists,
                         F_secondExists &lambdaSecondExists) const;
 
-    HistogramStruct m_histogram;
+	I m_input;
+	MapStruct m_histogram;
     int             m_size;
 };
 
@@ -203,13 +203,19 @@ Histogram<I, Compare>::Histogram() : m_histogram(), m_size(0)
 
 
 template <class I, class Compare>
-Histogram<I, Compare>::Histogram(const I &image) : m_histogram(), m_size(0)
+Histogram<I, Compare>::Histogram(const I &image) : m_histogram(), m_size(0), m_input(image)
 {
     compute(image);
 }
 
 template <class I, class Compare>
-void Histogram<I, Compare>::saveImageToCsv(const I& image, const std::string& out)
+void Histogram<I, Compare>::updateStatistics()
+{
+
+}
+
+template <class I, class Compare>
+bool Histogram<I, Compare>::saveImageToCsv(const I& image, const std::string& out)
 {
     std::ofstream ofs_out(out);
     ofs_out << image.width() << std::endl;
@@ -219,25 +225,33 @@ void Histogram<I, Compare>::saveImageToCsv(const I& image, const std::string& ou
         ofs_out << pix << std::endl;
     });
     ofs_out.close();
+	if(!ofs_out)
+		return false;
+	return true;
 }
 
 template <class I, class Compare>
-void Histogram<I, Compare>::loadImageFromCsv(I& image, const std::string &in)
+bool Histogram<I, Compare>::loadImageFromCsv(I& image, const std::string &in)
 {
+	const unsigned pixelSize = sizeof(typename I::PixelType)/sizeof(typename I::DataType);
     std::ifstream ifs_in(in);
     int w, h;
-    double value;
+	typename I::DataType value[pixelSize];
     if(ifs_in.is_open())
     {
         ifs_in >> w >> h;
         image.initItk(w, h);
         image.for_all_pixels([&] (typename I::PixelType &pix)
         {
-            ifs_in >> value;
-            pix = (typename I::PixelType)value;
+			for(unsigned i=0; i<pixelSize; ++i)
+				ifs_in >> value[i];
+			memcpy(&pix, value, sizeof(typename I::PixelType));
         });
     }
     ifs_in.close();
+	if(!ifs_in)
+		return false;
+	return true;
 }
 
 template <class I, class Compare>
