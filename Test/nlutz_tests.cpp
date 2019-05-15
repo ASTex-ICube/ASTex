@@ -123,15 +123,16 @@ int test_contentExchangeRenderingPack(int argc, char **argv)
     for(int i=1; i<argc; ++i)
     {
         srand(0);
-        ImageRGBu8 im_in;
-        im_in.load(std::string(std::string(MY_PATH)+argv[i]));
+		ImageRGBf im_in;
+		//im_in.load(std::string(std::string(MY_PATH)+argv[i]));
+		IO::loadu8_in_01(im_in, std::string(std::string(MY_PATH)+argv[i]));
 
         std::string out_dir=std::string(MY_PATH)+"contentExchangeRendering";
         std::string name_file = IO::remove_path(std::string(MY_PATH)+argv[i]);
         std::string name_noext = IO::remove_ext(name_file);
         create_directory(out_dir);
 
-        ContentExchange::PatchProcessor<ImageRGBu8> pProcessor(im_in);
+		ContentExchange::PatchProcessor<ImageRGBf> pProcessor(im_in);
         pProcessor.setFilteringMode(ISOTROPIC);
         pProcessor.setNbContentsPerPatch(6);
         //pProcessor.fullProcess_oldMethod(); //for nerds
@@ -147,9 +148,9 @@ int test_contentExchangeRenderingPack(int argc, char **argv)
 
         std::string renderingDirectory = out_dir + "/" + std::to_string(std::time(0)) + "_random_" + name_noext + "/";
 
-        ImageRGBu8 im_patches;
+		ImageRGBf im_patches;
         im_patches.initItk(im_in.width(), im_in.height());
-        im_patches.for_all_pixels([&] (ImageRGBu8::PixelType &pix, int x, int y)
+		im_patches.for_all_pixels([&] (ImageRGBf::PixelType &pix, int x, int y)
         {
             ContentExchange::word64 w = pProcessor.patchMapMipmap().texture().pixelAbsolute(x, y);
             pix = std::ceil(log2(w)) != std::floor(log2(w)) ? 255 : 0;
@@ -355,37 +356,42 @@ int test_texton(int argc, char **argv)
 
 int test_easy(int argc, char **argv)
 {
-    const int size = 512;
-    ImageGrayd output;
-    output.initItk(size, size);
-    ImageSpectrald spec_pink, phase_random;
-    spec_pink.initItk(size, size);
-    phase_random.initItk(size, size);
-    Offset center;
-    center[0]=size/2;
-    center[1]=size/2;
-    spec_pink.setCenter(center);
-    double meanHeight = 0.5;
-    spec_pink.for_all_pixels( [&] (ImageSpectrald::PixelType &pix, int x, int y)
-    {
-        double dx2=(x - center[0]) * (x - center[0]), dy2=(y - center[1]) * (y - center[1]);
-        if(dx2 != 0 || dy2 != 0)
-            pix = 1.0/std::sqrt(dx2+dy2);
-        else
-            pix = meanHeight*size;
-    });
-    Fourier::randomPhase(phase_random);
-    rpn_scalar(spec_pink, phase_random, output);
-    output.for_all_pixels([&] (ImageSpectrald::PixelType &pix)
-    {
-        pix = std::min(std::max(0.0, pix), 1.0);
-    });
-    spec_pink.for_all_pixels([&] (ImageSpectrald::PixelType &pix)
-    {
-        pix = std::min(std::max(0.0, pix), 1.0);
-    });
-    IO::save01_in_u8(output, "/home/nlutz/img/pink_noise.png");
-    IO::save01_in_u8(spec_pink, "/home/nlutz/img/spectrum_pink.png");
+//	ImageRGBu8 input;
+//	input.load(argv[1]);
+//	input.for_all_pixels([&] (ImageRGBu8::PixelType &pix)
+//	{
+//		pix[2] = 255;
+//	});
+//	input.save(argv[1]);
+
+	if( argc < 4 )
+	{
+		std::cerr << "Usage: " << std::endl;
+		std::cerr << argv[0] << "<input heightmap> <output rgb texture> <scale>" << std::endl;
+
+		return EXIT_FAILURE;
+	}
+
+	ImageGrayd input;
+	IO::loadu8_in_01(input, argv[1]);
+	ImageRGBd texture;
+	texture.initItk(input.width(), input.height());
+
+	auto f_heightToColor = [&] (ImageGrayd::PixelType pix) -> ImageRGBd::PixelType
+	{
+		ImageRGBd::PixelType rgb;
+		rgb[0] = pix >= 0.5 ? (pix - 0.5) * 2 : 0;
+		rgb[2] = pix < 0.5 ?  (0.5 - pix) * 2 : 0;
+		rgb[1] = pix >= 0.5 ? 1.0 - rgb[0] : 1.0 - rgb[2];
+		return rgb;
+	};
+
+	texture.for_all_pixels([&] (ImageRGBd::PixelType &pix, int x, int y)
+	{
+		pix = f_heightToColor(input.pixelAbsolute(x, y));
+	});
+
+	IO::save01_in_u8(texture, argv[2]);
 }
 
 char fname[256];
@@ -490,17 +496,18 @@ int test_benchmarkingContentExchange(int argc, char **argv)
         std::string name_noext = IO::remove_ext(name_file);
         std::string pcts_file = MY_PATH + "pcts_" + name_noext + ".txt";
         ContentExchangeBenchmarker ceb;
+		srand(42);
         ceb.setInput(input);
-
+		ceb.setNbContentsPerPatch(6);
         ceb.setNbOutputs(3);
-        ceb.setOutputSize(1024, 1024);
+		ceb.setOutputSize(512, 512);
         ceb.setRoot(std::string("/home/nlutz/eg2019_contentExchange/") + name_noext);
         ceb.setOutputDirectories("usingOldMethod", "usingRandomPatchesAndContents", "usingGetisGI", "usingPCTS");
-        ceb.setGenerateOld(true);
-        ceb.setGenerateRandom(false);
+		ceb.setGenerateOld(false);
+		ceb.setGenerateRandom(true);
         ceb.setGeneratePCTS(false);
         ceb.setGenerateGetisGI(false);
-        ceb.setPCTSArgumentsFilePath(pcts_file);
+		//ceb.setPCTSArgumentsFilePath(pcts_file);
 
         ceb.generate();
     }
@@ -512,10 +519,10 @@ int main( int argc, char **argv )
     //return test_genet(argc, argv);
     //return test_texton(argc, argv);
     //return test_autoconvolutionSpectrum(argc, argv);
-    //return test_contentExchangeRenderingPack(argc, argv);
+	//return test_contentExchangeRenderingPack(argc, argv);
     //return test_wendling(argc, argv);
     //return test_getis_gi(argc, argv);
-    return test_easy(argc, argv);
+	//return test_easy(argc, argv);
     //return test_pcts(argc, argv);
-    //return test_benchmarkingContentExchange(argc, argv);
+	return test_benchmarkingContentExchange(argc, argv);
 }

@@ -273,13 +273,11 @@ void Mipmap<I>::setTexture(const I& texture)
     m_textureSet=true;
     if(m_isoMipmaps.size()>0)
     {
-        //because apparently = and the copy constructor can't be bothered to deep copy half the time
         m_isoMipmaps[0].initItk(texture.width(), texture.height());
         m_isoMipmaps[0].copy_pixels(texture);
     }
     else
     {
-        //same here
         I idiotTexture;
         idiotTexture.initItk(texture.width(), texture.height());
         idiotTexture.copy_pixels(texture);

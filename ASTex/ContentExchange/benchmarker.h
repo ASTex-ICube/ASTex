@@ -2,24 +2,11 @@
 #define __BENCHMARKER__H__
 
 #include "patchProcessor.h"
-
-class Benchmarker
-{
-public:
-    Benchmarker();
-    virtual ~Benchmarker();
-
-    void setRoot(const std::string &root);
-
-    virtual void generate()=0;
-
-protected:
-    std::string m_root;
-};
+#include "utils.h"
 
 /////////////////////
 
-class ContentExchangeBenchmarker : public Benchmarker
+class ContentExchangeBenchmarker : public ASTex::Benchmarker
 {
 public:
     ContentExchangeBenchmarker();
@@ -83,19 +70,6 @@ private:
     ASTex::ContentExchange::PatchProcessor<ImageType> *m_pp;
 };
 
-Benchmarker::Benchmarker():
-    m_root("./")
-{}
-
-Benchmarker::~Benchmarker()
-{}
-
-void Benchmarker::setRoot(const std::string &root)
-{
-    ASTex::create_directory(root);
-    m_root=root + "/";
-}
-
 ContentExchangeBenchmarker::ContentExchangeBenchmarker() :
     Benchmarker(),
     m_generateOld(true),
@@ -154,7 +128,7 @@ void ContentExchangeBenchmarker::generateRandomMethod()
     {
         _generateParametersForPP();
         m_pp->setSeed(i+1);
-        m_pp->patches_initRandom(32);
+		m_pp->patches_initRandom(16);
         m_pp->contents_initDefault();
         m_pp->contents_initRandom();
         ASTex::Mipmap<ImageType> outputTexture = m_pp->generate();
@@ -178,7 +152,7 @@ void ContentExchangeBenchmarker::generatePCTSMethod()
     {
         _generateParametersForPP();
         m_pp->setSeed(i+1);
-        m_pp->patches_initRandom(32);
+		m_pp->patches_initRandom(16);
         m_pp->contents_initDefault();
         m_pp->contents_initRandom();
         m_pp->contents_enhancePCTS(m_pctsPath);

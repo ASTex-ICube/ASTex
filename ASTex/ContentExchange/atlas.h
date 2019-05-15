@@ -467,6 +467,7 @@ void Atlas<I>::generateAndSaveAtlas(std::string directory) const
     {
         generate(i);
         m_generativeAtlas.save(directory + "/contentAtlas_" + std::to_string(i) + ".png");
+		Histogram<I>::saveImageToCsv(m_generativeAtlas, directory + "/contentAtlas_" + std::to_string(i) + ".csv");
     }
     saveOrigins(directory + "/atlasOrigins.csv");
 }

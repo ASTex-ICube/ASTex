@@ -22,11 +22,24 @@ int main(int argc, char **argv)
     ContentExchange::PatchProcessor<ImageRGBu8> pProcessor(im_in);
     pProcessor.setFilteringMode(ISOTROPIC);
     pProcessor.setNbContentsPerPatch(5);
-    pProcessor.fullProcess_oldMethod();
+//	pProcessor.patches_initRandom(32);
+//	pProcessor.contents_initDefault();
+//	pProcessor.contents_initRandom();
+	pProcessor.fullProcess_oldMethod();
 
     std::string renderingDirectory = out_dir + "/" + name_noext + "_" + std::to_string(std::time(0)) + "/";
     create_directory(renderingDirectory);
     pProcessor.saveRenderingPack(renderingDirectory);
+	pProcessor.setOutputSize(2*im_in.width(), im_in.height());
+	pProcessor.setSeed(3);
+
+	for(unsigned i=0; i<pProcessor.patchMapMipmap().numberMipmapsWidth(); ++i)
+	{
+		std::cout << double(pProcessor.analysis_getNumberOfTextureAccessForMipmap(i, i)) /
+					 (pProcessor.mipmap(i, i).width()*pProcessor.mipmap(i, i).height()) << std::endl;
+	}
+
+	pProcessor.generate().texture().save("/home/nlutz/img/contentExchange/output.png");
 
     return 0;
 }

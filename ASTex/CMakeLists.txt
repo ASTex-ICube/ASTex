@@ -68,6 +68,8 @@ set (LIB_INCLUDE
         Stamping/stamper.h
         PCTS/pcts.h
         filters.h
+
+	colorMatching.h
 )
 
 set (LIB_SRC

@@ -198,7 +198,7 @@ public:
 
     void fullProcess_GIOptimization(unsigned int nbPatchesPerDimension=5);
 
-    template<typename std::enable_if<std::is_same<I, ASTex::ImageRGBu8>::value>::type* = nullptr >
+	template<typename T1=I, typename Enable=typename std::enable_if<std::is_same<T1, ASTex::ImageRGBu8>::value>::type>
     void fullProcess_oldMethod();
 
     //////////////////////////////
@@ -221,7 +221,7 @@ public:
      */
     void saveRenderingPack(const std::string &outputDirectory, bool storeLevel0=true) const;
 
-    void loadRenderingPack(const std::string &inputDirectory);
+	void loadRenderingPack(const std::string &inputDirectory);
 
     /**
      * @brief analysis_getGPUMemoryCost
@@ -811,14 +811,14 @@ void PatchProcessor<I>::contents_enhancePCTS(std::string pctsArgFile)
 //Full process initializers (patches + contents)
 
 template<typename I>
-template<typename std::enable_if<std::is_same<I, ASTex::ImageRGBu8>::value>::type*>
+template<typename T1, typename Enable>
 void PatchProcessor<I>::fullProcess_oldMethod()
 {
     unsigned fragmentMinSize        = 20;
-    unsigned fragmentMaxSize        = 500;
+	unsigned fragmentMaxSize        = 400;
     unsigned fragmentColorThreshold = 40;
     unsigned requiredPatchNumber    = 16;
-    unsigned downsamplingMinSize    = 128;
+	unsigned downsamplingMinSize    = 64;
     srand(m_seed);
 
     ContentExchg::FragmentProcessor fProc( m_texture );
@@ -985,7 +985,8 @@ void PatchProcessor<I>::saveRenderingPack(const std::string &outputDirectory, bo
 {
     unsigned i,j,k,l;
     //saving input
-    m_texture.save(outputDirectory + "/input.png");
+	m_texture.save(outputDirectory + "/input.png");
+	Histogram<I>::saveImageToCsv(m_texture, outputDirectory + "/input.csv");
 
     //saving patch map
     for(k=0; k<m_patchMapMipmap.numberMipmapsWidth(); ++k)
@@ -1042,9 +1043,19 @@ void PatchProcessor<I>::saveRenderingPack(const std::string &outputDirectory, bo
         }
         ofs_origins_out.close();
     }
-    std::ofstream ofs_executable(outputDirectory + "/pack.exch");
-    ofs_executable << outputDirectory << std::endl;
-    ofs_executable.close();
+	if(std::is_floating_point<typename I::DataType>::value)
+	{
+		std::ofstream ofs_executable(outputDirectory + "/pack.exch");
+		ofs_executable << outputDirectory << std::endl;
+		ofs_executable.close();
+	}
+	else
+	{
+		std::ofstream ofs_executable(outputDirectory + "/pack.exchf");
+		ofs_executable << outputDirectory << std::endl;
+		ofs_executable.close();
+	}
+
 
     //additional: content translations
     std::ofstream ofs_transformations_out(outputDirectory + "/transformations.csv");
@@ -1066,7 +1077,8 @@ void PatchProcessor<I>::loadRenderingPack(const std::string &inputDirectory)
     unsigned i, j, k,l;
 
     //loading input
-    m_texture.load(inputDirectory + "/input.png");
+	//m_texture.load(inputDirectory + "/input.png");
+	Histogram<I>::loadImageFromCsv(m_texture, inputDirectory + "/input.csv");
 
     //loading useful data
     std::ifstream ifs_data_in(inputDirectory + "/data.csv");
@@ -1138,7 +1150,7 @@ void PatchProcessor<I>::loadRenderingPack(const std::string &inputDirectory)
     m_contentsAtlas.resize(nbContents);
     for(i=0; i<nbContents; ++i)
     {
-        m_contentsAtlas[i].load(inputDirectory + "/contentAtlas_" + std::to_string(i) + ".png");
+		Histogram<I>::loadImageFromCsv(m_contentsAtlas[i], inputDirectory + "/contentAtlas_" + std::to_string(i) + ".csv");
     }
 
     ifs_data_in.open(inputDirectory + "/transformations.csv");
