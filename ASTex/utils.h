@@ -36,6 +36,10 @@
 #include<windows.h>
 #endif
 
+#include <ASTex/image_gray.h>
+#include <ASTex/image_rgb.h>
+#include <ASTex/image_rgba.h>
+
 namespace ASTex
 {
 
@@ -155,25 +159,25 @@ void image_expo (const ISRC& src, IDST& dst, double dev)
 }
 
 template <typename IMG, typename MASK>
-typename IMG::ASTexPixelType compute_mean(const IMG& img, const MASK& mask)
+typename IMG::PixelType compute_mean(const IMG& img, const MASK& mask)
 {
-	using Pix = typename IMG::ASTexPixelType;
+	using Pix = typename IMG::DoublePixelEigen;
 
 	Pix mean(0);
 	long int nbpix = 0;
 
 	img.for_all_pixels([&] (const Pix& p)
 	{
-		mean += p;
+		mean += eigenPixel<double>(p);
 		nbpix++;
 	}, mask);
 
 	mean /= nbpix;
-	return mean;
+	return IMG::itkPixel(mean);
 }
 
 template <typename IMG>
-typename IMG::ASTexPixelType compute_mean(const IMG& img)
+typename IMG::PixelType compute_mean(const IMG& img)
 {
 	return compute_mean(img,[](int,int){return true;});
 }
@@ -184,9 +188,9 @@ typename IMG::ASTexPixelType compute_mean(const IMG& img)
 
 template <typename IMG, typename MASK, typename SUP>
 auto compute_max(const IMG& img, const MASK& mask, const SUP& sup) ->
-		typename IMG::ASTexPixelType
+		typename IMG::PixelType
 {
-	using Pix = typename IMG::ASTexPixelType;
+	using Pix = typename IMG::PixelType;
 
 	Pix max_val = img.pixelAbsolute(0,0);
 	img.for_all_pixels([&](const Pix& p)
@@ -201,16 +205,16 @@ auto compute_max(const IMG& img, const MASK& mask, const SUP& sup) ->
 
 template <typename IMG, typename MASK>
 auto compute_max(const IMG& img, const MASK& mask) ->
-		typename std::enable_if<std::is_arithmetic<typename IMG::ASTexPixelType>::value, typename IMG::ASTexPixelType>::type
+		typename std::enable_if<std::is_arithmetic<typename IMG::PixelType>::value, typename IMG::PixelType>::type
 {
-	using Pix = typename IMG::ASTexPixelType;
+	using Pix = typename IMG::PixelType;
 	return compute_max(img, mask, [](const Pix& p, const Pix& q){return p>q;});
 }
 
 template <typename IMG>
-typename IMG::ASTexPixelType compute_max(const IMG& img)
+typename IMG::PixelType compute_max(const IMG& img)
 {
-	using Pix = typename IMG::ASTexPixelType;
+	using Pix = typename IMG::PixelType;
 	return compute_max(img,
 					[](int,int){return true;},
 					[](const Pix& p, const Pix& q){return p>q;});
@@ -222,9 +226,9 @@ typename IMG::ASTexPixelType compute_max(const IMG& img)
 
 template <typename IMG, typename MASK, typename SUP>
 auto compute_min(const IMG& img, const MASK& mask, const SUP& inf) ->
-		typename IMG::ASTexPixelType
+		typename IMG::PixelType
 {
-	using Pix = typename IMG::ASTexPixelType;
+	using Pix = typename IMG::PixelType;
 
 	Pix min_val = img.pixelAbsolute(0,0);
 	img.for_all_pixels([&](const Pix& p)
@@ -241,14 +245,14 @@ template <typename IMG, typename MASK>
 auto compute_min(const IMG& img, const MASK& mask) ->
 		typename std::enable_if<std::is_arithmetic<typename IMG::ASTexPixelType>::value, typename IMG::ASTexPixelType>::type
 {
-	using Pix = typename IMG::ASTexPixelType;
+	using Pix = typename IMG::PixelType;
 	return compute_min(img, mask, [](const Pix& p, const Pix& q){return p<q;});
 }
 
 template <typename IMG>
-typename IMG::ASTexPixelType compute_min(const IMG& img)
+typename IMG::PixelType compute_min(const IMG& img)
 {
-	using Pix = typename IMG::ASTexPixelType;
+	using Pix = typename IMG::PixelType;
 	return compute_min(img,
 					[](int,int){return true;},
 					[](const Pix& p, const Pix& q){return p<q;});
@@ -257,53 +261,53 @@ typename IMG::ASTexPixelType compute_min(const IMG& img)
 template <typename I>
 double mse(const I& i1, const I& i2, int x1, int y1, int x2, int y2, int neighborhoodRadius, int periodicity=false)
 {
-    double error=0.0;
-    static typename I::PixelType ms_zero;
-    typename I::PixelType diff=ms_zero;
-    size_t arraySize = sizeof(typename I::PixelType) / sizeof(typename I::DataType);
-    typename I::DataType    *a_pixi1 = new typename I::DataType[arraySize],
-                            *a_pixi2 = new typename I::DataType[arraySize];
+	double error=0.0;
+	static typename I::PixelType ms_zero;
+	typename I::PixelType diff=ms_zero;
+	size_t arraySize = sizeof(typename I::PixelType) / sizeof(typename I::DataType);
+	typename I::DataType    *a_pixi1 = new typename I::DataType[arraySize],
+							*a_pixi2 = new typename I::DataType[arraySize];
 
-    unsigned hit=0;
-    for(int dy=-neighborhoodRadius; dy<=neighborhoodRadius; ++dy)
-        for(int dx=-neighborhoodRadius; dx<=neighborhoodRadius; ++dx)
-        {
-            int xx1 = periodicity ? (x1+dx)%i1.width() : x1+dx;
-            int xx2 = periodicity ? (x2+dx)%i2.width() : x2+dx;
-            int yy1 = periodicity ? (y1+dy)%i1.height() : y1+dy;
-            int yy2 = periodicity ? (y2+dy)%i2.height() : y2+dy;
+	unsigned hit=0;
+	for(int dy=-neighborhoodRadius; dy<=neighborhoodRadius; ++dy)
+		for(int dx=-neighborhoodRadius; dx<=neighborhoodRadius; ++dx)
+		{
+			int xx1 = periodicity ? (x1+dx)%i1.width() : x1+dx;
+			int xx2 = periodicity ? (x2+dx)%i2.width() : x2+dx;
+			int yy1 = periodicity ? (y1+dy)%i1.height() : y1+dy;
+			int yy2 = periodicity ? (y2+dy)%i2.height() : y2+dy;
 
-            if(xx1 >= 0 && xx1<i1.width() &&
-               xx2 >= 0 && xx2<i2.width() &&
-               yy1 >= 0 && yy1<i1.height() &&
-               yy2 >= 0 && yy1<i2.height())
-            {
-                typename I::PixelType pixi1=i1.pixelAbsolute(xx1, yy1), pixi2=i2.pixelAbsolute(xx2, yy2);
-                assert(sizeof(typename I::DataType) <= 64
-                       && "mse: using Image types of data types with sizes higher than 64 bits is not allowed");
-                std::memcpy(a_pixi1, &pixi1, sizeof(typename I::PixelType));
-                std::memcpy(a_pixi2, &pixi2, sizeof(typename I::PixelType));
-                if(!std::is_floating_point<typename I::DataType>::value)
-                {
-                    for(unsigned i=0; i<arraySize; ++i)
-                    {
-                        error += (int64_t(a_pixi1[i]) - a_pixi2[i]) * (int64_t(a_pixi1[i]) - a_pixi2[i]);
-                    }
-                }
-                else
-                {
-                    for(unsigned i=0; i<arraySize; ++i)
-                    {
-                        error += (double(a_pixi1[i]) - a_pixi2[i]) * (double(a_pixi1[i]) - a_pixi2[i]);
-                    }
-                }
-                ++hit;
-            }
-        }
-    assert(hit!=0 && "mse: error with parameters");
-    delete[](a_pixi1);
-    delete[](a_pixi2);
-    return error/arraySize/hit;
+			if(xx1 >= 0 && xx1<i1.width() &&
+			   xx2 >= 0 && xx2<i2.width() &&
+			   yy1 >= 0 && yy1<i1.height() &&
+			   yy2 >= 0 && yy1<i2.height())
+			{
+				typename I::PixelType pixi1=i1.pixelAbsolute(xx1, yy1), pixi2=i2.pixelAbsolute(xx2, yy2);
+				assert(sizeof(typename I::DataType) <= 64
+					   && "mse: using Image types of data types with sizes higher than 64 bits is not allowed");
+				std::memcpy(a_pixi1, &pixi1, sizeof(typename I::PixelType));
+				std::memcpy(a_pixi2, &pixi2, sizeof(typename I::PixelType));
+				if(!std::is_floating_point<typename I::DataType>::value)
+				{
+					for(unsigned i=0; i<arraySize; ++i)
+					{
+						error += (int64_t(a_pixi1[i]) - a_pixi2[i]) * (int64_t(a_pixi1[i]) - a_pixi2[i]);
+					}
+				}
+				else
+				{
+					for(unsigned i=0; i<arraySize; ++i)
+					{
+						error += (double(a_pixi1[i]) - a_pixi2[i]) * (double(a_pixi1[i]) - a_pixi2[i]);
+					}
+				}
+				++hit;
+			}
+		}
+	assert(hit!=0 && "mse: error with parameters");
+	delete[](a_pixi1);
+	delete[](a_pixi2);
+	return error/arraySize/hit;
 }
 
 template<typename I>

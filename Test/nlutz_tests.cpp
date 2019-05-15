@@ -19,96 +19,96 @@ using namespace ASTex;
 
 int test_getis_gi(int argc, char **argv)
 {
-    if(argc < 2)
-    {
-        std::cerr << "Usage: " << std::endl;
-        std::cerr << argv[0] << " <in_texture> [max_dist (pixels)] [variance]" << std::endl;
-        return EXIT_FAILURE;
-    }
+	if(argc < 2)
+	{
+		std::cerr << "Usage: " << std::endl;
+		std::cerr << argv[0] << " <in_texture> [max_dist (pixels)] [variance]" << std::endl;
+		return EXIT_FAILURE;
+	}
 
-    ImageGrayd img;
-    IO::loadu8_in_01(img, std::string(MY_PATH) + argv[1]);
-    int max_dist = argc > 2 ? atoi(argv[2]) : 60;
-    double variance = argc > 3 ? atof(argv[3]) : 1.0;
+	ImageGrayd img;
+	IO::loadu8_in_01(img, std::string(MY_PATH) + argv[1]);
+	int max_dist = argc > 2 ? atoi(argv[2]) : 60;
+	double variance = argc > 3 ? atof(argv[3]) : 1.0;
 
-    FilterGetisGI<ImageGrayd>::Pointer fggi = FilterGetisGI<ImageGrayd>::New();
-    fggi->setKernelSize(max_dist);
-    fggi->setKernelVariance(variance);
-    fggi->SetInput(img.itk());
-    fggi->Update();
-    ImageGrayd result(fggi->GetOutput());
+	FilterGetisGI<ImageGrayd>::Pointer fggi = FilterGetisGI<ImageGrayd>::New();
+	fggi->setKernelSize(max_dist);
+	fggi->setKernelVariance(variance);
+	fggi->SetInput(img.itk());
+	fggi->Update();
+	ImageGrayd result(fggi->GetOutput());
 
-    result.for_all_pixels([&] (ImageGrayd::PixelType &pix, int x, int y)
-    {
-        pix = std::max(0.0, std::min(1.0, (std::abs(pix) * 0.1)));
-    });
+	result.for_all_pixels([&] (ImageGrayd::PixelType &pix, int x, int y)
+	{
+		pix = std::max(0.0, std::min(1.0, (std::abs(pix) * 0.1)));
+	});
 
-    std::string filename_source=argv[1];
-    std::string name_file = IO::remove_path(filename_source);
-    std::string name_noext = IO::remove_ext(name_file);
-    IO::save01_in_u8(result, std::string(MY_PATH)+ "gi_translated_" + name_noext + "_" + std::to_string(max_dist) + "_" + std::to_string(variance) + ".png");
+	std::string filename_source=argv[1];
+	std::string name_file = IO::remove_path(filename_source);
+	std::string name_noext = IO::remove_ext(name_file);
+	IO::save01_in_u8(result, std::string(MY_PATH)+ "gi_translated_" + name_noext + "_" + std::to_string(max_dist) + "_" + std::to_string(variance) + ".png");
 
-    return 0;
+	return 0;
 }
 
 int test_wendling(int argc, char **argv)
 {
-    if(argc < 3)
-    {
-        std::cerr << "Usage: " << std::endl;
-        std::cerr << argv[0] << " <in_texture> <in_patchMap>" << std::endl;
-        return EXIT_FAILURE;
-    }
-    auto getVariance = [&] (const ImageGrayd& img){
-            double variance =0;
-            double mean = 0;
+	if(argc < 3)
+	{
+		std::cerr << "Usage: " << std::endl;
+		std::cerr << argv[0] << " <in_texture> <in_patchMap>" << std::endl;
+		return EXIT_FAILURE;
+	}
+	auto getVariance = [&] (const ImageGrayd& img){
+			double variance =0;
+			double mean = 0;
 
-            img.for_all_pixels([&](const ImageGrayd::PixelType& p){
-               mean+=p;
-            });
+			img.for_all_pixels([&](const ImageGrayd::PixelType& p){
+			   mean+=p;
+			});
 
-            mean /= img.width()*img.height();
+			mean /= img.width()*img.height();
 
-            img.for_all_pixels([&](const ImageGrayd::PixelType& p){
-               double diff_mean = mean-p;
-               variance += diff_mean*diff_mean;
-            });
-            return variance/(img.width()*img.height());
-        };
+			img.for_all_pixels([&](const ImageGrayd::PixelType& p){
+			   double diff_mean = mean-p;
+			   variance += diff_mean*diff_mean;
+			});
+			return variance/(img.width()*img.height());
+		};
 
-        ImageGrayd img, result;
-        IO::loadu8_in_01(img, std::string(MY_PATH) + argv[1]);
+		ImageGrayd img, result;
+		IO::loadu8_in_01(img, std::string(MY_PATH) + argv[1]);
 
-        double mean = 0;
-        ImageGrayd tmp(img.width(),img.height());
+		double mean = 0;
+		ImageGrayd tmp(img.width(),img.height());
 
-        //initialisation de l'image de travail (copie de l'image de base
-        tmp.for_all_pixels([&](ImageGrayd::PixelType& p,int x,int y){
-            p = img.pixelAbsolute(x,y);
+		//initialisation de l'image de travail (copie de l'image de base
+		tmp.for_all_pixels([&](ImageGrayd::PixelType& p,int x,int y){
+			p = img.pixelAbsolute(x,y);
 
-            //Calcul de la moyenne de l'image
-            mean+=p;
-        });
+			//Calcul de la moyenne de l'image
+			mean+=p;
+		});
 
-        mean /= img.width()*img.height();
+		mean /= img.width()*img.height();
 
-        //val-moyenne pour le calcul de l'autocorrelation
-        tmp.for_all_pixels([&](ImageGrayd::PixelType& p){
-            p-=mean;
-        });
+		//val-moyenne pour le calcul de l'autocorrelation
+		tmp.for_all_pixels([&](ImageGrayd::PixelType& p){
+			p-=mean;
+		});
 
-        //Calcul de l'autocorrelation
-        result.initItk(tmp.width(), tmp.height());
-        Fourier::autoCorrelation_full_size(tmp,result);
+		//Calcul de l'autocorrelation
+		result.initItk(tmp.width(), tmp.height());
+		Fourier::autoCorrelation_full_size(tmp,result);
 
-        double var_img = getVariance(img);
+		double var_img = getVariance(img);
 
-        //Normalisation par la variance de l'image pour val dans [-1;1]
-        result.for_all_pixels([&](ImageGrayd::PixelType& p){
-            p/=var_img;
-        });
+		//Normalisation par la variance de l'image pour val dans [-1;1]
+		result.for_all_pixels([&](ImageGrayd::PixelType& p){
+			p/=var_img;
+		});
 
-        return 0;
+		return 0;
 }
 
 int test_contentExchangeRenderingPack(int argc, char **argv)
@@ -146,7 +146,7 @@ int test_contentExchangeRenderingPack(int argc, char **argv)
 //        pProcessor.patchAt(1).contentAt(0).mipmap(2, 2).save("/home/nlutz/mipmap3.png");
 //        pProcessor.patchAt(1).contentAt(0).mipmap(3, 3).save("/home/nlutz/mipmap4.png");
 
-        std::string renderingDirectory = out_dir + "/" + std::to_string(std::time(0)) + "_random_" + name_noext + "/";
+		std::string renderingDirectory = out_dir + "/" + std::to_string(std::time(0)) + "_random_" + name_noext + "/";
 
 		ImageRGBf im_patches;
         im_patches.initItk(im_in.width(), im_in.height());
@@ -156,13 +156,13 @@ int test_contentExchangeRenderingPack(int argc, char **argv)
             pix = std::ceil(log2(w)) != std::floor(log2(w)) ? 255 : 0;
         });
 
-        im_patches.save("/home/nlutz/im_seams.png");
+		im_patches.save("/home/nlutz/im_seams.png");
 
-        create_directory(renderingDirectory);
-        pProcessor.saveRenderingPack(renderingDirectory, false);
-    }
+		create_directory(renderingDirectory);
+		pProcessor.saveRenderingPack(renderingDirectory, false);
+	}
 
-    return 0;
+	return 0;
 }
 
 /**
@@ -183,104 +183,104 @@ int test_contentExchangeRenderingPack(int argc, char **argv)
  */
 int test_texton(int argc, char **argv)
 {
-    if( argc < 3 )
-    {
-        std::cerr << "Usage: " << std::endl;
-        std::cerr << argv[0] << "<input image> <texton image/file>" << std::endl;
+	if( argc < 3 )
+	{
+		std::cerr << "Usage: " << std::endl;
+		std::cerr << argv[0] << "<input image> <texton image/file>" << std::endl;
 
-        return EXIT_FAILURE;
-    }
+		return EXIT_FAILURE;
+	}
 
 #ifdef USE_QWIDGETS
-    QApplication app(argc, argv);
-    std::setlocale(LC_ALL,"C");
+	QApplication app(argc, argv);
+	std::setlocale(LC_ALL,"C");
 #endif
 
-    std::string filename_source=argv[1];
-    std::string name_file = IO::remove_path(filename_source);
-    std::string name_noext = IO::remove_ext(name_file);
+	std::string filename_source=argv[1];
+	std::string name_file = IO::remove_path(filename_source);
+	std::string name_noext = IO::remove_ext(name_file);
 
-    std::string input_noext=name_noext;
+	std::string input_noext=name_noext;
 
-    filename_source=argv[2];
-    name_file = IO::remove_path(filename_source);
-    name_noext = IO::remove_ext(name_file);
+	filename_source=argv[2];
+	name_file = IO::remove_path(filename_source);
+	name_noext = IO::remove_ext(name_file);
 
-    //Loading sample
-    //Loading im_in
+	//Loading sample
+	//Loading im_in
 
-    ImageRGBd im_in, im_out, im_rpn, im_sample, im_texton;
-    IO::loadu8_in_01(im_in, std::string(MY_PATH)+argv[1]);
+	ImageRGBd im_in, im_out, im_rpn, im_sample, im_texton;
+	IO::loadu8_in_01(im_in, std::string(MY_PATH)+argv[1]);
 
-    //warning; these import functions turn a texton file into a vizualizable image
-    if(!import_texton(im_texton, MY_PATH+filename_source))
-    {
-        assert(import_texton_from_png(im_texton, MY_PATH+filename_source));
-    }
+	//warning; these import functions turn a texton file into a vizualizable image
+	if(!import_texton(im_texton, MY_PATH+filename_source))
+	{
+		assert(import_texton_from_png(im_texton, MY_PATH+filename_source));
+	}
 
-    HistogramRGBd histo_texton(im_texton);
-    ImageRGBd::PixelType mean;
-    for(int i=0; i<3; ++i)
-        mean[i] = histo_texton.mean(i);
-    //transformation image -> texton
-    im_texton.for_all_pixels([&] (ImageRGBd::PixelType &pix) {
-        pix -= mean;
-        pix = pix * (1.0/std::sqrt(im_texton.width()*im_texton.height()));
-    });
+	HistogramRGBd histo_texton(im_texton);
+	ImageRGBd::PixelType mean;
+	for(int i=0; i<3; ++i)
+		mean[i] = histo_texton.mean(i);
+	//transformation image -> texton
+	im_texton.for_all_pixels([&] (ImageRGBd::PixelType &pix) {
+		pix -= mean;
+		pix = pix * (1.0/std::sqrt(im_texton.width()*im_texton.height()));
+	});
 
-    //Testing
+	//Testing
 
-    Stamping::SamplerUniform sampler;
-    sampler.setNbPoints(400); //< you can change that
-    Stamping::StampDiscrete<ImageRGBd> stamp(im_texton);
-    stamp.setInterpolationRule(Stamping::StampDiscrete<ImageRGBd>::BILINEAR); //< you can change that too
+	Stamping::SamplerUniform sampler;
+	sampler.setNbPoints(400); //< you can change that
+	Stamping::StampDiscrete<ImageRGBd> stamp(im_texton);
+	stamp.setInterpolationRule(Stamping::StampDiscrete<ImageRGBd>::BILINEAR); //< you can change that too
 
-    Stamping::StamperTexton<ImageRGBd> tamponneur(&sampler, &stamp);
+	Stamping::StamperTexton<ImageRGBd> tamponneur(&sampler, &stamp);
 
-    tamponneur.setPeriodicity(false);
-    tamponneur.setUseMargins(true);
+	tamponneur.setPeriodicity(false);
+	tamponneur.setUseMargins(true);
 
-    int W=512, H=512;
+	int W=512, H=512;
 
-    im_out = tamponneur.generate(W, H);
+	im_out = tamponneur.generate(W, H);
 
-    //transformation texton -> image
-    im_out.for_all_pixels([&] (ImageRGBd::PixelType &pix) {
-        //pix = pix * std::sqrt(im_texton.width()*im_texton.height()); //mistake: no need to re-normalize on top
-        pix += mean;
-    });
+	//transformation texton -> image
+	im_out.for_all_pixels([&] (ImageRGBd::PixelType &pix) {
+		//pix = pix * std::sqrt(im_texton.width()*im_texton.height()); //mistake: no need to re-normalize on top
+		pix += mean;
+	});
 
-    im_sample.initItk(W, H, true);
+	im_sample.initItk(W, H, true);
 
 
-    std::vector<Eigen::Vector2f> pointArray = sampler.generate();
-    for(std::vector<Eigen::Vector2f>::iterator it=pointArray.begin(); it!=pointArray.end(); ++it)
-    {
-        int i = im_sample.width() * (*it)[0]; //i & j: single point coordinates in im_out
-        int j = im_sample.height() * (*it)[1];
+	std::vector<Eigen::Vector2f> pointArray = sampler.generate();
+	for(std::vector<Eigen::Vector2f>::iterator it=pointArray.begin(); it!=pointArray.end(); ++it)
+	{
+		int i = im_sample.width() * (*it)[0]; //i & j: single point coordinates in im_out
+		int j = im_sample.height() * (*it)[1];
 
-        im_sample.pixelAbsolute(i, j)=1.0;
-    }
+		im_sample.pixelAbsolute(i, j)=1.0;
+	}
 
-    //colored_RPN(im_in, im_rpn, RGB_SPACE, NORMAL, 0, 0, false, true, false, 1.0);
+	//colored_RPN(im_in, im_rpn, RGB_SPACE, NORMAL, 0, 0, false, true, false, 1.0);
 
-    auto clamp = [&] (ImageRGBd::PixelType &pix) { for(int i=0; i<3; ++i) pix[i] = pix[i] > 1.0 ? 1.0 : (pix[i] < 0.0 ? 0.0 : pix[i]); };
-    im_out.for_all_pixels(clamp);
-    //im_rpn.for_all_pixels(clamp);
+	auto clamp = [&] (ImageRGBd::PixelType &pix) { for(int i=0; i<3; ++i) pix[i] = pix[i] > 1.0 ? 1.0 : (pix[i] < 0.0 ? 0.0 : pix[i]); };
+	im_out.for_all_pixels(clamp);
+	//im_rpn.for_all_pixels(clamp);
 
-    HistogramRGBd histo_in(im_in);
-    HistogramRGBd histo_out(im_out);
-    //HistogramRGBd histo_rpn(im_rpn);
+	HistogramRGBd histo_in(im_in);
+	HistogramRGBd histo_out(im_out);
+	//HistogramRGBd histo_rpn(im_rpn);
 
-    std::cout << "Mean of input is: (" << std::to_string(histo_in.mean(0)) << ", " << std::to_string(histo_in.mean(1)) << ", " << std::to_string(histo_in.mean(2)) << ")" << std::endl;
-    std::cout << "Variance of input is: (" << std::to_string(histo_in.covariance(0, 0)) << ", " << std::to_string(histo_in.covariance(1, 1)) << ", " << std::to_string(histo_in.covariance(2, 2)) << ")" << std::endl;
+	std::cout << "Mean of input is: (" << std::to_string(histo_in.mean(0)) << ", " << std::to_string(histo_in.mean(1)) << ", " << std::to_string(histo_in.mean(2)) << ")" << std::endl;
+	std::cout << "Variance of input is: (" << std::to_string(histo_in.covariance(0, 0)) << ", " << std::to_string(histo_in.covariance(1, 1)) << ", " << std::to_string(histo_in.covariance(2, 2)) << ")" << std::endl;
 
-    std::cout << "==================" << std::endl;
+	std::cout << "==================" << std::endl;
 
-    std::cout << "Mean of output is: (" << std::to_string(histo_out.mean(0)) << ", " << std::to_string(histo_out.mean(1)) << ", " << std::to_string(histo_out.mean(2)) << ")" << std::endl;
-    std::cout << "Variance of output is: (" << std::to_string(histo_out.covariance(0, 0)) << ", " << std::to_string(histo_out.covariance(1, 1)) << ", " << std::to_string(histo_out.covariance(2, 2)) << ")" << std::endl;
+	std::cout << "Mean of output is: (" << std::to_string(histo_out.mean(0)) << ", " << std::to_string(histo_out.mean(1)) << ", " << std::to_string(histo_out.mean(2)) << ")" << std::endl;
+	std::cout << "Variance of output is: (" << std::to_string(histo_out.covariance(0, 0)) << ", " << std::to_string(histo_out.covariance(1, 1)) << ", " << std::to_string(histo_out.covariance(2, 2)) << ")" << std::endl;
 
-    std::cout << "==================" << std::endl;
+	std::cout << "==================" << std::endl;
 
 //    std::cout << "Mean of rpn is: (" << std::to_string(histo_rpn.mean(0)) << ", " << std::to_string(histo_rpn.mean(1)) << ", " << std::to_string(histo_rpn.mean(2)) << ")" << std::endl;
 //    std::cout << "Variance of rpn is: (" << std::to_string(histo_rpn.covariance(0, 0)) << ", " << std::to_string(histo_rpn.covariance(1, 1)) << ", " << std::to_string(histo_rpn.covariance(2, 2)) << ")" << std::endl;
@@ -291,9 +291,9 @@ int test_texton(int argc, char **argv)
 //    std::cout << "Variance of texton is: (" << std::to_string(histo_texton.covariance(0, 0)) << ", " << std::to_string(histo_texton.covariance(1, 1)) << ", " << std::to_string(histo_texton.covariance(2, 2)) << ")" << std::endl;
 
 
-    double zero[3];
-    double one[3];
-    for(int i=0; i<3; ++i) {zero[i]=0.0; one[i]=1.0;}
+	double zero[3];
+	double one[3];
+	for(int i=0; i<3; ++i) {zero[i]=0.0; one[i]=1.0;}
 
 //    HistogramRGBBase<int> quantizedHisto;
 
@@ -320,37 +320,37 @@ int test_texton(int argc, char **argv)
 //        quantizedHisto.saveHistogram(std::string(MY_PATH) + "out_" + input_noext + "_tn_galerne" + ".csv", 24);
 //    }
 
-    //Saving sample
-    //Saving im_out
-    IO::save01_in_u8(im_sample, std::string(MY_PATH) + name_noext + "_sample.png");
-    IO::save01_in_u8(im_out, std::string(MY_PATH) + name_noext + "_out_tn.png");
+	//Saving sample
+	//Saving im_out
+	IO::save01_in_u8(im_sample, std::string(MY_PATH) + name_noext + "_sample.png");
+	IO::save01_in_u8(im_out, std::string(MY_PATH) + name_noext + "_out_tn.png");
 //    IO::save01_in_u8(im_rpn, std::string(MY_PATH) + input_noext + "_out_rpn.png");
-    IO::save01_in_u8(im_texton, std::string(MY_PATH) + name_noext + "_texton.png");
+	IO::save01_in_u8(im_texton, std::string(MY_PATH) + name_noext + "_texton.png");
 
 #ifdef USE_QWIDGETS
-    ImageViewer imgv_in("Source", &app, 0);
-    imgv_in.setWindowTitle("Source");
-    imgv_in.set_rgb01(im_in.getDataPtr(), im_in.width(),im_in.height(),1);
-    imgv_in.show();
+	ImageViewer imgv_in("Source", &app, 0);
+	imgv_in.setWindowTitle("Source");
+	imgv_in.set_rgb01(im_in.getDataPtr(), im_in.width(),im_in.height(),1);
+	imgv_in.show();
 
-    ImageViewer imgv_sample("Sampling", &app, 1);
-    imgv_sample.setWindowTitle("Sampling");
-    imgv_sample.set_rgb01(im_sample.getDataPtr(), im_sample.width(), im_sample.height(),1);
-    imgv_sample.show();
+	ImageViewer imgv_sample("Sampling", &app, 1);
+	imgv_sample.setWindowTitle("Sampling");
+	imgv_sample.set_rgb01(im_sample.getDataPtr(), im_sample.width(), im_sample.height(),1);
+	imgv_sample.show();
 
 //    ImageViewer imgv_rpn("RPN", &app, 2);
 //    imgv_rpn.setWindowTitle("RPN");
 //    imgv_rpn.set_rgb01(im_rpn.getDataPtr(), im_rpn.width(),im_rpn.height(),1);
 //    imgv_rpn.show();
 
-    ImageViewer imgv_out("Texton noise", &app, 3);
-    imgv_out.setWindowTitle("Texton noise");
-    imgv_out.set_rgb01(im_out.getDataPtr(), im_out.width(), im_out.height(),1);
-    imgv_out.show();
+	ImageViewer imgv_out("Texton noise", &app, 3);
+	imgv_out.setWindowTitle("Texton noise");
+	imgv_out.set_rgb01(im_out.getDataPtr(), im_out.width(), im_out.height(),1);
+	imgv_out.show();
 
-    return app.exec();
+	return app.exec();
 #else
-    return 0;
+	return 0;
 #endif
 }
 
@@ -398,26 +398,26 @@ char fname[256];
 
 int test_pcts(int argc, char **argv)
 {
-    std::cout << "PCTS started" << std::endl;
+	std::cout << "PCTS started" << std::endl;
 
-    ImageRGBd image, guid, seg;
+	ImageRGBd image, guid, seg;
 	ImageRGBd mask, Ipos, Ineg, I2pos, I2neg;
 	ImageRGBd synth, binary, stencil;
 
-    std::string input_directory = std::string(argv[1]);
-    char *name = argv[2];
+	std::string input_directory = std::string(argv[1]);
+	char *name = argv[2];
 
 	//set this image and macro PCTS_DEBUG_DIRECTORY in pcts.h
-    sprintf(fname, "%s/%s.png", input_directory.c_str(), name);
-    IO::loadu8_in_01(image, fname);
-    sprintf(fname, "%s/mask.png", input_directory.c_str());
+	sprintf(fname, "%s/%s.png", input_directory.c_str(), name);
+	IO::loadu8_in_01(image, fname);
+	sprintf(fname, "%s/mask.png", input_directory.c_str());
 	IO::loadu8_in_01(mask, fname);
-    sprintf(fname, "%s/init_Binary_warped_specific_DT.png", input_directory.c_str());
-    IO::loadu8_in_01(Ipos, fname);
-    sprintf(fname, "%s/init_Binary_warped_specific_DT_neg.png", input_directory.c_str());
+	sprintf(fname, "%s/init_Binary_warped_specific_DT.png", input_directory.c_str());
+	IO::loadu8_in_01(Ipos, fname);
+	sprintf(fname, "%s/init_Binary_warped_specific_DT_neg.png", input_directory.c_str());
 	IO::loadu8_in_01(Ineg, fname);
-    sprintf(fname, "%s/rigidity_RGB.png", input_directory.c_str());
-    IO::loadu8_in_01(stencil, fname);
+	sprintf(fname, "%s/rigidity_RGB.png", input_directory.c_str());
+	IO::loadu8_in_01(stencil, fname);
 	seg.initItk(Ipos.width(), Ipos.height());
 	seg.for_all_pixels([&](ImageRGBd::PixelType &pix, int x, int y)
 	{
@@ -427,9 +427,9 @@ int test_pcts(int argc, char **argv)
 		col[2] = 0.0;
 		pix = ImageRGBd::PixelType(col);
 	});
-    sprintf(fname, "%s/Binary_warped_specific_DT.png", input_directory.c_str());
+	sprintf(fname, "%s/Binary_warped_specific_DT.png", input_directory.c_str());
 	IO::loadu8_in_01(I2pos, fname);
-    sprintf(fname, "%s/Binary_warped_specific_DT_neg.png", input_directory.c_str());
+	sprintf(fname, "%s/Binary_warped_specific_DT_neg.png", input_directory.c_str());
 	IO::loadu8_in_01(I2neg, fname);
 	guid.initItk(I2pos.width(), I2pos.height());
 	guid.for_all_pixels([&](ImageRGBd::PixelType &pix, int x, int y)
@@ -440,50 +440,50 @@ int test_pcts(int argc, char **argv)
 		col[2] = 0.0;
 		pix = ImageRGBd::PixelType(col);
 	});
-    sprintf(fname, "%s/%s_C_10.png", input_directory.c_str(), name);
+	sprintf(fname, "%s/%s_C_10.png", input_directory.c_str(), name);
 	IO::loadu8_in_01(synth, fname);
-    sprintf(fname, "%s/%s_C_10_bin.png", input_directory.c_str(), name);
+	sprintf(fname, "%s/%s_C_10_bin.png", input_directory.c_str(), name);
 	IO::loadu8_in_01(binary, fname);
 
 	ASTex::Pcts<ImageRGBd> pcts;
-    pcts.setTexture(image);
-    //pcts.setWidth(800);
-    //pcts.setHeight(800);
+	pcts.setTexture(image);
+	//pcts.setWidth(800);
+	//pcts.setHeight(800);
 
 
-    unsigned    seed=0,
-                bs = 4,
-                sl = 5,
-                samples = 60,
-                ref = 1,
-                radius = 30;
+	unsigned    seed=0,
+				bs = 4,
+				sl = 5,
+				samples = 60,
+				ref = 1,
+				radius = 30;
 
-     double     labelW = 0.9,
-                guidanceW = 0.8,
-                stencilW = 1.0;
+	 double     labelW = 0.9,
+				guidanceW = 0.8,
+				stencilW = 1.0;
 
-    srand(seed);
-    pcts.setLvl0BlockSize(bs);
-    pcts.setMinimumSizeLog(sl);
-    pcts.setNbSamplesNNM(samples);
-    pcts.setNbRefinementsNNM(ref);
-    pcts.setRadiusScaleNNM(radius);
-    pcts.setLabel(mask, labelW);
-    pcts.setGuidance(guid, seg, guidanceW, 1.0);
-	pcts.setMask(synth, binary);
-    pcts.setStencil(stencil, stencilW); // weight between 0 and 1
-    IO::save01_in_u8(pcts.generate(), input_directory + "/out_pcts_seed" + std::to_string(seed)
-                     + "_bs" + std::to_string(bs)
-                     + "_sl" + std::to_string(sl)
-                     + "_samples" + std::to_string(samples)
-                     + "_ref" + std::to_string(ref)
-                     + "_labelW" + std::to_string(labelW)
-                     + "_guidanceW" + std::to_string(guidanceW)
-                     + "_stencilW" + std::to_string(stencilW)
-                     + ".png");
+	srand(seed);
+	pcts.setLvl0BlockSize(bs);
+	pcts.setMinimumSizeLog(sl);
+	pcts.setNbSamplesNNM(samples);
+	pcts.setNbRefinementsNNM(ref);
+	pcts.setRadiusScaleNNM(radius);
+	pcts.setTextureLabel(mask, labelW);
+	pcts.setGuidance(guid, seg, guidanceW, 1.0);
+	pcts.setSynthesis(synth, binary);
+	pcts.setStencil(stencil, stencilW); // weight between 0 and 1
+	IO::save01_in_u8(pcts.generate(), input_directory + "/out_pcts_seed" + std::to_string(seed)
+					 + "_bs" + std::to_string(bs)
+					 + "_sl" + std::to_string(sl)
+					 + "_samples" + std::to_string(samples)
+					 + "_ref" + std::to_string(ref)
+					 + "_labelW" + std::to_string(labelW)
+					 + "_guidanceW" + std::to_string(guidanceW)
+					 + "_stencilW" + std::to_string(stencilW)
+					 + ".png");
 
-    std::cout << "PCTS ended" << std::endl;
-    return 0;
+	std::cout << "PCTS ended" << std::endl;
+	return 0;
 }
 
 int test_benchmarkingContentExchange(int argc, char **argv)

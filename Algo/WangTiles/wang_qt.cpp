@@ -23,97 +23,73 @@
 
 
 
-#include <iostream>
 #include <ASTex/image_rgb.h>
-#include <ASTex/image_rgba.h>
-
-
-#include <ASTex/special_io.h>
+#include <ASTex/image_gray.h>
 #include <ASTex/easy_io.h>
 
-//#include <ASTex/image_merging.h>
+#include "wang_tiles.h"
+
+#include "imageviewer.h"
 
 using namespace ASTex;
 
 
-int main()
+int main(int argc, char** argv)
 {
-	ImageRGBu8 image;
+	QApplication app(argc, argv);
+	std::string fn = TEMPO_PATH+"quilting_input8.png";
+	int tw = 100;
+	int gen_sz = 1000;
+	int nbcol = 2;
 
-	bool ok = image.load(TEMPO_PATH+"simpleRGB.png");
-	if (!ok)
-		return 1;
-
-
-	image.pixelAbsolute(0,0) = itkRGBPixel(255,127,52);
-	image.pixelAbsolute(1,0) = itkRGBPixel(20,104,51);
-
-	ImageRGBu8::DoublePixelEigen dp1 = image.pixelEigenAbsolute(0,0);
-	ImageRGBu8::DoublePixelEigen dp2 = image.pixelEigenAbsolute(1,0);
-	image.pixelEigenAbsolute(0, 1) = (dp1 + dp2) / 2;
-
-
-	std::cout << image.pixelAbsolute(0,1) << std::endl;
-
-	return 0;
-
-
-
-//	ImageRGBu8 imx;
-
-//	auto hm = Assembler1D::into(imx);
-//	hm <<image << 3 << image << gen_region(50,50,150,150) << Assembler1D::HorizontalFlush;
-//	imx.save(TEMPO_PATH+"h2simple.png");
-
-//	Assembler1D::into(imx) <<image << 3 << image << gen_region(50,50,200,200) << 2 << image << gen_region(0,0,150,150) << Assembler1D::VerticalFlush;
-//	imx.save(TEMPO_PATH+"v3simple.png");
-
-//	Assembler2D::into(imx) <<image << 1 << image << Assembler2D::EndLine(2)<<image << 1 << image << Assembler2D::FinalFlush;
-//	imx.save(TEMPO_PATH+"4simple.png");
-
-	int W = image.width()/4;
-	int H = image.height()/4;
-
-	image.setCenter(image.width()/2, image.height()/2);
-
-	for( int j= 0; j<H  ; ++j)
+	if (argc>4)
 	{
-		for( int i= 0; i< W ; ++i)
-		{
-			if (j%2)
-				image.pixelRelative(i,j) = ImageRGBu8::itkPixel(255,128,0);
-			else
-				image.pixelRelative(i,j)[2]=0;
-		}
+		fn = std::string(argv[1]);
+		tw = atoi(argv[2]);
+		gen_sz = atoi(argv[3]);
+		nbcol = atoi(argv[4]);
+	}
+	else
+	{
+		std::cout << argv[0]<< " tile_width generated_width   using default"<< std::endl;
 	}
 
+	ImageRGBu8 im;
+	im.load(fn);
 
-	for( int j= 0; j<H  ; ++j)
+	auto start_chrono = std::chrono::system_clock::now();
+
+//	auto wang = WangTilesGenerator<ImageRGBu8,3>::create(im,tw,nbcol);
+
+	WangTilesGenerator<ImageRGBu8> wta(im, tw,nbcol);
+	auto wang = wta.create();
+
+
+	std::chrono::duration<double> elapsed_seconds = std::chrono::system_clock::now() - start_chrono;
+	std::cout << "wang tile timing: " << elapsed_seconds.count() << " s." << std::endl;
+
+	ImageViewer v0("xx");
+	v0.update(wta.choosen_img_);
+	v0.show();
+
+	ImageRGBu8 ti = wang.all_tiles();
+	auto v1 = image_viewer(ti);
+
+	ImageRGBu8 gen = wang.compose(gen_sz/tw, gen_sz/tw);
+	auto v2 = image_viewer(gen,"gen", &app);
+
+	v2->set_mouse_cb([](int b, int x, int y)
 	{
-		for( int i= 0; i< W ; ++i)
-		{
-
-			ImageRGBu8::PixelType& P = image.pixelAbsolute(i,j);
-			P[0] = 0;
-			P[1] = 30;
-
-			auto P2 = image.pixelAbsolute(i,j);
-			P2[2] = 200;
-
-		}
-	}
-
-	image.save(TEMPO_PATH+"out.png");
-
-	ImageRGBAd im(512,512);
-	im.for_all_pixels([](ImageRGBAd::PixelType& P, int /*x*/, int y)
-	{
-		P = ImageRGBAd::itkPixel(1.0,0.3,0,(511-y%255)/255.0);
+		std::cout << "mouse button "<< b << " at " << x << " , " << y <<std::endl;
 	});
-	IO::save01_in_u8(im,TEMPO_PATH + "out_rgba.png");
+
+	v2->set_key_cb([&](int code, char c)
+	{
+		std::ignore = code; // for warning
+		std::cout << "key "<< c << std::endl;
+	});
 
 
 
-  return EXIT_SUCCESS;
+	return app.exec();
 }
-

@@ -463,17 +463,14 @@ I DictionaryProcessor<I>::synthesize(unsigned width, unsigned height, unsigned n
 	weights.resize(patches.size());
 	for(unsigned i=0; i<nbIterations; ++i)
 	{
+		matchImage(output, m_input);
+		readImage(output, patches);
+
 		for(size_t p=0; p<m_patches.size(); ++p) //2. Sparse coding (update weights)
 		{
 			orthogonalMatchingPursuit<Compare>(p, patches, weights);
 		}
 		output=reconstructImage(weights, output.width(), output.height());
-//		for(unsigned k=0; k<weights.size(); ++k)
-//			for(unsigned l=0; l<weights[k].size(); ++l)
-//				std::cout << "weight (" << k << ", " << l << ": " << weights[k][l] << std::endl;
-		IO::save01_in_u8(output, "/home/nlutz/matchedNotImage.png");
-		matchImage(output, m_input);
-		readImage(output, patches);
 	}
 	return output;
 }
