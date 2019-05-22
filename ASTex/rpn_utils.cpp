@@ -511,82 +511,95 @@ double compute_crossCorrelation_diff(const ImageRGBd& in1, const ImageRGBd& in2,
 }
 
 /**
- * @brief matchImage matches the histogram with image to the histogram of input.
+ * @brief matchImage matches the histogram with image to the histogram of target.
  * @pre Although linear interpolation could fix it, both images are required to be of the same size.
  */
-void matchImage(ImageRGBd& image, const ImageRGBd& input)
+void matchImage(ImageRGBd& source, const ImageRGBd& target, std::string external_program_name)
 {
-	MaskBool mb_alwaysTrue(image.width(), image.height());
-	mb_alwaysTrue |= [] (int, int) {return true;};
-	ImageGrayd pca1, pca2, pca3;
-
-	//First we compute the PCA of the image to decorrelate the channels as much as we can
-	PCA pcaImage(image);
-	pcaImage.computePCA(mb_alwaysTrue);
-	pcaImage.project(pca1, pca2, pca3);
-	ImageRGBd pcadImage;
-	fold3Channels(pcadImage, pca1, pca2, pca3);
-
-	//we also compute the PCA of the input
-	PCA pcaInput(input);
-	pcaInput.computePCA(mb_alwaysTrue);
-	pcaInput.project(pca1, pca2, pca3);
-	ImageRGBd pcadInput;
-	fold3Channels(pcadInput, pca1, pca2, pca3);
-
-	auto f_invNorm = [&] (Eigen::Vector3d vector) -> double
+	if(!external_program_name.empty())
 	{
-		return 1.0/(std::sqrt(vector[0]*vector[0] + vector[1]*vector[1] + vector[2]*vector[2]));
-	};
-
-	CompareWeightedPCA::weight[0] = f_invNorm(pcaInput.eigenVector(0));
-	CompareWeightedPCA::weight[1] = f_invNorm(pcaInput.eigenVector(1));
-	CompareWeightedPCA::weight[2] = f_invNorm(pcaInput.eigenVector(2));
-	Histogram<ImageRGBd, CompareWeightedPCA> histInput(pcadInput);
-
-	CompareWeightedPCA::weight[0] = f_invNorm(pcaImage.eigenVector(0));
-	CompareWeightedPCA::weight[1] = f_invNorm(pcaImage.eigenVector(1));
-	CompareWeightedPCA::weight[2] = f_invNorm(pcaImage.eigenVector(2));
-	Histogram<ImageRGBd, CompareWeightedPCA> cdfImage(pcadImage), histHistoryOfImage(pcadImage);
-	unsigned count = 0;
-	for(typename Histogram<ImageRGBd, CompareWeightedPCA>::iterator itThis=cdfImage.begin(); itThis!=cdfImage.end(); ++itThis)
-	{ //transforms the histogram into a cdf
-		count += (*itThis).second;
-		(*itThis).second = count;
+		IO::save01_in_u8(source, "./_source.png");
+		IO::save01_in_u8(target, "./_target.png");
+		char buffer[256];
+		snprintf(buffer, sizeof(buffer), "%s ./_source.png ./_target.png ./output.png", external_program_name.c_str());
+		system(buffer);
+		IO::loadu8_in_01(source, "./_output.png");
+		system("rm ./_source.png ./_target.png ./_output.png");
 	}
-
-	//compute translations from a sorted version of image to image
-	ImageRGB32 colorMap;
-	colorMap.initItk(input.width(), input.height());
-	colorMap.for_all_pixels([&] (ImageRGB32::PixelType &pix, int x, int y)
+	else
 	{
-		int position = (*cdfImage.find(pcadImage.pixelAbsolute(x, y))).second
-				- (*histHistoryOfImage.find(pcadImage.pixelAbsolute(x, y))).second--;
-		int x2 = position%colorMap.width(), y2 = position/colorMap.width();
-		pix[0] = x2;
-		pix[1] = y2;
-	});
+		MaskBool mb_alwaysTrue(source.width(), source.height());
+		mb_alwaysTrue |= [] (int, int) {return true;};
+		ImageGrayd pca1, pca2, pca3;
 
-	ImageRGBd orderedInput;
-	orderedInput.initItk(input.width(), input.height());
-	typename Histogram<ImageRGBd, CompareWeightedPCA>::iterator itInput = histInput.begin();
-	orderedInput.for_all_pixels([&] (typename ImageRGBd::PixelType &pix)
-	{
-		if((*itInput).second == 0)
-			++itInput;
-		pix = (*itInput).first;
-		--(*itInput).second;
-	});
+		//First we compute the PCA of the image to decorrelate the channels as much as we can
+		PCA pcaImage(source);
+		pcaImage.computePCA(mb_alwaysTrue);
+		pcaImage.project(pca1, pca2, pca3);
+		ImageRGBd pcadImage;
+		fold3Channels(pcadImage, pca1, pca2, pca3);
 
-	ImageRGBd matchedPcadImage;
-	matchedPcadImage.initItk(image.width(), image.height());
-	matchedPcadImage.for_all_pixels([&] (typename ImageRGBd::PixelType &pix, int x, int y)
-	{
-//		std::cout << "(" << x << ", " << y << ") -> " << "x: " << colorMap.pixelAbsolute(x, y)[0] << ", y: " << colorMap.pixelAbsolute(x, y)[1] << std::endl;
-		matchedPcadImage.pixelAbsolute(	x, y ) = orderedInput.pixelAbsolute(colorMap.pixelAbsolute(x, y)[0], colorMap.pixelAbsolute(x, y)[1]);
-	});
+		//we also compute the PCA of the input
+		PCA pcaInput(target);
+		pcaInput.computePCA(mb_alwaysTrue);
+		pcaInput.project(pca1, pca2, pca3);
+		ImageRGBd pcadInput;
+		fold3Channels(pcadInput, pca1, pca2, pca3);
 
-	extract3Channels(matchedPcadImage, pca1, pca2, pca3);
-	pcaInput.back_project(pca1, pca2, pca3, image);
-	IO::save01_in_u8(image, "/home/nlutz/matchedImage.png");
+		auto f_invNorm = [&] (Eigen::Vector3d vector) -> double
+		{
+			return 1.0/(std::sqrt(vector[0]*vector[0] + vector[1]*vector[1] + vector[2]*vector[2]));
+		};
+
+		CompareWeightedPCA::weight[0] = f_invNorm(pcaInput.eigenVector(0));
+		CompareWeightedPCA::weight[1] = f_invNorm(pcaInput.eigenVector(1));
+		CompareWeightedPCA::weight[2] = f_invNorm(pcaInput.eigenVector(2));
+		Histogram<ImageRGBd, CompareWeightedPCA> histInput(pcadInput);
+
+		CompareWeightedPCA::weight[0] = f_invNorm(pcaImage.eigenVector(0));
+		CompareWeightedPCA::weight[1] = f_invNorm(pcaImage.eigenVector(1));
+		CompareWeightedPCA::weight[2] = f_invNorm(pcaImage.eigenVector(2));
+		Histogram<ImageRGBd, CompareWeightedPCA> cdfImage(pcadImage), histHistoryOfImage(pcadImage);
+		unsigned count = 0;
+		for(typename Histogram<ImageRGBd, CompareWeightedPCA>::iterator itThis=cdfImage.begin(); itThis!=cdfImage.end(); ++itThis)
+		{ //transforms the histogram into a cdf
+			count += (*itThis).second;
+			(*itThis).second = count;
+		}
+
+		//compute translations from a sorted version of image to image
+		ImageRGB32 colorMap;
+		colorMap.initItk(target.width(), target.height());
+		colorMap.for_all_pixels([&] (ImageRGB32::PixelType &pix, int x, int y)
+		{
+			int position = (*cdfImage.find(pcadImage.pixelAbsolute(x, y))).second
+					- (*histHistoryOfImage.find(pcadImage.pixelAbsolute(x, y))).second--;
+			int x2 = position%colorMap.width(), y2 = position/colorMap.width();
+			pix[0] = x2;
+			pix[1] = y2;
+		});
+
+		ImageRGBd orderedInput;
+		orderedInput.initItk(target.width(), target.height());
+		typename Histogram<ImageRGBd, CompareWeightedPCA>::iterator itInput = histInput.begin();
+		orderedInput.for_all_pixels([&] (typename ImageRGBd::PixelType &pix)
+		{
+			if((*itInput).second == 0)
+				++itInput;
+			pix = (*itInput).first;
+			--(*itInput).second;
+		});
+
+		ImageRGBd matchedPcadImage;
+		matchedPcadImage.initItk(source.width(), source.height());
+		matchedPcadImage.for_all_pixels([&] (typename ImageRGBd::PixelType &pix, int x, int y)
+		{
+	//		std::cout << "(" << x << ", " << y << ") -> " << "x: " << colorMap.pixelAbsolute(x, y)[0] << ", y: " << colorMap.pixelAbsolute(x, y)[1] << std::endl;
+			matchedPcadImage.pixelAbsolute(	x, y ) = orderedInput.pixelAbsolute(colorMap.pixelAbsolute(x, y)[0], colorMap.pixelAbsolute(x, y)[1]);
+		});
+
+		extract3Channels(matchedPcadImage, pca1, pca2, pca3);
+		pcaInput.back_project(pca1, pca2, pca3, source);
+		//IO::save01_in_u8(source, "/home/nlutz/matchedImage.png");
+	}
 }

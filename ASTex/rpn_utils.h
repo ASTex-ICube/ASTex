@@ -390,7 +390,7 @@ void colored_RPN(const ImageRGBd& in, ImageRGBd& out, color_space_t colorSpace=R
 
 double compute_crossCorrelation_diff(const ImageRGBd& in1, const ImageRGBd& in2, int channel1, int channel2, ImageGrayd& diff);
 
-void matchImage(ImageRGBd& image, const ImageRGBd& input);
+void matchImage(ImageRGBd& source, const ImageRGBd& target, std::string external_program_name = std::string());
 
 template<typename NUMTYPE>
 void matchImage(ImageCommon<ImageGrayBase<NUMTYPE>, false>& image, const ImageCommon<ImageGrayBase<NUMTYPE>, false>& input)
