@@ -131,7 +131,6 @@ else()
   endif()
 endif()
 
-
 target_compile_definitions(${PROJECT_NAME} PUBLIC "${PNG_DEFINITION}")
 
 target_link_libraries(${PROJECT_NAME} PUBLIC ${ASTEX_LIBRARIES})

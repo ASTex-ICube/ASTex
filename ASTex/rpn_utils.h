@@ -438,4 +438,6 @@ void matchImage(ImageCommon<ImageGrayBase<NUMTYPE>, false>& image, const ImageCo
 	image = matchedImage;
 }
 
+ImageRGBd computeGradient(const ImageGrayd &heightField);
+
 #endif

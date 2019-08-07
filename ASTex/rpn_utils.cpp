@@ -518,88 +518,68 @@ void matchImage(ImageRGBd& source, const ImageRGBd& target, std::string external
 {
 	if(!external_program_name.empty())
 	{
-		IO::save01_in_u8(source, "./_source.png");
-		IO::save01_in_u8(target, "./_target.png");
+		pid_t pid = getpid();
+		std::string source_filename = std::string("./_source") + std::to_string(pid) + ".png";
+		std::string target_filename = std::string("./_target") + std::to_string(pid) + ".png";
+		std::string output_filename = std::string("./_output") + std::to_string(pid) + ".png";
+		IO::save01_in_u8(source, source_filename);
+		IO::save01_in_u8(target, target_filename);
 		char buffer[256];
-		snprintf(buffer, sizeof(buffer), "%s ./_source.png ./_target.png ./output.png", external_program_name.c_str());
+		snprintf(buffer, sizeof(buffer), (external_program_name + ' ' + source_filename + ' ' + target_filename + ' ' + output_filename).c_str());
 		system(buffer);
-		IO::loadu8_in_01(source, "./_output.png");
-		system("rm ./_source.png ./_target.png ./_output.png");
+		IO::loadu8_in_01(source, output_filename);
+		system((std::string("rm ") + source_filename + ' ' + target_filename + ' ' + output_filename).c_str());
 	}
 	else
 	{
 		MaskBool mb_alwaysTrue(source.width(), source.height());
 		mb_alwaysTrue |= [] (int, int) {return true;};
-		ImageGrayd pca1, pca2, pca3;
+		ImageGrayd pca1_source, pca2_source, pca3_source, pca1_target, pca2_target, pca3_target;
 
 		//First we compute the PCA of the image to decorrelate the channels as much as we can
-		PCA pcaImage(source);
-		pcaImage.computePCA(mb_alwaysTrue);
-		pcaImage.project(pca1, pca2, pca3);
-		ImageRGBd pcadImage;
-		fold3Channels(pcadImage, pca1, pca2, pca3);
+		PCA pcaSource(source);
+		pcaSource.computePCA(mb_alwaysTrue);
+		pcaSource.project(pca1_source, pca2_source, pca3_source);
 
 		//we also compute the PCA of the input
-		PCA pcaInput(target);
-		pcaInput.computePCA(mb_alwaysTrue);
-		pcaInput.project(pca1, pca2, pca3);
-		ImageRGBd pcadInput;
-		fold3Channels(pcadInput, pca1, pca2, pca3);
+		PCA pcaTarget(target);
+		pcaTarget.computePCA(mb_alwaysTrue);
+		pcaTarget.project(pca1_target, pca2_target, pca3_target);
 
-		auto f_invNorm = [&] (Eigen::Vector3d vector) -> double
-		{
-			return 1.0/(std::sqrt(vector[0]*vector[0] + vector[1]*vector[1] + vector[2]*vector[2]));
-		};
+		matchImage(pca1_source, pca1_target);
+		matchImage(pca2_source, pca2_target);
+		matchImage(pca3_source, pca3_target);
 
-		CompareWeightedPCA::weight[0] = f_invNorm(pcaInput.eigenVector(0));
-		CompareWeightedPCA::weight[1] = f_invNorm(pcaInput.eigenVector(1));
-		CompareWeightedPCA::weight[2] = f_invNorm(pcaInput.eigenVector(2));
-		Histogram<ImageRGBd, CompareWeightedPCA> histInput(pcadInput);
-
-		CompareWeightedPCA::weight[0] = f_invNorm(pcaImage.eigenVector(0));
-		CompareWeightedPCA::weight[1] = f_invNorm(pcaImage.eigenVector(1));
-		CompareWeightedPCA::weight[2] = f_invNorm(pcaImage.eigenVector(2));
-		Histogram<ImageRGBd, CompareWeightedPCA> cdfImage(pcadImage), histHistoryOfImage(pcadImage);
-		unsigned count = 0;
-		for(typename Histogram<ImageRGBd, CompareWeightedPCA>::iterator itThis=cdfImage.begin(); itThis!=cdfImage.end(); ++itThis)
-		{ //transforms the histogram into a cdf
-			count += (*itThis).second;
-			(*itThis).second = count;
-		}
-
-		//compute translations from a sorted version of image to image
-		ImageRGB32 colorMap;
-		colorMap.initItk(target.width(), target.height());
-		colorMap.for_all_pixels([&] (ImageRGB32::PixelType &pix, int x, int y)
-		{
-			int position = (*cdfImage.find(pcadImage.pixelAbsolute(x, y))).second
-					- (*histHistoryOfImage.find(pcadImage.pixelAbsolute(x, y))).second--;
-			int x2 = position%colorMap.width(), y2 = position/colorMap.width();
-			pix[0] = x2;
-			pix[1] = y2;
-		});
-
-		ImageRGBd orderedInput;
-		orderedInput.initItk(target.width(), target.height());
-		typename Histogram<ImageRGBd, CompareWeightedPCA>::iterator itInput = histInput.begin();
-		orderedInput.for_all_pixels([&] (typename ImageRGBd::PixelType &pix)
-		{
-			if((*itInput).second == 0)
-				++itInput;
-			pix = (*itInput).first;
-			--(*itInput).second;
-		});
-
-		ImageRGBd matchedPcadImage;
-		matchedPcadImage.initItk(source.width(), source.height());
-		matchedPcadImage.for_all_pixels([&] (typename ImageRGBd::PixelType &pix, int x, int y)
-		{
-	//		std::cout << "(" << x << ", " << y << ") -> " << "x: " << colorMap.pixelAbsolute(x, y)[0] << ", y: " << colorMap.pixelAbsolute(x, y)[1] << std::endl;
-			matchedPcadImage.pixelAbsolute(	x, y ) = orderedInput.pixelAbsolute(colorMap.pixelAbsolute(x, y)[0], colorMap.pixelAbsolute(x, y)[1]);
-		});
-
-		extract3Channels(matchedPcadImage, pca1, pca2, pca3);
-		pcaInput.back_project(pca1, pca2, pca3, source);
+		pcaSource.back_project(pca1_source, pca2_source, pca3_source, source);
 		//IO::save01_in_u8(source, "/home/nlutz/matchedImage.png");
 	}
 }
+
+ImageRGBd computeGradient(const ImageGrayd &heightField)
+{
+	assert(heightField.is_initialized());
+	ImageRGBd gradientMap;
+	gradientMap.initItk(heightField.width(), heightField.height());
+	gradientMap.for_all_pixels([&] (ImageRGBd::PixelType &pix, int x, int y)
+	{
+		if(x == heightField.width()-1 || y == heightField.height()-1)//border condition
+		{
+			if(x == heightField.width()-1)
+				pix[0] = (heightField.pixelAbsolute(x, y) - heightField.pixelAbsolute(x-1, y)+1.0) / 2;
+			else
+				pix[0] = (heightField.pixelAbsolute(x+1, y) - heightField.pixelAbsolute(x, y)+1.0) / 2;
+			if(y == heightField.height()-1)
+				pix[1] = (heightField.pixelAbsolute(x, y) - heightField.pixelAbsolute(x, y-1)+1.0) / 2;
+			else
+				pix[1] = (heightField.pixelAbsolute(x, y+1) - heightField.pixelAbsolute(x, y)+1.0) / 2;
+		}
+		else //normal condition
+		{
+			pix[0] = (heightField.pixelAbsolute(x+1, y) - heightField.pixelAbsolute(x, y)+1.0) / 2;
+			pix[1] = (heightField.pixelAbsolute(x, y+1) - heightField.pixelAbsolute(x, y)+1.0) / 2;
+		}
+		pix[2] = 1.0;
+	});
+	return gradientMap;
+}
+

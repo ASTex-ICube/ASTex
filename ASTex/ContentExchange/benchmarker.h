@@ -94,13 +94,17 @@ void ContentExchangeBenchmarker::setOutputDirectories(const std::string &OldDire
 													   const std::string &PCTSDirectory)
 {
 	m_OldDirectory = OldDirectory + "/";
-	ASTex::create_directory(m_root + m_OldDirectory);
+	if(m_generateOld)
+		ASTex::create_directory(m_root + m_OldDirectory);
 	m_RandomDirectory = RandomDirectory + "/";
-	ASTex::create_directory(m_root + m_RandomDirectory);
+	if(m_generateRandom)
+		ASTex::create_directory(m_root + m_RandomDirectory);
 	m_GetisGIDirectory = GetisGIDirectory + "/";
-	ASTex::create_directory(m_root + m_GetisGIDirectory);
+	if(m_generateGetisGI)
+		ASTex::create_directory(m_root + m_GetisGIDirectory);
 	m_PCTSDirectory = PCTSDirectory + "/";
-	ASTex::create_directory(m_root + m_PCTSDirectory);
+	if(m_generatePCTS)
+		ASTex::create_directory(m_root + m_PCTSDirectory);
 }
 
 void ContentExchangeBenchmarker::setOutputSize(size_t width, size_t height)

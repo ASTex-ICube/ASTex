@@ -451,38 +451,43 @@ int test_pcts(int argc, char **argv)
 	//pcts.setHeight(800);
 
 
-	unsigned    seed=0,
-				bs = 4,
-				sl = 5,
-				samples = 60,
+	unsigned    seed=13,
+				bs = 20,
+				sl = 6,
+				samples = 15,
 				ref = 1,
-				radius = 30;
+				radius = 60;
 
-	 double     labelW = 0.9,
-				guidanceW = 0.8,
+	 double     labelW = 0.5,
+				guidanceW = 0.5,
 				stencilW = 1.0;
 
-	srand(seed);
-	pcts.setLvl0BlockSize(bs);
-	pcts.setMinimumSizeLog(sl);
-	pcts.setNbSamplesNNM(samples);
-	pcts.setNbRefinementsNNM(ref);
-	pcts.setRadiusScaleNNM(radius);
-	pcts.setTextureLabel(mask, labelW);
-	pcts.setGuidance(guid, seg, guidanceW, 1.0);
-	pcts.setSynthesis(synth, binary);
-	pcts.setStencil(stencil, stencilW); // weight between 0 and 1
-	IO::save01_in_u8(pcts.generate(), input_directory + "/out_pcts_seed" + std::to_string(seed)
-					 + "_bs" + std::to_string(bs)
-					 + "_sl" + std::to_string(sl)
-					 + "_samples" + std::to_string(samples)
-					 + "_ref" + std::to_string(ref)
-					 + "_labelW" + std::to_string(labelW)
-					 + "_guidanceW" + std::to_string(guidanceW)
-					 + "_stencilW" + std::to_string(stencilW)
-					 + ".png");
+	for(bs=14; bs<20; bs+=2)
+	for(seed=15; seed<19;++seed)
+	{
+		srand(seed);
+		pcts.setLvl0BlockSize(bs);
+		pcts.setMinimumSizeLog(sl);
+		pcts.setNbSamplesNNM(samples);
+		pcts.setNbRefinementsNNM(ref);
+		pcts.setRadiusScaleNNM(radius);
+		pcts.setTextureLabel(mask, labelW);
+		pcts.setGuidance(guid, seg, guidanceW, 1.0);
+		pcts.setSynthesis(synth, binary);
+		pcts.setStencil(stencil, stencilW); // weight between 0 and 1
+		IO::save01_in_u8(pcts.generate(), input_directory + "/out_pcts_seed" + std::to_string(seed)
+						 + "_bs" + std::to_string(bs)
+						 + "_sl" + std::to_string(sl)
+						 + "_samples" + std::to_string(samples)
+						 + "_ref" + std::to_string(ref)
+						 + "_labelW" + std::to_string(labelW)
+						 + "_guidanceW" + std::to_string(guidanceW)
+						 + "_stencilW" + std::to_string(stencilW)
+						 + ".png");
 
-	std::cout << "PCTS ended" << std::endl;
+		std::cout << "PCTS ended" << std::endl;
+	}
+
 	return 0;
 }
 
@@ -503,7 +508,7 @@ int test_benchmarkingContentExchange(int argc, char **argv)
 		ceb.setOutputSize(512, 512);
         ceb.setRoot(std::string("/home/nlutz/eg2019_contentExchange/") + name_noext);
         ceb.setOutputDirectories("usingOldMethod", "usingRandomPatchesAndContents", "usingGetisGI", "usingPCTS");
-		ceb.setGenerateOld(false);
+		ceb.setGenerateOld(true);
 		ceb.setGenerateRandom(true);
         ceb.setGeneratePCTS(false);
         ceb.setGenerateGetisGI(false);
@@ -523,6 +528,6 @@ int main( int argc, char **argv )
     //return test_wendling(argc, argv);
     //return test_getis_gi(argc, argv);
 	//return test_easy(argc, argv);
-    //return test_pcts(argc, argv);
+	//return test_pcts(argc, argv);
 	return test_benchmarkingContentExchange(argc, argv);
 }
