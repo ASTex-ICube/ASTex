@@ -10,6 +10,7 @@
 #include "old_PoissonDiskSampler.h"
 #include <random>
 #include "ASTex/PCTS/pcts.h"
+#include "ASTex/Stamping/sampler.h"
 
 namespace ASTex
 {
@@ -184,7 +185,7 @@ public:
 
 	/**
 	 * @brief initializeContents builds the initial contents from the input.
-	 * Mandatory, but can be used in conjonction with other contents_ functions.
+	 * As of V1 it is mandatory to use it, and can be used in conjonction with other contents_ functions.
 	 */
 	void contents_initDefault();
 
@@ -194,6 +195,11 @@ public:
 	 * @param nbContentsPerPatch
 	 */
 	void contents_initRandom();
+
+	void contents_addTextureToPool(const I& texture, bool periodicity);
+	void contents_addTransformationToPool(const Eigen::Matrix2d transformation);
+	void contents_explorePools();
+	void contents_randomPools();
 
 	void contents_enhancePCTS(std::string pctsArgFile = std::string());
 
@@ -259,7 +265,7 @@ private:
 
 	unsigned m_nbContentsPerPatch;
 	std::vector<Patch<I>> m_patches;
-	I m_texture;
+	I m_tile;
 	MipmapBitmask<ImageMask64> m_patchMapMipmap;
 	mipmap_mode_t m_mipmapMode;
 	size_t m_outputWidth;
@@ -273,6 +279,9 @@ private:
 
 	bool m_patchesOverlap;
 
+	std::vector<std::pair<I, bool>> m_texturePool;
+	std::vector<Eigen::Matrix2d> m_transformationPool;
+
 	static typename I::PixelType ms_zero;
 };
 
@@ -283,7 +292,7 @@ template<typename I>
 PatchProcessor<I>::PatchProcessor():
 	m_nbContentsPerPatch(1),
 	m_patches(),
-	m_texture(),
+	m_tile(),
 	m_patchMapMipmap(),
 	m_mipmapMode(NO_FILTER),
 	m_outputWidth(512),
@@ -291,14 +300,15 @@ PatchProcessor<I>::PatchProcessor():
 	m_seed(0),
 	m_atlas(0),
 	m_contentsAtlas(),
-	m_patchesOverlap(true)
+	m_patchesOverlap(true),
+	m_texturePool()
 {}
 
 template<typename I>
 PatchProcessor<I>::PatchProcessor(const I& texture):
 	m_nbContentsPerPatch(1),
 	m_patches(),
-	m_texture(texture),
+	m_tile(texture),
 	m_patchMapMipmap(),
 	m_mipmapMode(NO_FILTER),
 	m_outputWidth(512),
@@ -306,7 +316,8 @@ PatchProcessor<I>::PatchProcessor(const I& texture):
 	m_seed(0),
 	m_atlas(0),
 	m_contentsAtlas(),
-	m_patchesOverlap(true)
+	m_patchesOverlap(true),
+	m_texturePool()
 {}
 
 template<typename I>
@@ -320,7 +331,7 @@ PatchProcessor<I>::~PatchProcessor()
 template<typename I>
 const I& PatchProcessor<I>::texture() const
 {
-	return m_texture;
+	return m_tile;
 }
 
 template<typename I>
@@ -361,7 +372,7 @@ I& PatchProcessor<I>::atlasContentAt(size_t index)
 template<typename I>
 void PatchProcessor<I>::setTexture(const I& texture)
 {
-	m_texture = texture;
+	m_tile = texture;
 }
 
 template<typename I>
@@ -381,7 +392,7 @@ void PatchProcessor<I>::setSeed(unsigned seed)
 template<typename I>
 void PatchProcessor<I>::patches_initRegularGrid(unsigned nbPatches)
 {
-	assert(m_texture.is_initialized() &&
+	assert(m_tile.is_initialized() &&
 		   "PatchProcessor::initializePatches: texture uninitialized (use PatchProcessor::setTexture with an initialized texture)");
 	assert(nbPatches <= CTEXCH_MAX_PATCHES &&
 		   "PatchProcessor::initializePatches: synthesis cannot allow that many patches (max given by CTEXCH_MAX_PATCHES)");
@@ -390,9 +401,9 @@ void PatchProcessor<I>::patches_initRegularGrid(unsigned nbPatches)
 	int nbPatchesPerSide = int(std::sqrt(nbPatches));
 	nbPatches = nbPatchesPerSide * nbPatchesPerSide;
 	ImageMask64 patchMap;
-	patchMap.initItk(m_texture.width(), m_texture.height());
-	nbPixelsInWidthPerPatch = m_texture.width()/double(nbPatchesPerSide);
-	nbPixelsInHeightPerPatch = m_texture.height()/double(nbPatchesPerSide);
+	patchMap.initItk(m_tile.width(), m_tile.height());
+	nbPixelsInWidthPerPatch = m_tile.width()/double(nbPatchesPerSide);
+	nbPixelsInHeightPerPatch = m_tile.height()/double(nbPatchesPerSide);
 
 	patchMap.for_all_pixels([&] (ImageMask64::PixelType &pix, int x, int y)
 	{
@@ -410,7 +421,7 @@ void PatchProcessor<I>::patches_initRegularGrid(unsigned nbPatches)
 template<typename I>
 void PatchProcessor<I>::patches_initCircles(unsigned nbPatches)
 {
-	assert(m_texture.is_initialized() &&
+	assert(m_tile.is_initialized() &&
 		   "PatchProcessor::initializePatches: texture uninitialized (use PatchProcessor::setTexture with an initialized texture)");
 	assert(nbPatches <= CTEXCH_MAX_PATCHES &&
 		   "PatchProcessor::initializePatches: synthesis cannot allow that many patches (max given by CTEXCH_MAX_PATCHES)");
@@ -418,8 +429,8 @@ void PatchProcessor<I>::patches_initCircles(unsigned nbPatches)
 	Stamping::SamplerUniform sampler(nbPatches);
 	std::vector<Eigen::Vector2f> centroids = sampler.generate();
 	ImageMask64 patchMap;
-	patchMap.initItk(m_texture.width(), m_texture.height());
-	float r = m_texture.width() * m_texture.height() / float(nbPatches*nbPatches*2);
+	patchMap.initItk(m_tile.width(), m_tile.height());
+	float r = m_tile.width() * m_tile.height() / float(nbPatches*nbPatches*2);
 	int i = 0;
 	for(std::vector<Eigen::Vector2f>::const_iterator cit = centroids.begin(); cit != centroids.end(); ++cit, ++i)
 	{
@@ -428,8 +439,8 @@ void PatchProcessor<I>::patches_initCircles(unsigned nbPatches)
 		patchMap.for_all_pixels([&] (ImageMask64::PixelType &pix, int x, int y)
 		{
 			int x0, y0;
-			x0 = (*cit)[0]*m_texture.width();
-			y0 = (*cit)[1]*m_texture.height();
+			x0 = (*cit)[0]*m_tile.width();
+			y0 = (*cit)[1]*m_tile.height();
 			if(std::sqrt((x0-x) * (x0-x) + (y0-y) * (y0-y)) < r)
 				reinterpret_cast<word64&>(pix) |= w;
 		});
@@ -447,7 +458,7 @@ void PatchProcessor<I>::patches_initRandom(unsigned nbPatches)
 	assert(nbPatches < 64);
 	static ImageMask64::PixelType zero;
 	ImageMask64 patchMap;
-	patchMap.initItk(m_texture.width(), m_texture.height(), true);
+	patchMap.initItk(m_tile.width(), m_tile.height(), true);
 	patchMap.for_all_pixels([&] (ImageMask64::PixelType &pix)
 	{
 		pix = zero;
@@ -456,8 +467,8 @@ void PatchProcessor<I>::patches_initRandom(unsigned nbPatches)
 	//sampler poisson but with the correct number of samples
 	std::vector< Eigen::Vector2d > samples;
 	std::vector< Eigen::Vector2d > samplesValidated;
-	double minDist = std::sqrt(m_texture.width()*m_texture.height())/(2.0*std::sqrt(nbPatches) + 1);
-	ContentExchg::PoissonDiskSampler::generateSamples(m_texture.width(), m_texture.height(), samples, minDist, nbPatches);
+	double minDist = std::sqrt(m_tile.width()*m_tile.height())/(2.0*std::sqrt(nbPatches) + 1);
+	ContentExchg::PoissonDiskSampler::generateSamples(m_tile.width(), m_tile.height(), samples, minDist, nbPatches);
 	std::minstd_rand minstdRandGenerator;
 	minstdRandGenerator.seed(m_seed+1);
 	assert(samples.size()>=nbPatches);
@@ -474,7 +485,7 @@ void PatchProcessor<I>::patches_initRandom(unsigned nbPatches)
 	unsigned totalNumberOfMarkedPixels = 0;
 	for(unsigned i=0; i<nbPatches; ++i)
 	{
-		unsigned maxTexelsForPatchi = ((0.5+(rand()/double(RAND_MAX)))*m_texture.width()*m_texture.height())/nbPatches;
+		unsigned maxTexelsForPatchi = ((0.5+(rand()/double(RAND_MAX)))*m_tile.width()*m_tile.height())/nbPatches;
 		grownTexelCountdownVector[i] = maxTexelsForPatchi;
 	}
 	do
@@ -514,11 +525,11 @@ void PatchProcessor<I>::patches_initRandom(unsigned nbPatches)
 			grownTexelCountdownVector[i++]+=64; //whatever average number is fine, this is used to add more pixels in case the image isn't filled
 		}
 	}
-	while(totalNumberOfMarkedPixels < m_texture.width()*m_texture.height());
+	while(totalNumberOfMarkedPixels < m_tile.width()*m_tile.height());
 
 	//Debug only
 	ASTex::ImageGrayu8 patches;
-	patches.initItk(m_texture.width(), m_texture.height());
+	patches.initItk(m_tile.width(), m_tile.height());
 	word64 w=0x1;
 	for(unsigned i=0; i<nbPatches; ++i)
 	{
@@ -538,7 +549,7 @@ template<typename I>
 template<typename R>
 void PatchProcessor<I>::patches_initFromImageRGB(const ImageCommon<ImageRGBBase<R>, false>& patchImage)
 {
-	assert(patchImage.size() == m_texture.size() &&
+	assert(patchImage.size() == m_tile.size() &&
 		   "PatchProcessor::debug_setPatchFromImageRGBd: patchImage should have the same size as texture");
 	HistogramRGBBase<R> histogramPI(patchImage);
 	assert(histogramPI.binsNumber()<=CTEXCH_MAX_PATCHES &&
@@ -567,7 +578,7 @@ template<typename I>
 template<typename R>
 void PatchProcessor<I>::patches_initFromImageGray(const ImageCommon<ImageGrayBase<R>, false> &patchImage)
 {
-	assert(patchImage.size() == m_texture.size() &&
+	assert(patchImage.size() == m_tile.size() &&
 		   "PatchProcessor::debug_setPatchFromImageRGBd: patchImage should have the same size as texture");
 	HistogramGrayBase<R> histogramPI(patchImage);
 	assert(histogramPI.binsNumber()<=CTEXCH_MAX_PATCHES &&
@@ -615,9 +626,7 @@ void PatchProcessor<I>::patches_dilate(bool con8)
 				x+=width;
 				y+=height;
 				existsPatchw = true;
-//                newPatchmap.pixelAbsolute(x%width, (y-1)%height) |= w;
 				newPatchmap.pixelAbsolute(x%width, (y+1)%height) |= w;
-//                newPatchmap.pixelAbsolute((x-1)%width, y%height) |= w;
 				newPatchmap.pixelAbsolute((x+1)%width, y%height) |= w;
 				if(con8)
 				{
@@ -646,7 +655,7 @@ void PatchProcessor<I>::patches_fill(unsigned nbPatches)
 		wFill |= w;
 		w *= 2;
 	}
-	patchMap.initItk(m_texture.width(), m_texture.height(), true);
+	patchMap.initItk(m_tile.width(), m_tile.height(), true);
 	patchMap.for_all_pixels([&] (ImageMask64::PixelType &pix)
 	{
 		pix = wFill;
@@ -661,11 +670,11 @@ void PatchProcessor<I>::patches_fill(unsigned nbPatches)
 template<typename I>
 void PatchProcessor<I>::contents_initDefault()
 {
-	assert(m_texture.is_initialized() &&
+	assert(m_tile.is_initialized() &&
 		   "PatchProcessor::initializeContents: texture uninitialized (use PatchProcessor::setTexture with an initialized texture)");
 	assert(m_patchMapMipmap.isGenerated() &&
 		   "PatchProcessor::initializeContents: patch mask mipmap not generated (use PatchProcessor::initializePatches<Mode> to compute patches)");
-	assert(m_texture.size()==m_patchMapMipmap.texture().size() &&
+	assert(m_tile.size()==m_patchMapMipmap.texture().size() &&
 		   "PatchProcessor::initializeContents: patch mask must have the same size as texture (texture changed?)");
 
 	//find the number of patches
@@ -690,7 +699,7 @@ void PatchProcessor<I>::contents_initDefault()
 	for(typename std::vector<Patch<I>>::iterator it=m_patches.begin(); it!=m_patches.end(); ++it)
 	{
 		ImageGrayd alphaMap;
-		alphaMap.initItk(m_texture.width(), m_texture.height(), true );
+		alphaMap.initItk(m_tile.width(), m_tile.height(), true );
 		m_patchMapMipmap.texture().for_all_pixels([&] (ImageMask64::PixelType &pix, int x, int y)
 		{
 			if((w|=reinterpret_cast<word64&>(pix)) & wTest)
@@ -709,7 +718,7 @@ void PatchProcessor<I>::contents_initDefault()
 		wTest*=2;
 		Patch<I> &patch=(*it);
 		patch.setAlphaMap(alphaMap, m_mipmapMode);
-		Content<I> content(m_texture, (*it));
+		Content<I> content(m_tile, (*it));
 		patch.addContent(content);
 	}
 }
@@ -722,22 +731,239 @@ void PatchProcessor<I>::contents_initRandom()
 	srand(m_seed);
 	unsigned i, j;
 	int randomShiftX, randomShiftY;
-	I shiftedTexture;
-	shiftedTexture.initItk(m_texture.width(), m_texture.height());
+	I shiftedTile;
+	shiftedTile.initItk(m_tile.width(), m_tile.height());
 	for(j=0; j<m_patches.size(); ++j)
 	{
 		Patch<I> &patch=m_patches[j];
 		for(i=0; i<m_nbContentsPerPatch-1; ++i)
 		{
-			randomShiftX = rand()%shiftedTexture.width();
-			randomShiftY = rand()%shiftedTexture.height();
-			shiftedTexture.for_all_pixels([&] (typename I::PixelType &pix, int x, int y)
+			randomShiftX = rand()%shiftedTile.width();
+			randomShiftY = rand()%shiftedTile.height();
+			shiftedTile.for_all_pixels([&] (typename I::PixelType &pix, int x, int y)
 			{
-				pix = m_texture.pixelAbsolute((x + randomShiftX)%shiftedTexture.width(), (y + randomShiftY)%shiftedTexture.height());
+				pix = m_tile.pixelAbsolute((x + randomShiftX)%shiftedTile.width(), (y + randomShiftY)%shiftedTile.height());
 			});
-			Content<I> c(shiftedTexture, patch);
+			Content<I> c(shiftedTile, patch);
 			c.setTranslationTag(Eigen::Vector2i(randomShiftX, randomShiftY));
 			patch.addContent(c);
+		}
+	}
+}
+
+template<typename I>
+void PatchProcessor<I>::contents_addTextureToPool(const I& texture, bool periodicity)
+{
+	m_texturePool.push_back(std::make_pair(texture, periodicity));
+}
+
+template<typename I>
+void PatchProcessor<I>::contents_addTransformationToPool(const Eigen::Matrix2d transformation)
+{
+	m_transformationPool.push_back(transformation);
+}
+
+//void contents_explorePools();
+
+template<typename I>
+void PatchProcessor<I>::contents_randomPools()
+{
+	assert(m_patches.size()>0 &&
+		   "PatchProcessor::contents_initRandom: a patch initializer must be called before being able to choose contents");
+	srand(m_seed);
+	unsigned randomTextureIndex=0;
+	unsigned randomTransformationIndex=0;
+	unsigned i,j;
+	I selectedTexture;
+	bool textureIsPeriodic = true;
+	Eigen::Matrix2d selectedTransformation;
+	I shiftedTile;
+	shiftedTile.initItk(m_tile.width(), m_tile.height());
+	std::cout << "I have reached a control point: shifted tile. Over." << std::endl;
+	for(j=0; j<m_patches.size(); ++j)
+	{
+		Patch<I> &patch=m_patches[j]; //we establish a bounding box of the patch to avoid out of bounds later on
+		PixelPos patchOrigin = patch.originAt(0, 0);
+
+		unsigned patchBBWidth=0, patchBBHeight=0;
+		for(bool stop=false; !stop; ++patchBBWidth)
+		{
+			PixelPos patchOriginTranslated = patchOrigin;
+			patchOriginTranslated[0] = ((patchOriginTranslated[0]+patchBBWidth)%patch.alphaMap().width());
+			if(patch.alphaMap().pixelAbsolute(patchOriginTranslated)==0)
+			{
+				PixelPos patchIndex = patchOriginTranslated;
+				patchIndex[1]=(patchIndex[1]+1)%patch.alphaMap().height();
+				std::cout << patchIndex << std::endl;
+				std::cout << patchOriginTranslated << std::endl;
+				std::cout << patch.alphaMap().height() << std::endl;
+				bool found;
+				for(found=false;
+					!found && patchIndex!=patchOriginTranslated;
+					patchIndex[1]=(patchIndex[1]+1)%patch.alphaMap().height())
+				{
+					if(patch.alphaMap().pixelAbsolute(patchOriginTranslated)!=0)
+						found=true;
+				}
+				if(!found)
+					stop=true;
+			}
+			std::cout << "I have reached a control point: end of patch width loop. Over." << std::endl;
+					std::cout << patchOrigin << " " << patchOriginTranslated << std::endl;
+		}
+		std::cout << "I have reached a control point: patch width. Over." << std::endl;
+		for(bool stop=false; !stop; ++patchBBHeight)
+		{
+			PixelPos patchOriginTranslated = patchOrigin;
+			patchOriginTranslated[1] = ((patchOriginTranslated[1]+patchBBHeight)%patch.alphaMap().height());
+			if(patch.alphaMap().pixelAbsolute(patchOriginTranslated)==0)
+			{
+				PixelPos patchIndex = patchOriginTranslated;
+				patchIndex[0]=(patchIndex[0]+1)%patch.alphaMap().width();
+				unsigned k=0;
+				bool found;
+				for(found=false;
+					!found && k<patchBBWidth;
+					patchIndex[0]=(patchIndex[0]+1)%patch.alphaMap().width(), ++k)
+				{
+					if(patch.alphaMap().pixelAbsolute(patchOriginTranslated)!=0)
+						found=true;
+				}
+				if(!found)
+					stop=true;
+			}
+		}
+		std::cout << "I have reached a control point: patch bounding box. Over." << std::endl;
+		for(i=0; i<m_nbContentsPerPatch-1; ++i)
+		{
+			randomTextureIndex = rand()%(m_texturePool.size()+1);
+			if(randomTextureIndex==m_texturePool.size())
+			{
+				selectedTexture.initItk(m_tile.width(), m_tile.height());
+				selectedTexture.copy_pixels(m_tile);
+				textureIsPeriodic=true;
+			}
+			else
+			{
+				selectedTexture.initItk(m_texturePool[randomTextureIndex].first.width(),
+										m_texturePool[randomTextureIndex].first.height());
+				selectedTexture.copy_pixels(m_texturePool[randomTextureIndex].first);
+				textureIsPeriodic = m_texturePool[randomTextureIndex].second;
+			}
+			randomTransformationIndex = rand()%(m_transformationPool.size()+1);
+			if(randomTransformationIndex==m_transformationPool.size())
+			{
+				selectedTransformation(0, 0)=1.0;
+				selectedTransformation(0, 1)=0.0;
+				selectedTransformation(1, 0)=0.0;
+				selectedTransformation(1, 1)=1.0;
+			}
+			else
+			{
+				selectedTransformation=m_transformationPool[randomTransformationIndex];
+			}
+			Eigen::Matrix2d invTransformation = selectedTransformation.inverse();
+			if(textureIsPeriodic)
+			{
+				unsigned randomShiftX = rand()%shiftedTile.width();
+				unsigned randomShiftY = rand()%shiftedTile.height();
+				shiftedTile.for_all_pixels([&] (typename I::PixelType &pix, int x, int y)
+				{
+					Eigen::Vector2d v;
+					v[0]=x;
+					v[1]=y;
+					Eigen::Vector2d vt = invTransformation * v;
+					//interpolation?
+					pix = selectedTexture.pixelAbsolute(int(vt[0] + randomShiftX)%selectedTexture.width(), int(vt[1] + randomShiftY)%selectedTexture.height());
+				});
+				Content<I> c(shiftedTile, patch);
+				c.setTranslationTag(Eigen::Vector2i(0, 0));
+				patch.addContent(c);
+				std::cout << "I have reached a control point: periodic content. Over." << std::endl;
+			}
+			else
+			{
+				//first compute the transformed texture explicitely
+				I transformedTexture;
+				using ImageBool = ImageGray8;
+				ImageBool inBoundsMap;
+				transformedTexture.initItk( sqrt(	selectedTexture.width()*selectedTexture.width()+
+													selectedTexture.height()*selectedTexture.height()),
+											sqrt(	selectedTexture.width()*selectedTexture.width()+
+													selectedTexture.height()*selectedTexture.height()));
+				inBoundsMap.initItk(transformedTexture.width(), transformedTexture.height());
+				transformedTexture.for_all_pixels([&] (typename I::PixelType &pix, int x, int y)
+				{
+					Eigen::Vector2d v;
+					v[0]=x-(transformedTexture.width()-selectedTexture.width())/2.0;
+					v[1]=y-(transformedTexture.height()-selectedTexture.height())/2.0;
+					Eigen::Vector2d vt = invTransformation * v;
+					if(vt[0]<0 || vt[0]>=selectedTexture.width() || vt[1]<0 || vt[1]>=selectedTexture.height())
+					{
+						pix = ms_zero;
+						inBoundsMap.pixelAbsolute(x, y)=0;
+					}
+					else
+					{
+						pix = selectedTexture.pixelAbsolute(vt[0], vt[1]);
+						inBoundsMap.pixelAbsolute(x, y)=1;
+					}
+				});
+				//then choose a portion such that no pixel goes out of bound.
+				//We assume it is possible because patches are supposed to be much smaller than the images in the pool
+				Stamping::SamplerPoisson sampler;
+				sampler.setNbPoints(32);
+				std::vector<Eigen::Vector2f> samples = sampler.generate();
+				bool foundSuitableRegion=false;
+				PixelPos contentOrigin;
+				for(unsigned s=0; !foundSuitableRegion && s<samples.size(); ++s)
+				{
+					contentOrigin[0]=samples[s][0]*transformedTexture.width() - patchBBWidth/2;
+					contentOrigin[1]=samples[s][1]*transformedTexture.height() - patchBBHeight/2;
+					bool outOfBounds=false;
+					for(unsigned x=contentOrigin[0]; x<contentOrigin[0]+patchBBWidth && !outOfBounds; ++x)
+					{
+						if(x<0 || x>transformedTexture.width())
+							outOfBounds=true;
+						else
+							for(unsigned y=contentOrigin[1]; y<contentOrigin[1]+patchBBHeight && !outOfBounds; ++y)
+							{
+								if(y<0 || y>transformedTexture.height() ||
+										(patch.alphaMap().pixelAbsolute(x-contentOrigin[0], y-contentOrigin[1])!=0
+										 && inBoundsMap.pixelAbsolute(x, y)==0)) //meaning that pixel cannot be used
+								outOfBounds=true;
+							}
+
+					}
+					if(!outOfBounds)
+						foundSuitableRegion=true;
+				}
+				if(!foundSuitableRegion)	//in case you get a crash here, the sampler may be broken (unlikely),
+					exit(EXIT_FAILURE);		//the patch of this content too large (likely),
+				else						//or the image you're trying to get a content from too small (very likely).
+				{ //finally, build a tile texture such that the content you want is centered on the patch.
+					I shiftedTile;
+					shiftedTile.initItk(m_tile.width(), m_tile.height());
+					unsigned countX=0, countY=0;
+					for(unsigned x=patchOrigin[0];
+						x!=(patchOrigin[0]+patchBBWidth)%patch.alphaMap().width();
+						x=(x+1)%patch.alphaMap().width(), ++countX)
+					{
+						for(unsigned y=patchOrigin[1];
+							y!=(patchOrigin[1]+patchBBHeight)%patch.alphaMap().height();
+							y=(y+1)%patch.alphaMap().height(), ++countY)
+						{
+							PixelPos contentIndex = contentOrigin;
+							contentIndex[0]=contentOrigin[0]+countX;
+							contentIndex[1]=contentOrigin[1]+countY;
+							shiftedTile.pixelAbsolute(x, y) = transformedTexture.pixelAbsolute(contentIndex);
+						}
+					}
+					Content<I> c(shiftedTile, patch);
+					c.setTranslationTag(Eigen::Vector2i(0, 0));
+					patch.addContent(c);
+				}
+			}
 		}
 	}
 }
@@ -750,9 +976,9 @@ void PatchProcessor<I>::contents_enhancePCTS(std::string pctsArgFile)
 	size_t arraySize = sizeof(typename I::PixelType) / sizeof(typename I::DataType);
 	typename I::DataType *pix_one = new typename I::DataType[arraySize];
 	static typename I::PixelType pix_zero;
-	ASTex::Pcts<I> pcts(m_texture);
-	pcts.setWidth(m_texture.width());
-	pcts.setHeight(m_texture.height());
+	ASTex::Pcts<I> pcts(m_tile);
+	pcts.setWidth(m_tile.width());
+	pcts.setHeight(m_tile.height());
 	pcts.setPeriodicity(true);
 	if(!pctsArgFile.empty())
 		pcts.loadParametersFromFile(pctsArgFile);
@@ -761,7 +987,7 @@ void PatchProcessor<I>::contents_enhancePCTS(std::string pctsArgFile)
 		Patch<I> &p = m_patches[i];
 		MipmapCEPatch::PixelPos origin = p.originAt(0, 0);
 		I mask;
-		mask.initItk(m_texture.width(), m_texture.height());
+		mask.initItk(m_tile.width(), m_tile.height());
 		mask.for_all_pixels([] (typename I::PixelType &pix)
 		{
 			pix = pix_zero;
@@ -783,8 +1009,8 @@ void PatchProcessor<I>::contents_enhancePCTS(std::string pctsArgFile)
 		{
 			Content<I> &c = p.contentAt(j);
 			I contentTexture;
-			contentTexture.initItk(m_texture.width(), m_texture.height());
-			contentTexture.copy_pixels(m_texture);
+			contentTexture.initItk(m_tile.width(), m_tile.height());
+			contentTexture.copy_pixels(m_tile);
 
 			for(int x=0; x<c.texture().width(); ++x)
 			{
@@ -822,7 +1048,7 @@ void PatchProcessor<I>::fullProcess_oldMethod()
 	unsigned downsamplingMinSize    = 64;
 	srand(m_seed);
 
-	ContentExchg::FragmentProcessor fProc( m_texture );
+	ContentExchg::FragmentProcessor fProc( m_tile );
 	fProc.createFragments( fragmentMaxSize, fragmentColorThreshold );
 	fProc.cleanupSmallestFragments( fragmentMinSize );
 	fProc.updateFragmentsAttributes();
@@ -841,7 +1067,7 @@ void PatchProcessor<I>::fullProcess_oldMethod()
 		idColors[i].SetBlue ( uint8_t((i * 255)/pProc.patchCount()-1) );
 	}
 
-	ASTex::ImageRGBu8 *imgPatch = new ASTex::ImageRGBu8( m_texture.width(), m_texture.height() );
+	ASTex::ImageRGBu8 *imgPatch = new ASTex::ImageRGBu8( m_tile.width(), m_tile.height() );
 	for( auto &p : pProc.patches() )
 		for( auto &frag : p.fragments )
 			for( auto &pixel : fProc.fragmentById(int(frag)).pixels )
@@ -851,11 +1077,18 @@ void PatchProcessor<I>::fullProcess_oldMethod()
 
 	std::vector<double> rotations;
 	rotations.push_back( 0.0 );
+	rotations.push_back( 0.5*M_PI );
+	rotations.push_back( M_PI );
+	rotations.push_back( -0.5*M_PI );
+
 
 	std::vector<double> scales;
 	scales.push_back( 1.0000 );
 
 	pProc.findAlternativeContents( rotations, scales, m_nbContentsPerPatch-1, downsamplingMinSize );
+
+	ASTex::ImageRGBAf patchMap;
+	pProc.getPatchMap( patchMap, 1.0 );
 
 	//translation to new content exchange
 
@@ -867,18 +1100,28 @@ void PatchProcessor<I>::fullProcess_oldMethod()
 	{
 		for(auto &c : p.contents)
 		{
-			I shiftedTexture;
-			shiftedTexture.initItk(m_texture.width(), m_texture.height());
+			I shiftedTile;
+			shiftedTile.initItk(m_tile.width(), m_tile.height());
 
 			Patch<I> &patch=m_patches[pId];
-			shiftedTexture.for_all_pixels([&] (typename I::PixelType &pix, int x, int y)
+			shiftedTile.for_all_pixels([&] (typename I::PixelType &pix, int x, int y)
 			{
-				pix = m_texture.pixelAbsolute(  (x+c.offset[0])%shiftedTexture.width(),
-						(y+c.offset[1])%shiftedTexture.height());
+				Eigen::Matrix2d transform;
+				transform(0,0) =  std::cos(c.angle) * c.scale;
+				transform(1,0) =  std::sin(c.angle) * c.scale;
+				transform(0,1) = -transform(1,0);
+				transform(1,1) =  transform(0,0);
+
+				Eigen::Vector2d transformedPixel = (transform * Eigen::Vector2d(p.centroid[0] + x, p.centroid[1] + y) ) + Eigen::Vector2d(c.offset[0]+0.5,c.offset[1]+0.5);
+				itk::Index<2> shiftedPixel;
+				shiftedPixel[0] = ((int) transformedPixel[0] + 4*shiftedTile.width ()) % shiftedTile.width ();
+				shiftedPixel[1] = ((int) transformedPixel[1] + 4*shiftedTile.height()) % shiftedTile.height();
+
+				pix = m_tile.pixelAbsolute(shiftedPixel);
 			});
-			Content<I> content(shiftedTexture, patch);
+			Content<I> content(shiftedTile, patch);
 			patch.addContent(content);
-			shiftedTexture.initItk(m_texture.width(), m_texture.height());
+			shiftedTile.initItk(m_tile.width(), m_tile.height());
 		}
 		++pId;
 	}
@@ -900,7 +1143,7 @@ template<typename I>
 void PatchProcessor<I>::fullProcess_GIOptimization(unsigned int nbPatchesPerDimension)
 {
 	ImageMask64 patchMask;
-	patchMask.initItk(m_texture.width(), m_texture.height(), true);
+	patchMask.initItk(m_tile.width(), m_tile.height(), true);
 	patchMask.for_all_pixels([&] (const typename I::PixelType &pix)
 	{
 		word64 &wPixel=reinterpret_cast<word64&>(pix);
@@ -986,8 +1229,8 @@ void PatchProcessor<I>::saveRenderingPack(const std::string &outputDirectory, bo
 {
     unsigned i,j,k,l;
     //saving input
-	m_texture.save(outputDirectory + "/input.png");
-	Histogram<I>::saveImageToCsv(m_texture, outputDirectory + "/input.csv");
+	m_tile.save(outputDirectory + "/input.png");
+	Histogram<I>::saveImageToCsv(m_tile, outputDirectory + "/input.csv");
 
     //saving patch map
     for(k=0; k<m_patchMapMipmap.numberMipmapsWidth(); ++k)
@@ -1079,7 +1322,7 @@ void PatchProcessor<I>::loadRenderingPack(const std::string &inputDirectory)
 
     //loading input
 	//m_texture.load(inputDirectory + "/input.png");
-	Histogram<I>::loadImageFromCsv(m_texture, inputDirectory + "/input.csv");
+	Histogram<I>::loadImageFromCsv(m_tile, inputDirectory + "/input.csv");
 
     //loading useful data
     std::ifstream ifs_data_in(inputDirectory + "/data.csv");
