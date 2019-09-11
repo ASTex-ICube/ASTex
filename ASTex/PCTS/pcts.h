@@ -6,7 +6,7 @@
 #include "ASTex/Stamping/sampler.h"
 #include "ASTex/utils.h"
 
-#define PCTS_DEBUG_DIRECTORY "/home/nlutz/img/PCTS_debug/"
+//#define PCTS_DEBUG_DIRECTORY "/home/nlutz/img/PCTS_debug/"
 
 namespace ASTex
 {
@@ -414,7 +414,9 @@ I Pcts<I>::generate()
 		lmbd_lookupIndexIntoImage(indexImageLevel0, guidanceLevel0, pyramidGuidance, maxReductionLevel);
 		lmbd_lookupIndexIntoImage(indexImageLevel0, segmentedLevel0, pyramidSegmented, maxReductionLevel);
 	}
-	imageLevel0.save(std::string(PCTS_DEBUG_DIRECTORY) + "testBlock" + std::to_string(maxReductionLevel) + ".png");
+	//imageLevel0.save(std::string(PCTS_DEBUG_DIRECTORY) + "testBlock" + std::to_string(maxReductionLevel) + ".png");
+	// ^ those lines would be great with an if(useDebugDirectory) if PCTS_DEBUG_DIRECTORY was a class variable
+	//so right now I'll just comment them
 
 	//Synthesis
 	for(int s=maxReductionLevel; s>=0; --s)
@@ -502,7 +504,7 @@ I Pcts<I>::generate()
 										(radius = m_radiusScaleNNM*m_neighborhood / (int)pow(2.0, (double)n)) >= 1;
 										++n)
 									{
-										Stamping::SamplerPoisson sp;
+										Stamping::SamplerPoissonGrid sp;
 										sp.setNbPoints(m_nbSamplesNNM);
 										std::vector<Eigen::Vector2f> spResult = sp.generate();
 
@@ -582,11 +584,11 @@ I Pcts<I>::generate()
 						}
 		}
 		ImageIndex2 indexImageLevel1;
-		imageLevel0.save(std::string(PCTS_DEBUG_DIRECTORY) + "imageLevel0_" + std::to_string(s) + ".png");
+		//imageLevel0.save(std::string(PCTS_DEBUG_DIRECTORY) + "imageLevel0_" + std::to_string(s) + ".png");
 
 		ImageRGBd fakeColorIndex0;
 		lmbd_fakeColorIndex(indexImageLevel0, fakeColorIndex0);
-		IO::save01_in_u8(fakeColorIndex0, std::string(PCTS_DEBUG_DIRECTORY) + "fakeColorIndex0_" + std::to_string(s) + ".png");
+		//IO::save01_in_u8(fakeColorIndex0, std::string(PCTS_DEBUG_DIRECTORY) + "fakeColorIndex0_" + std::to_string(s) + ".png");
 
 		if(s>0)
 		{
@@ -611,14 +613,14 @@ I Pcts<I>::generate()
 		I imageLevel1;
 		imageLevel1.initItk(indexImageLevel1.width(), indexImageLevel1.height());
 		lmbd_lookupIndexIntoImage(indexImageLevel1, imageLevel1, pyramidInput, std::max(0, s-1));
-		imageLevel1.save(std::string(PCTS_DEBUG_DIRECTORY) + "imageLevel1_" + std::to_string(s) + ".png");
+		//imageLevel1.save(std::string(PCTS_DEBUG_DIRECTORY) + "imageLevel1_" + std::to_string(s) + ".png");
 
 		ImageRGBd fakeColorIndexImageLevel0;
 		lmbd_fakeColorIndex(indexImageLevel0, fakeColorIndexImageLevel0);
 
 		indexImageLevel0 = indexImageLevel1;
 
-		IO::save01_in_u8(fakeColorIndexImageLevel0, std::string(PCTS_DEBUG_DIRECTORY) + "fakeColorIndex1_" + std::to_string(s) + ".png");
+		//IO::save01_in_u8(fakeColorIndexImageLevel0, std::string(PCTS_DEBUG_DIRECTORY) + "fakeColorIndex1_" + std::to_string(s) + ".png");
 	}
 
 	return imageLevel0;

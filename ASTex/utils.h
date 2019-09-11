@@ -97,12 +97,24 @@ inline bool compare_scalar(const SCALAR i, const SCALAR j, const SCALAR EPSILON 
 	return std::abs(j-i) < EPSILON;
 }
 
+template <typename IMG>
+void nullify_image(IMG& image)
+{
+	static typename IMG::PixelType pix_zero;
+	image.for_all_pixels([&] (typename IMG::PixelType &pix)
+	{
+		pix = pix_zero;
+	});
+}
+
 
 template <typename IMG>
 void crop_image(const IMG& input, IMG& output, int i_min, int i_max, int j_min, int j_max)
 {
+	static typename IMG::PixelType pix_zero;
 	assert(0<=i_min && i_min < i_max && i_max < input.width() && 0<=j_min && j_min < j_max && j_max < input.height());
-
+	output.initItk(i_max-i_min+1, j_max-j_min+1, true);
+	nullify_image(output);
 	for(int x = i_min; x <= i_max; x++)
 	{
 		for(int y = j_min; y <= j_max; y++)
@@ -259,38 +271,37 @@ typename IMG::PixelType compute_min(const IMG& img)
 }
 
 template <typename I>
-double mse(const I& i1, const I& i2, int x1, int y1, int x2, int y2, int neighborhoodRadius, int periodicity=false)
+double mse(const I& i1, const I& i2, int x1, int y1, int x2, int y2, int neighborhoodRadius=0, bool periodicity=false)
 {
 	double error=0.0;
-	static typename I::PixelType ms_zero;
-	typename I::PixelType diff=ms_zero;
-	size_t arraySize = sizeof(typename I::PixelType) / sizeof(typename I::DataType);
+	static typename I::PixelType ms_zero; //A way to always get a zero-valued pixel
+	size_t arraySize = sizeof(typename I::PixelType) / sizeof(typename I::DataType); //Finding out the nb of channels
 	typename I::DataType    *a_pixi1 = new typename I::DataType[arraySize],
-							*a_pixi2 = new typename I::DataType[arraySize];
+							*a_pixi2 = new typename I::DataType[arraySize]; //Creating a dummy pixel you can use [] on
 
 	unsigned hit=0;
 	for(int dy=-neighborhoodRadius; dy<=neighborhoodRadius; ++dy)
 		for(int dx=-neighborhoodRadius; dx<=neighborhoodRadius; ++dx)
 		{
-			int xx1 = periodicity ? (x1+dx)%i1.width() : x1+dx;
-			int xx2 = periodicity ? (x2+dx)%i2.width() : x2+dx;
-			int yy1 = periodicity ? (y1+dy)%i1.height() : y1+dy;
-			int yy2 = periodicity ? (y2+dy)%i2.height() : y2+dy;
+			int xx1 = periodicity ? (x1+dx+4*i1.width())%i1.width() : x1+dx;
+			int xx2 = periodicity ? (x2+dx+4*i2.width())%i2.width() : x2+dx;
+			int yy1 = periodicity ? (y1+dy+4*i1.height())%i1.height() : y1+dy;
+			int yy2 = periodicity ? (y2+dy+4*i2.height())%i2.height() : y2+dy;
 
 			if(xx1 >= 0 && xx1<i1.width() &&
 			   xx2 >= 0 && xx2<i2.width() &&
 			   yy1 >= 0 && yy1<i1.height() &&
-			   yy2 >= 0 && yy1<i2.height())
+			   yy2 >= 0 && yy2<i2.height())
 			{
 				typename I::PixelType pixi1=i1.pixelAbsolute(xx1, yy1), pixi2=i2.pixelAbsolute(xx2, yy2);
 				assert(sizeof(typename I::DataType) <= 64
 					   && "mse: using Image types of data types with sizes higher than 64 bits is not allowed");
-				std::memcpy(a_pixi1, &pixi1, sizeof(typename I::PixelType));
+				std::memcpy(a_pixi1, &pixi1, sizeof(typename I::PixelType)); //Filling the dummy pixel
 				std::memcpy(a_pixi2, &pixi2, sizeof(typename I::PixelType));
 				if(!std::is_floating_point<typename I::DataType>::value)
 				{
 					for(unsigned i=0; i<arraySize; ++i)
-					{
+					{//computing the error per channel
 						error += (int64_t(a_pixi1[i]) - a_pixi2[i]) * (int64_t(a_pixi1[i]) - a_pixi2[i]);
 					}
 				}
@@ -304,10 +315,12 @@ double mse(const I& i1, const I& i2, int x1, int y1, int x2, int y2, int neighbo
 				++hit;
 			}
 		}
-	assert(hit!=0 && "mse: error with parameters");
+	if(hit==0)
+		return std::numeric_limits<double>::infinity(); //Maybe crash the program instead?
 	delete[](a_pixi1);
 	delete[](a_pixi2);
-	return error/arraySize/hit;
+	return error/arraySize/hit; //It returns a double but you may want an array,
+								//so either extract the channels from your image or make another mse
 }
 
 template<typename I>
