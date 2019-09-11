@@ -217,14 +217,17 @@ template <class I, class Compare>
 bool Histogram<I, Compare>::saveImageToCsv(const I& image, const std::string& out)
 {
     std::ofstream ofs_out(out);
-    ofs_out << image.width() << std::endl;
-    ofs_out << image.height() << std::endl;
-    image.for_all_pixels([&] (const typename I::PixelType &pix)
-    {
-        ofs_out << pix << std::endl;
-    });
-    ofs_out.close();
-	if(!ofs_out)
+	if(ofs_out)
+	{
+		ofs_out << image.width() << std::endl;
+		ofs_out << image.height() << std::endl;
+		image.for_all_pixels([&] (const typename I::PixelType &pix)
+		{
+			ofs_out << pix << std::endl;
+		});
+		ofs_out.close();
+	}
+	else
 		return false;
 	return true;
 }
@@ -236,7 +239,7 @@ bool Histogram<I, Compare>::loadImageFromCsv(I& image, const std::string &in)
     std::ifstream ifs_in(in);
     int w, h;
 	typename I::DataType value[pixelSize];
-    if(ifs_in.is_open())
+	if(ifs_in)
     {
         ifs_in >> w >> h;
         image.initItk(w, h);
@@ -246,9 +249,9 @@ bool Histogram<I, Compare>::loadImageFromCsv(I& image, const std::string &in)
 				ifs_in >> value[i];
 			memcpy(&pix, value, sizeof(typename I::PixelType));
         });
+		ifs_in.close();
     }
-    ifs_in.close();
-	if(!ifs_in)
+	else
 		return false;
 	return true;
 }

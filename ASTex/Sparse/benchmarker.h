@@ -6,7 +6,25 @@
 
 /////////////////////
 
-class SparseBenchmarker : public ASTex::Benchmarker
+class Benchmarker
+{
+public:
+	Benchmarker() : m_root("./") {}
+	virtual ~Benchmarker() {}
+
+	void setRoot(const std::string &root)
+	{
+		ASTex::create_directory(root);
+		m_root=root + "/";
+	}
+
+	virtual void generate()=0;
+
+protected:
+	std::string m_root;
+};
+
+class SparseBenchmarker : public Benchmarker
 {
 public:
 	SparseBenchmarker();
@@ -55,7 +73,7 @@ private:
 
 	//result directories
 
-	std::string m_learningDirectory;
+	std::string m_learningDirectoryPath;
 	std::string m_inputName;
 
 	DictionaryProcessor<ImageType> m_dictionaryProcessor;
@@ -68,40 +86,43 @@ SparseBenchmarker::SparseBenchmarker() :
 	m_numberIterationsLearning(8),
 	m_numberIterationsSynthesising(8),
 	m_numberResults(1),
-	m_learningDirectory(),
+	m_learningDirectoryPath(),
 	m_inputName(),
 	m_dictionaryProcessor()
 {}
 
-void SparseBenchmarker::setLearningDirectory(const std::string &learningDirectory)
+void SparseBenchmarker::setLearningDirectory(const std::string &learningDirectoryPath)
 {
-	m_learningDirectory = learningDirectory;
-	ASTex::create_directory(m_root + learningDirectory);
+	m_learningDirectoryPath = learningDirectoryPath;
+	ASTex::create_directory(m_root + learningDirectoryPath);
 }
 
 void SparseBenchmarker::generate()
 {
-	std::string ioPath = m_root + m_learningDirectory + "/" + m_inputName
+	std::string ioPath = m_root + m_learningDirectoryPath + "/" + m_inputName
 			+ "_learn" + std::to_string(m_numberIterationsLearning)
 			+ "_" + std::to_string(m_dictionaryProcessor.nbAtoms()) + "atoms"
 			+ "_s" + std::to_string(m_dictionaryProcessor.sparsity())
 			+ "_ox" + std::to_string(m_dictionaryProcessor.patchOffset()[0])
 			+ "_p" + std::to_string(m_dictionaryProcessor.patchSize()[0]);
 	ASTex::create_directory(ioPath);
-	if(m_loadDictionaryMode)
-		m_dictionaryProcessor.load(ioPath);
-	else
+	if(!(m_loadDictionaryMode && m_dictionaryProcessor.load(ioPath)))
 	{
 		m_dictionaryProcessor.setInput(m_input);
 		m_dictionaryProcessor.dictionaryLearning(m_numberIterationsLearning);
 		m_dictionaryProcessor.save(ioPath);
 	}
+	m_dictionaryProcessor.saveVizualisableAtoms(ioPath);
+	if(m_numberIterationsSynthesising == 0)
+		m_numberIterationsSynthesising = (m_dictionaryProcessor.weights().size() * m_dictionaryProcessor.sparsity() * 3) / 2; //Found in Tartavel's article.
 	for(unsigned i=0; i<m_numberResults; ++i)
 	{
 		ImageType out = m_dictionaryProcessor.synthesize(m_input.width(), m_input.height(), m_numberIterationsSynthesising);
 		IO::save01_in_u8(out, ioPath + "/" + "output_it" + std::to_string(m_numberIterationsSynthesising) + "_time" + std::to_string(time(nullptr)) + ".png");
 	}
 	IO::save01_in_u8(m_input, ioPath + "/" + "input.png");
+	ASTex::ImageRGBd reconstructedInput = m_dictionaryProcessor.reconstructInput();
+	IO::save01_in_u8(reconstructedInput, ioPath + "/" + "reconstruction.png");
 }
 
 

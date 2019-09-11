@@ -27,6 +27,8 @@ public:
 
 	void reset();
 
+	Atom &operator=(const Atom& other);
+
 	template <typename FUNC>
 	typename std::enable_if<function_traits<FUNC>::arity == 1, I>::type visualize(const FUNC &f) const;
 
@@ -43,6 +45,7 @@ class Dictionary
 public:
 
 	Dictionary();
+	Dictionary(const Dictionary &other);
 
 	size_t atomWidth() const {return m_atomWidth;}
 	size_t atomHeight() const {return m_atomHeight;}
@@ -52,6 +55,8 @@ public:
 	Atom<I> &atom(size_t i);
 	const Atom<I> &atom(size_t i) const;
 
+	void erase(size_t i);
+
 	size_t nbAtoms() const {return m_atoms.size();}
 
 	void initRandom(unsigned nbAtoms);
@@ -60,7 +65,7 @@ public:
 	I operator*(const std::vector<typename I::PixelType> &other) const;
 
 	void save(const std::string &directory) const;
-	void load(const std::string &directory);
+	bool load(const std::string &directory);
 
 private:
 
@@ -131,6 +136,14 @@ void Atom<I>::reset()
 }
 
 template <typename I>
+Atom<I> &Atom<I>::operator=(const Atom<I>& other)
+{
+	m_content.initItk(other.content().width(), other.content().height());
+	m_content.copy_pixels(other.content());
+	return (*this);
+}
+
+template <typename I>
 template <typename FUNC>
 typename std::enable_if<function_traits<FUNC>::arity == 1, I>::type Atom<I>::visualize(const FUNC &f) const
 {
@@ -147,6 +160,16 @@ template <typename I>
 Dictionary<I>::Dictionary() :
 	m_atoms(), m_atomWidth(0), m_atomHeight(0)
 {}
+
+template <typename I>
+Dictionary<I>::Dictionary(const Dictionary &other) :
+	m_atoms(other.nbAtoms()), m_atomWidth(other.atomWidth()), m_atomHeight(other.atomHeight())
+{
+	for(unsigned i=0; i<other.nbAtoms(); ++i)
+	{
+		m_atoms[i] = other.atom(i);
+	}
+}
 
 template <typename I>
 void Dictionary<I>::setAtomSize(size_t width, size_t height)
@@ -169,19 +192,25 @@ Atom<I> &Dictionary<I>::atom(size_t i)
 }
 
 template <typename I>
+void Dictionary<I>::erase(size_t i)
+{
+	m_atoms.erase(m_atoms.begin()+i);
+}
+
+template <typename I>
 void Dictionary<I>::initRandom(unsigned nbAtoms)
 {
 	m_atoms.resize(nbAtoms);
-	size_t arraySize = sizeof(typename I::PixelType) / sizeof(typename I::DataType);
-	typename I::DataType *pixd = new typename I::DataType[arraySize]();
+	size_t pixelSize = sizeof(typename I::PixelType) / sizeof(typename I::DataType);
+	typename I::DataType *pixd = new typename I::DataType[pixelSize]();
 	for(Atom<I> &atom : m_atoms)
 	{
 		atom.content().initItk(m_atomWidth, m_atomHeight);
 		atom.content().for_all_pixels([&] (typename I::PixelType &pix) //first iteration, random vector
 		{
-			for(unsigned i=0; i<arraySize; ++i)
+			for(unsigned k=0; k<pixelSize; ++k)
 			{
-				pixd[i] = typename I::DataType(std::rand())/RAND_MAX;
+				pixd[k] = typename I::DataType(std::rand())/RAND_MAX;
 			}
 			std::memcpy(&pix, pixd, sizeof(typename I::PixelType));
 		});
@@ -191,9 +220,14 @@ void Dictionary<I>::initRandom(unsigned nbAtoms)
 		atom.content().for_all_pixels([&] (typename I::PixelType &pix) //second iteration, random unit vector
 		{
 			std::memcpy(pixd, &pix, sizeof(typename I::PixelType));
-			for(unsigned i=0; i<arraySize; ++i)
+			for(unsigned k=0; k<pixelSize; ++k)
 			{
-				pixd[i] /= normD[i];
+				if(normD[k]<std::numeric_limits<float>::epsilon())
+				{
+					std::cerr << "Dictionary::initRandom: one of the norms of the initialized atoms is 0" << std::endl;
+					exit(EXIT_FAILURE);
+				}
+				pixd[k] /= normD[k];
 			}
 			std::memcpy(&pix, pixd, sizeof(typename I::PixelType));
 		});
@@ -263,18 +297,24 @@ void Dictionary<I>::save(const std::string &directory) const
 }
 
 template <typename I>
-void Dictionary<I>::load(const std::string &directory)
+bool Dictionary<I>::load(const std::string &directory)
 {
 	unsigned i=0, sizeAtoms=0;
 
 	std::ifstream ifs_data_in(directory + "/dictionaryData.csv");
-	ifs_data_in >> sizeAtoms;
-	ifs_data_in.close();
+	if(ifs_data_in.is_open())
+	{
+		ifs_data_in >> sizeAtoms;
+		ifs_data_in.close();
+	}
+	else
+		return false;
 
 	m_atoms.resize(sizeAtoms);
 	for(typename std::vector<Atom<I>>::iterator it=m_atoms.begin(); it!=m_atoms.end(); ++it, ++i)
 	{
-		Histogram<I>::loadImageFromCsv((*it).content(), std::string(directory) + "/atom" + std::to_string(i) + ".png");
+		if(!Histogram<I>::loadImageFromCsv((*it).content(), std::string(directory) + "/atom" + std::to_string(i) + ".png"))
+			return false;
 	}
 	m_atomWidth =  (*m_atoms.begin()).content().width();
 	m_atomHeight = (*m_atoms.begin()).content().height();
