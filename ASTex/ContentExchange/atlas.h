@@ -171,9 +171,9 @@ void Atlas<I>::_generateFirstTime(int contentId)
 			const Patch<I> &patch = m_patchProcessor.patchAt(n);
 			const ImageAlphad &alpha = patch.mipmap(0, 0);
 			emplaceLevel0(patch.contentAt(contentId).texture(), alpha, patch.originAt(0, 0)[0], patch.originAt(0, 0)[1],
-			m_patchProcessor.texture().height());
+			m_patchProcessor.tile().height());
 		}
-		y=m_patchProcessor.texture().height();
+		y=m_patchProcessor.tile().height();
 		yFindEmplace = y;
 	}
 
@@ -255,9 +255,9 @@ void Atlas<I>::_regenerate(int contentId)
 			const Patch<I> &patch = m_patchProcessor.patchAt(n);
 			const ImageAlphad &alpha = patch.mipmap(0, 0);
 			emplaceLevel0(patch.contentAt(contentId).texture(), alpha, patch.originAt(0, 0)[0], patch.originAt(0, 0)[1],
-			m_patchProcessor.texture().height());
+			m_patchProcessor.tile().height());
 		}
-		y+=m_patchProcessor.texture().height();
+		y+=m_patchProcessor.tile().height();
 	//then emplace the rest
 
 	//v nested class used to compare contents' heights so as to sort them by highest height first

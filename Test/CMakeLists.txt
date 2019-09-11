@@ -7,7 +7,8 @@ find_package(ASTex)
 add_definitions(-DTEMPO_PATH=std::string\(\"${ASTEX_TEMPO_PATH}/\"\) )
 
 
-set(exec_list test_exr_io test_super_pixel test_saliency nlutz_tests test_contentExchange test_sparse test_matchHistogram test_RPN test_terrainAmplification test_gradient)
+set(exec_list test_exr_io test_super_pixel test_saliency test_contentExchange test_sparse
+    test_matchHistogram test_RPN test_terrainAmplification test_gradient test_multiTextureContentExchange test_heightToTexture test_PCTSResynthesis test_texton)
 
 foreach(exec ${exec_list})
 	add_executable(${exec} "")

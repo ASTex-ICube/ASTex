@@ -45,7 +45,7 @@ std::vector<Eigen::Vector2f> SamplerUniform::generate()
 	return SamplePoints;
 }
 
-std::vector<Eigen::Vector2f> SamplerPoisson::generate()
+std::vector<Eigen::Vector2f> SamplerPoissonGrid::generate()
 {
 	float minDistance=m_minDistance;
 	if ( minDistance < 0.0f )

@@ -1,6 +1,5 @@
 #include <stdlib.h>
 #include "ASTex/ContentExchange/atlas.h"
-#include "ASTex/ContentExchange/benchmarker.h"
 
 int main(int argc, char **argv)
 {
@@ -25,7 +24,7 @@ int main(int argc, char **argv)
 //	pProcessor.patches_initRandom(32);
 //	pProcessor.contents_initDefault();
 //	pProcessor.contents_initRandom();
-	pProcessor.fullProcess_oldMethod();
+//	pProcessor.fullProcess_oldMethod();
 
     std::string renderingDirectory = out_dir + "/" + name_noext + "_" + std::to_string(std::time(0)) + "/";
     create_directory(renderingDirectory);

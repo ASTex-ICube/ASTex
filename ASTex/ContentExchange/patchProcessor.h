@@ -45,7 +45,7 @@ public:
 
 	//get
 
-	const I& texture() const;
+	const I& tile() const;
 
 	/**
 	 * @brief filteringMode
@@ -137,7 +137,7 @@ public:
 
 	void setNbContentsPerPatch(unsigned nbContents) {m_nbContentsPerPatch = nbContents;}
 
-	void setTexture(const I& texture);
+	void setTexture(const I& tile);
 
 	/**
 	 * @brief setFilteringMode changes the filtering mode, between NO_FILTER, ISOTROPIC and ANISOTROPIC.
@@ -195,11 +195,6 @@ public:
 	 * @param nbContentsPerPatch
 	 */
 	void contents_initRandom();
-
-	void contents_addTextureToPool(const I& texture, bool periodicity);
-	void contents_addTransformationToPool(const Eigen::Matrix2d transformation);
-	void contents_explorePools();
-	void contents_randomPools();
 
 	void contents_enhancePCTS(std::string pctsArgFile = std::string());
 
@@ -261,7 +256,7 @@ public:
 	iterator end() {return m_patches.end();}
 	const_iterator end() const {return m_patches.end();}
 
-private:
+protected:
 
 	unsigned m_nbContentsPerPatch;
 	std::vector<Patch<I>> m_patches;
@@ -278,9 +273,6 @@ private:
 	std::vector<Eigen::Vector2i> m_contentTranslations;
 
 	bool m_patchesOverlap;
-
-	std::vector<std::pair<I, bool>> m_texturePool;
-	std::vector<Eigen::Matrix2d> m_transformationPool;
 
 	static typename I::PixelType ms_zero;
 };
@@ -300,8 +292,7 @@ PatchProcessor<I>::PatchProcessor():
 	m_seed(0),
 	m_atlas(0),
 	m_contentsAtlas(),
-	m_patchesOverlap(true),
-	m_texturePool()
+	m_patchesOverlap(true)
 {}
 
 template<typename I>
@@ -316,8 +307,7 @@ PatchProcessor<I>::PatchProcessor(const I& texture):
 	m_seed(0),
 	m_atlas(0),
 	m_contentsAtlas(),
-	m_patchesOverlap(true),
-	m_texturePool()
+	m_patchesOverlap(true)
 {}
 
 template<typename I>
@@ -329,7 +319,7 @@ PatchProcessor<I>::~PatchProcessor()
 //get
 
 template<typename I>
-const I& PatchProcessor<I>::texture() const
+const I& PatchProcessor<I>::tile() const
 {
 	return m_tile;
 }
@@ -752,223 +742,6 @@ void PatchProcessor<I>::contents_initRandom()
 }
 
 template<typename I>
-void PatchProcessor<I>::contents_addTextureToPool(const I& texture, bool periodicity)
-{
-	m_texturePool.push_back(std::make_pair(texture, periodicity));
-}
-
-template<typename I>
-void PatchProcessor<I>::contents_addTransformationToPool(const Eigen::Matrix2d transformation)
-{
-	m_transformationPool.push_back(transformation);
-}
-
-//void contents_explorePools();
-
-template<typename I>
-void PatchProcessor<I>::contents_randomPools()
-{
-	assert(m_patches.size()>0 &&
-		   "PatchProcessor::contents_initRandom: a patch initializer must be called before being able to choose contents");
-	srand(m_seed);
-	unsigned randomTextureIndex=0;
-	unsigned randomTransformationIndex=0;
-	unsigned i,j;
-	I selectedTexture;
-	bool textureIsPeriodic = true;
-	Eigen::Matrix2d selectedTransformation;
-	I shiftedTile;
-	shiftedTile.initItk(m_tile.width(), m_tile.height());
-	std::cout << "I have reached a control point: shifted tile. Over." << std::endl;
-	for(j=0; j<m_patches.size(); ++j)
-	{
-		Patch<I> &patch=m_patches[j]; //we establish a bounding box of the patch to avoid out of bounds later on
-		PixelPos patchOrigin = patch.originAt(0, 0);
-
-		unsigned patchBBWidth=0, patchBBHeight=0;
-		for(bool stop=false; !stop; ++patchBBWidth)
-		{
-			PixelPos patchOriginTranslated = patchOrigin;
-			patchOriginTranslated[0] = ((patchOriginTranslated[0]+patchBBWidth)%patch.alphaMap().width());
-			if(patch.alphaMap().pixelAbsolute(patchOriginTranslated)==0)
-			{
-				PixelPos patchIndex = patchOriginTranslated;
-				patchIndex[1]=(patchIndex[1]+1)%patch.alphaMap().height();
-				std::cout << patchIndex << std::endl;
-				std::cout << patchOriginTranslated << std::endl;
-				std::cout << patch.alphaMap().height() << std::endl;
-				bool found;
-				for(found=false;
-					!found && patchIndex!=patchOriginTranslated;
-					patchIndex[1]=(patchIndex[1]+1)%patch.alphaMap().height())
-				{
-					if(patch.alphaMap().pixelAbsolute(patchOriginTranslated)!=0)
-						found=true;
-				}
-				if(!found)
-					stop=true;
-			}
-			std::cout << "I have reached a control point: end of patch width loop. Over." << std::endl;
-					std::cout << patchOrigin << " " << patchOriginTranslated << std::endl;
-		}
-		std::cout << "I have reached a control point: patch width. Over." << std::endl;
-		for(bool stop=false; !stop; ++patchBBHeight)
-		{
-			PixelPos patchOriginTranslated = patchOrigin;
-			patchOriginTranslated[1] = ((patchOriginTranslated[1]+patchBBHeight)%patch.alphaMap().height());
-			if(patch.alphaMap().pixelAbsolute(patchOriginTranslated)==0)
-			{
-				PixelPos patchIndex = patchOriginTranslated;
-				patchIndex[0]=(patchIndex[0]+1)%patch.alphaMap().width();
-				unsigned k=0;
-				bool found;
-				for(found=false;
-					!found && k<patchBBWidth;
-					patchIndex[0]=(patchIndex[0]+1)%patch.alphaMap().width(), ++k)
-				{
-					if(patch.alphaMap().pixelAbsolute(patchOriginTranslated)!=0)
-						found=true;
-				}
-				if(!found)
-					stop=true;
-			}
-		}
-		std::cout << "I have reached a control point: patch bounding box. Over." << std::endl;
-		for(i=0; i<m_nbContentsPerPatch-1; ++i)
-		{
-			randomTextureIndex = rand()%(m_texturePool.size()+1);
-			if(randomTextureIndex==m_texturePool.size())
-			{
-				selectedTexture.initItk(m_tile.width(), m_tile.height());
-				selectedTexture.copy_pixels(m_tile);
-				textureIsPeriodic=true;
-			}
-			else
-			{
-				selectedTexture.initItk(m_texturePool[randomTextureIndex].first.width(),
-										m_texturePool[randomTextureIndex].first.height());
-				selectedTexture.copy_pixels(m_texturePool[randomTextureIndex].first);
-				textureIsPeriodic = m_texturePool[randomTextureIndex].second;
-			}
-			randomTransformationIndex = rand()%(m_transformationPool.size()+1);
-			if(randomTransformationIndex==m_transformationPool.size())
-			{
-				selectedTransformation(0, 0)=1.0;
-				selectedTransformation(0, 1)=0.0;
-				selectedTransformation(1, 0)=0.0;
-				selectedTransformation(1, 1)=1.0;
-			}
-			else
-			{
-				selectedTransformation=m_transformationPool[randomTransformationIndex];
-			}
-			Eigen::Matrix2d invTransformation = selectedTransformation.inverse();
-			if(textureIsPeriodic)
-			{
-				unsigned randomShiftX = rand()%shiftedTile.width();
-				unsigned randomShiftY = rand()%shiftedTile.height();
-				shiftedTile.for_all_pixels([&] (typename I::PixelType &pix, int x, int y)
-				{
-					Eigen::Vector2d v;
-					v[0]=x;
-					v[1]=y;
-					Eigen::Vector2d vt = invTransformation * v;
-					//interpolation?
-					pix = selectedTexture.pixelAbsolute(int(vt[0] + randomShiftX)%selectedTexture.width(), int(vt[1] + randomShiftY)%selectedTexture.height());
-				});
-				Content<I> c(shiftedTile, patch);
-				c.setTranslationTag(Eigen::Vector2i(0, 0));
-				patch.addContent(c);
-				std::cout << "I have reached a control point: periodic content. Over." << std::endl;
-			}
-			else
-			{
-				//first compute the transformed texture explicitely
-				I transformedTexture;
-				using ImageBool = ImageGray8;
-				ImageBool inBoundsMap;
-				transformedTexture.initItk( sqrt(	selectedTexture.width()*selectedTexture.width()+
-													selectedTexture.height()*selectedTexture.height()),
-											sqrt(	selectedTexture.width()*selectedTexture.width()+
-													selectedTexture.height()*selectedTexture.height()));
-				inBoundsMap.initItk(transformedTexture.width(), transformedTexture.height());
-				transformedTexture.for_all_pixels([&] (typename I::PixelType &pix, int x, int y)
-				{
-					Eigen::Vector2d v;
-					v[0]=x-(transformedTexture.width()-selectedTexture.width())/2.0;
-					v[1]=y-(transformedTexture.height()-selectedTexture.height())/2.0;
-					Eigen::Vector2d vt = invTransformation * v;
-					if(vt[0]<0 || vt[0]>=selectedTexture.width() || vt[1]<0 || vt[1]>=selectedTexture.height())
-					{
-						pix = ms_zero;
-						inBoundsMap.pixelAbsolute(x, y)=0;
-					}
-					else
-					{
-						pix = selectedTexture.pixelAbsolute(vt[0], vt[1]);
-						inBoundsMap.pixelAbsolute(x, y)=1;
-					}
-				});
-				//then choose a portion such that no pixel goes out of bound.
-				//We assume it is possible because patches are supposed to be much smaller than the images in the pool
-				Stamping::SamplerPoisson sampler;
-				sampler.setNbPoints(32);
-				std::vector<Eigen::Vector2f> samples = sampler.generate();
-				bool foundSuitableRegion=false;
-				PixelPos contentOrigin;
-				for(unsigned s=0; !foundSuitableRegion && s<samples.size(); ++s)
-				{
-					contentOrigin[0]=samples[s][0]*transformedTexture.width() - patchBBWidth/2;
-					contentOrigin[1]=samples[s][1]*transformedTexture.height() - patchBBHeight/2;
-					bool outOfBounds=false;
-					for(unsigned x=contentOrigin[0]; x<contentOrigin[0]+patchBBWidth && !outOfBounds; ++x)
-					{
-						if(x<0 || x>transformedTexture.width())
-							outOfBounds=true;
-						else
-							for(unsigned y=contentOrigin[1]; y<contentOrigin[1]+patchBBHeight && !outOfBounds; ++y)
-							{
-								if(y<0 || y>transformedTexture.height() ||
-										(patch.alphaMap().pixelAbsolute(x-contentOrigin[0], y-contentOrigin[1])!=0
-										 && inBoundsMap.pixelAbsolute(x, y)==0)) //meaning that pixel cannot be used
-								outOfBounds=true;
-							}
-
-					}
-					if(!outOfBounds)
-						foundSuitableRegion=true;
-				}
-				if(!foundSuitableRegion)	//in case you get a crash here, the sampler may be broken (unlikely),
-					exit(EXIT_FAILURE);		//the patch of this content too large (likely),
-				else						//or the image you're trying to get a content from too small (very likely).
-				{ //finally, build a tile texture such that the content you want is centered on the patch.
-					I shiftedTile;
-					shiftedTile.initItk(m_tile.width(), m_tile.height());
-					unsigned countX=0, countY=0;
-					for(unsigned x=patchOrigin[0];
-						x!=(patchOrigin[0]+patchBBWidth)%patch.alphaMap().width();
-						x=(x+1)%patch.alphaMap().width(), ++countX)
-					{
-						for(unsigned y=patchOrigin[1];
-							y!=(patchOrigin[1]+patchBBHeight)%patch.alphaMap().height();
-							y=(y+1)%patch.alphaMap().height(), ++countY)
-						{
-							PixelPos contentIndex = contentOrigin;
-							contentIndex[0]=contentOrigin[0]+countX;
-							contentIndex[1]=contentOrigin[1]+countY;
-							shiftedTile.pixelAbsolute(x, y) = transformedTexture.pixelAbsolute(contentIndex);
-						}
-					}
-					Content<I> c(shiftedTile, patch);
-					c.setTranslationTag(Eigen::Vector2i(0, 0));
-					patch.addContent(c);
-				}
-			}
-		}
-	}
-}
-
-template<typename I>
 void PatchProcessor<I>::contents_enhancePCTS(std::string pctsArgFile)
 {
 	assert(m_patches.size()>0 && m_patches[0].nbContents()>1 &&
@@ -1044,7 +817,7 @@ void PatchProcessor<I>::fullProcess_oldMethod()
 	unsigned fragmentMinSize        = 20;
 	unsigned fragmentMaxSize        = 400;
 	unsigned fragmentColorThreshold = 40;
-	unsigned requiredPatchNumber    = 16;
+	unsigned requiredPatchNumber    = 32;
 	unsigned downsamplingMinSize    = 64;
 	srand(m_seed);
 

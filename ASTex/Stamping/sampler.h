@@ -129,14 +129,14 @@ private:
  * @brief The SamplerPoisson class is an override of SamplerBase,
  * supposed to yield an array of points in respect to a Poisson random process.
  */
-class SamplerPoisson: public SamplerBase
+class SamplerPoissonGrid: public SamplerBase
 {
 public:
 	/**
 	 * @brief SamplerPoisson constructor for SamplerPoisson.
 	 * @param nbPoints the default number of points the generate() function yields.
 	 */
-	SamplerPoisson(int nbPoints=0) :
+	SamplerPoissonGrid(int nbPoints=0) :
 		SamplerBase(),
 		m_nbPoints(nbPoints),
 		m_generator(),

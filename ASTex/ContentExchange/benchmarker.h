@@ -6,7 +6,25 @@
 
 /////////////////////
 
-class ContentExchangeBenchmarker : public ASTex::Benchmarker
+class Benchmarker
+{
+public:
+	Benchmarker() : m_root("./") {}
+	virtual ~Benchmarker() {}
+
+	void setRoot(const std::string &root)
+	{
+		ASTex::create_directory(root);
+		m_root=root + "/";
+	}
+
+	virtual void generate()=0;
+
+protected:
+	std::string m_root;
+};
+
+class ContentExchangeBenchmarker : public Benchmarker
 {
 public:
 	ContentExchangeBenchmarker();

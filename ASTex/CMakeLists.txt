@@ -47,7 +47,6 @@ target_sources (${PROJECT_NAME} PRIVATE
 
         Sparse/dictionary.h
 	Sparse/dictionaryProcessor.h
-	Sparse/benchmarker.h
 
         mipmap.h
         histogram.h
@@ -61,7 +60,7 @@ target_sources (${PROJECT_NAME} PRIVATE
         ContentExchange/old_PatchProcessor.h
         ContentExchange/old_FragmentProcessor.h
         ContentExchange/old_PoissonDiskSampler.h
-        ContentExchange/benchmarker.h
+	ContentExchange/multiTextureProcessor.h
         Stamping/sampler.h
         Stamping/stamp.h
         Stamping/stamper.h
@@ -88,7 +87,6 @@ target_sources (${PROJECT_NAME} PRIVATE
         ContentExchange/old_PatchProcessor.cpp
         ContentExchange/old_FragmentProcessor.cpp
         ContentExchange/old_PoissonDiskSampler.cpp
-        ContentExchange/benchmarker.cpp
 
         texton_io.cpp
         Stamping/sampler.cpp

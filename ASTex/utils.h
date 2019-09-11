@@ -323,23 +323,120 @@ void printImage(const I &image, std::ostream &out_stream, bool show_position = f
 	return;
 }
 
-class Benchmarker
+template<typename I>
+typename I::PixelType bilinear_interpolation(const I& image,
+											 double x, double y, bool periodicity) //Peut-être rendre plus lisible ?
 {
-public:
-	Benchmarker() : m_root("./") {}
-	virtual ~Benchmarker() {}
-
-	void setRoot(const std::string &root)
+	size_t pixelSize = sizeof(typename I::PixelType)/sizeof(typename I::DataType);
+	typename I::DataType *pixelArray = new typename I::DataType[pixelSize];
+	auto turnPixelIntoArithmeticArray = [&] (const typename I::PixelType &pix) -> double*
 	{
-		ASTex::create_directory(root);
-		m_root=root + "/";
+		double *arithmeticArray = new double[pixelSize];
+		std::memcpy(pixelArray, &pix, pixelSize*sizeof(typename I::DataType));
+		for(unsigned i=0; i<pixelSize; ++i)
+		{
+			arithmeticArray[i] = double(pixelArray[i]);
+		}
+		return arithmeticArray;
+	};
+	auto turnArithmeticArrayIntoPixel = [&] (double *arithmeticArray) -> typename I::PixelType
+	{
+		typename I::PixelType pix;
+		for(unsigned i=0; i<pixelSize; ++i)
+		{
+			pixelArray[i] = typename I::DataType(arithmeticArray[i]);
+		}
+		std::memcpy(&pix, pixelArray, pixelSize*sizeof(typename I::DataType));
+		return pix;
+	};
+	typename I::PixelType outputValue;
+	if(!periodicity)
+	{
+		if(x == image.width()-1)
+		{
+			if(y == image.height()-1)
+				outputValue=image.pixelAbsolute(x, y);
+			else
+			{
+				double *q0 = turnPixelIntoArithmeticArray(image.pixelAbsolute(int(x), int(y)));
+				double *q1 = turnPixelIntoArithmeticArray(image.pixelAbsolute(int(x), int(y+1)));
+				double *qInterp = new double[pixelSize];
+				double y_y1 = y - int(y);
+				for(unsigned i=0; i<pixelSize; ++i)
+				{
+					qInterp[i] = (1.0-y_y1) * q0[i] + y_y1*q1[i];
+				}
+				outputValue=turnArithmeticArrayIntoPixel(qInterp);
+				delete[] qInterp;
+				delete[] q0;
+				delete[] q1;
+			}
+		}
+		else if(y == image.height()-1)
+		{
+			double *q0 = turnPixelIntoArithmeticArray(image.pixelAbsolute(int(x), int(y)));
+			double *q1 = turnPixelIntoArithmeticArray(image.pixelAbsolute(int(x+1), int(y)));
+			double *qInterp = new double[pixelSize];
+			double x_x1 = x - int(x);
+			for(unsigned i=0; i<pixelSize; ++i)
+			{
+				qInterp[i] = (1.0-x_x1) * q0[i] + x_x1*q1[i];
+			}
+			outputValue=turnArithmeticArrayIntoPixel(qInterp);
+			delete[] qInterp;
+			delete[] q0;
+			delete[] q1;
+		}
+		else
+		{
+			double *q00 = turnPixelIntoArithmeticArray(image.pixelAbsolute(int(x), int(y)));
+			double *q10 = turnPixelIntoArithmeticArray(image.pixelAbsolute(int(x+1), int(y)));
+			double *q01 = turnPixelIntoArithmeticArray(image.pixelAbsolute(int(x), int(y+1)));
+			double *q11 = turnPixelIntoArithmeticArray(image.pixelAbsolute(int(x+1), int(y+1)));
+			double *qInterp = new double[pixelSize];
+			double x_x1 = x - int(x);
+			double y_y1 = y - int(y);
+			for(unsigned i=0; i<pixelSize; ++i)
+			{
+				qInterp[i] = (1.0-x_x1) * (1.0-y_y1) * q00[i]
+							+ x_x1	    * (1.0-y_y1) * q10[i]
+							+(1.0-x_x1) * y_y1		 * q01[i]
+							+x_x1		* y_y1		 * q11[i];
+			}
+			outputValue=turnArithmeticArrayIntoPixel(qInterp);
+			delete[] qInterp;
+			delete[] q00;
+			delete[] q10;
+			delete[] q01;
+			delete[] q11;
+		}
 	}
-
-	virtual void generate()=0;
-
-protected:
-	std::string m_root;
-};
+	else
+	{
+		double *q00 = turnPixelIntoArithmeticArray(image.pixelAbsolute(int(x)%image.width(), int(y)%image.height()));
+		double *q10 = turnPixelIntoArithmeticArray(image.pixelAbsolute(int(x+1)%image.width(), int(y)%image.height()));
+		double *q01 = turnPixelIntoArithmeticArray(image.pixelAbsolute(int(x)%image.width(), int(y+1)%image.height()));
+		double *q11 = turnPixelIntoArithmeticArray(image.pixelAbsolute(int(x+1)%image.width(), int(y+1)%image.height()));
+		double *qInterp = new double[pixelSize];
+		double x_x1 = x - int(x);
+		double y_y1 = y - int(y);
+		for(unsigned i=0; i<pixelSize; ++i)
+		{
+			qInterp[i] = (1.0-x_x1) * (1.0-y_y1) * q00[i]
+						+ x_x1	    * (1.0-y_y1) * q10[i]
+						+(1.0-x_x1) * y_y1		 * q01[i]
+						+x_x1		* y_y1		 * q11[i];
+		}
+		outputValue=turnArithmeticArrayIntoPixel(qInterp);
+		delete[] qInterp;
+		delete[] q00;
+		delete[] q10;
+		delete[] q01;
+		delete[] q11;
+	}
+	delete[] pixelArray;
+	return outputValue;
+}
 
 }
 
