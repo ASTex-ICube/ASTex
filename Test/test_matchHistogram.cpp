@@ -23,7 +23,7 @@ int main(int argc, char **argv)
 
 	std::string out_filename = argv[3];
 
-	matchImage(im_in, im_model);
+	matchImage(im_in, im_model, "/home/nlutz/exec/color_transfer/matchHistogram.sh");
 
 	IO::save01_in_u8(im_in, out_filename);
 
