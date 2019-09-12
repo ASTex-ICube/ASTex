@@ -516,6 +516,7 @@ double compute_crossCorrelation_diff(const ImageRGBd& in1, const ImageRGBd& in2,
  */
 void matchImage(ImageRGBd& source, const ImageRGBd& target, std::string external_program_name)
 {
+#ifndef _WIN32
 	if(!external_program_name.empty())
 	{
 		pid_t pid = getpid();
@@ -530,6 +531,13 @@ void matchImage(ImageRGBd& source, const ImageRGBd& target, std::string external
 		IO::loadu8_in_01(source, output_filename);
 		system((std::string("rm ") + source_filename + ' ' + target_filename + ' ' + output_filename).c_str());
 	}
+#else
+	if(!external_program_name.empty())
+	{
+		std::cout << "Feature unavailable on Windows as of now" << std::endl;
+		exit(EXIT_FAILURE);
+	}
+#endif
 	else
 	{
 		MaskBool mb_alwaysTrue(source.width(), source.height());
