@@ -1,6 +1,6 @@
 #include "rpn_utils.h"
 
-static double CompareWeightedPCA::weight[3];
+double CompareWeightedPCA::weight[3];
 
 void saveFourierModulusPhaseGray(const std::string &out_path, const std::string& in_texture)
 {
