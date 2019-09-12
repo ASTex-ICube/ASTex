@@ -1,4 +1,5 @@
 #include <stdlib.h>
+#include <ctime>
 #include "ASTex/ContentExchange/multiTextureProcessor.h"
 
 int main(int argc, char **argv)
@@ -66,7 +67,7 @@ int main(int argc, char **argv)
 		pProcessor.addTextureToPool(im_texture, false);
 	}
 
-	pProcessor.setSeed(seed == 0 ? std::time(0) : seed);
+	pProcessor.setSeed(seed == 0 ? time(0) : seed);
 
 	pProcessor.setFilteringMode(ISOTROPIC);
 	pProcessor.setNbContentsPerPatch(nb_contents);
@@ -80,12 +81,12 @@ int main(int argc, char **argv)
 //		for(unsigned c=0; c<pProcessor.nbContents(); ++c)
 //			IO::save01_in_u8(pProcessor.patchAt(p).contentAt(c).texture(), std::string("/home/nlutz/content_p") + std::to_string(p) + "_c" + std::to_string(c) + ".png");
 
-//	std::string renderingDirectory = out_dir + "/" + name_noext + "_" + std::to_string(std::time(0)) + "/";
+//	std::string renderingDirectory = out_dir + "/" + name_noext + "_" + std::to_string(time((0)) + "/";
 //	create_directory(renderingDirectory);
 //	pProcessor.saveRenderingPack(renderingDirectory);
 
 	ImageType output = pProcessor.generate().texture();
-	IO::save01_in_u8(output, out_dir + "/output_ctexch_" + name_noext + std::to_string(std::time(0)) + ".png");
+	IO::save01_in_u8(output, out_dir + "/output_ctexch_" + name_noext + std::to_string(time(0)) + ".png");
 
 	return 0;
 }

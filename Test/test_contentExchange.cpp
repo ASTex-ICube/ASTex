@@ -1,5 +1,6 @@
 #include <stdlib.h>
 #include "ASTex/ContentExchange/atlas.h"
+#include <ctime>
 
 int main(int argc, char **argv)
 {
@@ -26,7 +27,7 @@ int main(int argc, char **argv)
 //	pProcessor.contents_initRandom();
 //	pProcessor.fullProcess_oldMethod();
 
-    std::string renderingDirectory = out_dir + "/" + name_noext + "_" + std::to_string(std::time(0)) + "/";
+	std::string renderingDirectory = out_dir + "/" + name_noext + "_" + std::to_string(time(0)) + "/";
     create_directory(renderingDirectory);
     pProcessor.saveRenderingPack(renderingDirectory);
 	pProcessor.setOutputSize(2*im_in.width(), im_in.height());

@@ -1,5 +1,6 @@
 #include "ASTex/rpn_utils.h"
 #include <ostream>
+#include <ctime>
 
 int main(int argc, char **argv)
 {
@@ -22,7 +23,7 @@ int main(int argc, char **argv)
 		std::string name_noext = IO::remove_ext(name_file);
 		create_directory(out_dir);
 
-		unsigned seed = std::time(0);
+		unsigned seed=time(0);
 		std::cout << "Using time as seed: " << seed << std::endl;
 		srand(seed);
 
