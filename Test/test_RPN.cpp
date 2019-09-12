@@ -22,8 +22,8 @@ int main(int argc, char **argv)
 		std::string name_noext = IO::remove_ext(name_file);
 		create_directory(out_dir);
 
-		unsigned seed = getpid();
-		std::cout << "Using pid as seed: " << seed << std::endl;
+		unsigned seed = std::time(0);
+		std::cout << "Using time as seed: " << seed << std::endl;
 		srand(seed);
 
 		IO::loadu8_in_01(input, input_path);

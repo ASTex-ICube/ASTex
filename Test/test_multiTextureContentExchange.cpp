@@ -3,8 +3,6 @@
 
 int main(int argc, char **argv)
 {
-	std::setlocale(LC_ALL,"C");
-
 	if(argc < 4)
 	{
 		std::cerr << "Usage: " << std::endl;

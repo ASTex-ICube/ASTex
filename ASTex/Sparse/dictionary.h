@@ -64,7 +64,7 @@ public:
 
 	I operator*(const std::vector<typename I::PixelType> &other) const;
 
-	void save(const std::string &directory) const;
+	bool save(const std::string &directory) const;
 	bool load(const std::string &directory);
 
 private:
@@ -283,17 +283,22 @@ I Dictionary<I>::operator*(const std::vector<typename I::PixelType> &other) cons
 }
 
 template <typename I>
-void Dictionary<I>::save(const std::string &directory) const
+bool Dictionary<I>::save(const std::string &directory) const
 {
-	create_directory(directory);
+	if(!create_directory(directory))
+		return false;
 	unsigned i=0;
 	for(typename std::vector<Atom<I>>::const_iterator it=m_atoms.begin(); it!=m_atoms.end(); ++it, ++i)
 	{
-		Histogram<I>::saveImageToCsv((*it).content(), std::string(directory) + "/atom" + std::to_string(i) + ".png");
+		if(!Histogram<I>::saveImageToCsv((*it).content(), std::string(directory) + "/atom" + std::to_string(i) + ".png"))
+			return false;
 	}
 	std::ofstream ofs_data_out(directory + "/dictionaryData.csv");
+	if(!ofs_data_out)
+		return false;
 	ofs_data_out << m_atoms.size() << std::endl;
 	ofs_data_out.close();
+	return true;
 }
 
 template <typename I>
@@ -318,6 +323,8 @@ bool Dictionary<I>::load(const std::string &directory)
 	}
 	m_atomWidth =  (*m_atoms.begin()).content().width();
 	m_atomHeight = (*m_atoms.begin()).content().height();
+
+	return true;
 }
 
 }

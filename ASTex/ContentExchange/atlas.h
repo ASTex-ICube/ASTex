@@ -40,10 +40,10 @@ public:
 	PixelPos patchPositionAt(int patchId, size_t mw, size_t mh) const;
 	const I &generatedImage() {return m_generativeAtlas;}
 
-	void saveOrigins(const std::string &path);
+	void saveOrigins(const std::string &path) const;
 	void loadOrigins(const std::string &path);
 
-	void generateAndSaveAtlas(std::string directory) const;
+	void generateAndSaveAtlas(std::string directory);
 
 	void setStoreHighestLevel(bool b) {m_storeHighestLevel = b;}
 
@@ -413,7 +413,7 @@ void Atlas<I>::release_emplaceAlgorithm()
 }
 
 template<typename I>
-void Atlas<I>::saveOrigins(const std::string &path)
+void Atlas<I>::saveOrigins(const std::string &path) const
 {
 	assert(m_origins.size() > 0 && "ContentExchange::Atlas::saveOrigins: atlas not generated (try using generate())");
 	std::ofstream ofs(path);
@@ -461,7 +461,7 @@ void Atlas<I>::loadOrigins(const std::string &path)
 }
 
 template<typename I>
-void Atlas<I>::generateAndSaveAtlas(std::string directory) const
+void Atlas<I>::generateAndSaveAtlas(std::string directory)
 {
     for(size_t i=0; i<m_patchProcessor.nbContents(); ++i)
     {
