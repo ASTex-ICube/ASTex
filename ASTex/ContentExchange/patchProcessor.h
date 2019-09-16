@@ -1,13 +1,13 @@
 #ifndef __CTEXCH_PATCH_PROCESSOR_H__
 #define __CTEXCH_PATCH_PROCESSOR_H__
 
+#include "Algo/PatchExchange/PatchProcessor.h"
+#include "Algo/PatchExchange/PoissonDiskSampler.h"
 #include "ASTex/histogram.h"
 #include "patch.h"
 #include "content.h"
 #include "ASTex/easy_io.h"
 #include "ASTex/Stamping/sampler.h"
-#include "old_PatchProcessor.h"
-#include "old_PoissonDiskSampler.h"
 #include <random>
 #include "ASTex/PCTS/pcts.h"
 #include "ASTex/Stamping/sampler.h"
@@ -200,8 +200,16 @@ public:
 
 	void fullProcess_GIOptimization(unsigned int nbPatchesPerDimension=5);
 
+	/**
+	 * @brief fullProcess_oldMethod uses the VSLD13 method to build patches and contents.
+	 * Borders of the patches are strong borders of the texture.
+	 * Borders of the contents are computed such that the difference near
+	 * the border of the patches is as small as possible.
+	 */
 	template<typename T1=I, typename Enable=typename std::enable_if<std::is_same<T1, ASTex::ImageRGBu8>::value>::type>
-	void fullProcess_oldMethod();
+	void fullProcess_oldMethod(unsigned fragmentMinSize=20, unsigned fragmentMaxSize=400,
+							   unsigned fragmentColorThreshold=40, unsigned requiredPatchNumber=16,
+							   unsigned downsamplingMinSize=64);
 
 	//////////////////////////////
 	/////   MISC FUNCTIONS   /////
@@ -812,13 +820,8 @@ void PatchProcessor<I>::contents_enhancePCTS(std::string pctsArgFile)
 
 template<typename I>
 template<typename T1, typename Enable>
-void PatchProcessor<I>::fullProcess_oldMethod()
+void PatchProcessor<I>::fullProcess_oldMethod(unsigned fragmentMinSize, unsigned fragmentMaxSize, unsigned fragmentColorThreshold, unsigned requiredPatchNumber, unsigned downsamplingMinSize)
 {
-	unsigned fragmentMinSize        = 20;
-	unsigned fragmentMaxSize        = 400;
-	unsigned fragmentColorThreshold = 40;
-	unsigned requiredPatchNumber    = 32;
-	unsigned downsamplingMinSize    = 64;
 	srand(m_seed);
 
 	ContentExchg::FragmentProcessor fProc( m_tile );

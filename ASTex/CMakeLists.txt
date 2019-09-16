@@ -53,13 +53,15 @@ target_sources (${PROJECT_NAME} PRIVATE
         rpn_utils.h
         texton_io.h
         imageviewer.h
+
+	../Algo/PatchExchange/FragmentProcessor.h
+	../Algo/PatchExchange/PatchProcessor.h
+	../Algo/PatchExchange/PoissonDiskSampler.h
+
         ContentExchange/atlas.h
         ContentExchange/content.h
         ContentExchange/patch.h
         ContentExchange/patchProcessor.h
-        ContentExchange/old_PatchProcessor.h
-        ContentExchange/old_FragmentProcessor.h
-        ContentExchange/old_PoissonDiskSampler.h
 	ContentExchange/multiTextureProcessor.h
         Stamping/sampler.h
         Stamping/stamp.h
@@ -84,9 +86,9 @@ target_sources (${PROJECT_NAME} PRIVATE
 	pca.cpp
 	thread_pool.cpp
 
-        ContentExchange/old_PatchProcessor.cpp
-        ContentExchange/old_FragmentProcessor.cpp
-        ContentExchange/old_PoissonDiskSampler.cpp
+	../Algo/PatchExchange/FragmentProcessor.cpp
+	../Algo/PatchExchange/PatchProcessor.cpp
+	../Algo/PatchExchange/PoissonDiskSampler.cpp
 
         texton_io.cpp
         Stamping/sampler.cpp
