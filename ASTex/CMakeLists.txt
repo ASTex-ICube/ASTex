@@ -58,6 +58,8 @@ target_sources (${PROJECT_NAME} PRIVATE
         Stamping/stamp.h
         Stamping/stamper.h
         PCTS/pcts.h
+
+        noise.h
 )
 
 target_sources (${PROJECT_NAME} PRIVATE
