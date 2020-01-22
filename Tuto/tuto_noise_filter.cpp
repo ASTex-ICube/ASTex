@@ -1,5 +1,3 @@
-#include <cmath>
-#include <random>
 #include <ASTex/image_gray.h>
 #include <ASTex/noise.h>
 #include <ASTex/easy_io.h>
