@@ -28,12 +28,13 @@ public:
         {
             T inf = T(it->first) * pas;
             T sup = T((++it)->first) * pas;
+            T t = x - inf;
             it--;
             if (x >= inf && x <= sup) {
                 Color c_inf = it->second;
                 Color c_sup = (++it)->second;
                 //it--;
-                return ImageRGB<T>::itkPixel((1 - x) * c_inf + x * c_sup);
+                return ImageRGB<T>::itkPixel((1 - t) * c_inf + t * c_sup);
             }
         }
 
