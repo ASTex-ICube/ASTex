@@ -60,6 +60,7 @@ target_sources (${PROJECT_NAME} PRIVATE
         PCTS/pcts.h
 
         noise.h
+        color_map.h
 )
 
 target_sources (${PROJECT_NAME} PRIVATE
