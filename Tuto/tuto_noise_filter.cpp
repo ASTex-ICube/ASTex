@@ -19,16 +19,19 @@ int main()
     cm.add_color(4,Color_map<T>::Color(1,0,0));
     cm.add_color(6,Color_map<T>::Color(1,1,1));
 
-    im.for_all_pixels([&](ImageRGB<T>::PixelType &p,int i,int j)
+    im.parallel_for_all_pixels([&](ImageRGB<T>::PixelType &p,int i,int j)
     {
         Mat22 borns;
-        borns << 20, 0, 0, 20;
+        borns << 2, 0, 0, 2;
         Vec2 center = Vec2(borns(0),borns(3)) / T(2);
+
+        // x = vec(0) between [-center(0),center(0)]
+        // y = vec(1) between [-center(1),center(1)]
         Vec2 vec =  borns * Vec2(T(i) / T(im.width()), T(j) / T(im.height())) - center;
-//        T x = T(i) / T(im.width()) * borns(0) - center(0);      // x between [-center,center]
-//        T y = T(j) / T(im.height()) * borns(3) - center(1);     // y between [-center,center]
-        T r = noise.basic2D(vec(0),vec(1));                               // noise value at (x,y), vec(0) =x et vec(1)=y
-        p = cm.map(T(i) / T(im.width()));
+
+        // noise value at (x,y), vec(0) =x et vec(1)=y
+        T r = noise.basic2D(vec(0),vec(1));
+        p = cm.map(r);
     });
 
     IO::save01_in_u8(im,TEMPO_PATH + "noise.png");
