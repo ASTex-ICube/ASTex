@@ -28,7 +28,7 @@ public:
         {
             T inf = T(it->first) * pas;
             T sup = T((++it)->first) * pas;
-            T t = x - inf;
+            T t = (x - inf) / (sup -inf);
             it--;
             if (x >= inf && x <= sup) {
                 Color c_inf = it->second;
