@@ -20,12 +20,10 @@ public:
         palette.insert(std::pair<int, Color>(pos,col));
     }
 
-    typename ImageRGB<T>::PixelType map(const T &x)
-    {
+    typename ImageRGB<T>::PixelType map(const T &x){
         T pas = T(1) / T(palette.rbegin()->first);
 
-        for(auto it = palette.begin();it!=palette.end();++it)
-        {
+        for(auto it = palette.begin();it!=palette.end();++it){
             T inf = T(it->first) * pas;
             T sup = T((++it)->first) * pas;
             T t = (x - inf) / (sup -inf);
@@ -41,9 +39,29 @@ public:
         return ImageRGB<T>::itkPixel(0);
     }
 
-    void export_palette()
-    {
+    std::string to_string(){
+        std::stringstream s;
+        auto it = palette.begin();
+        s << "(" << it->first << " ";
+        s << it->second(0) << " " << it->second(1) << " " << it->second(2);
+        it++;
+        for (;it!=palette.end();++it) {
+            s << ", " << it->first << " ";
+            s << it->second(0) << " " << it->second(1) << " " << it->second(2);
+        }
 
+        s << ")";
+
+        return s.str();
+    }
+
+    void export_palette(std::string filename){
+        std::ofstream fd;
+        fd.open(filename);
+        fd << "set palette defined ";
+        fd << to_string();
+
+        fd.close();
     }
 };
 

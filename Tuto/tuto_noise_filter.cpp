@@ -19,6 +19,8 @@ int main()
     cm.add_color(4,Color_map<T>::Color(1,0,0));
     cm.add_color(6,Color_map<T>::Color(1,1,1));
 
+    cm.export_palette(TEMPO_PATH + "palette.gnu");
+
     im.parallel_for_all_pixels([&](ImageRGB<T>::PixelType &p,int i,int j)
     {
         Mat22 borns;
