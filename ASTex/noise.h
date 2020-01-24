@@ -1,6 +1,7 @@
 #ifndef NOISE_H
 #define NOISE_H
 
+#include <ASTex/utils.h>
 #include <random>
 
 namespace ASTex {
@@ -10,16 +11,6 @@ class Noise{
 private:
     int nb_cosines;
     T *phases,*frequences,*orientations;
-
-    T clamp(const T &x, const T &a, const T &b)
-    {
-        T ret = x;
-        if ( x < a)
-            ret = a;
-        if( x > b)
-            ret = b;
-        return ret;
-    }
 
 public : 
     Noise(const int &n, const T &fr_min, const T &fr_max) : nb_cosines(n) {
@@ -66,7 +57,7 @@ public :
 
         sum_cosines *= T(1)/ T(6) * std::sqrt(T(2) / T(nb_cosines));
         sum_cosines += T(0.5);
-        sum_cosines = clamp(sum_cosines,T(0),T(1));
+        sum_cosines = clamp_scalar(sum_cosines,T(0),T(1));
 
         return sum_cosines;
     }
