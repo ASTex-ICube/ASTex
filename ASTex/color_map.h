@@ -55,13 +55,22 @@ public:
         return s.str();
     }
 
-    void export_palette(std::string filename){
+    void export_palette(const std::string &filename){
         std::ofstream fd;
         fd.open(filename);
         fd << "set palette defined ";
         fd << to_string();
 
         fd.close();
+    }
+
+    void export_courbe(const std::string &filename = "data.txt"){
+        std::ofstream fd;
+        fd.open(filename);
+        for (int i =0; i < 100; i++) {
+            T x( T(i) / T(100));
+            fd << x << " " << map(x)[0] << std::endl;
+        }
     }
 };
 
