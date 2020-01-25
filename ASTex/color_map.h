@@ -20,7 +20,7 @@ public:
         palette.insert(std::pair<int, Color>(pos,col));
     }
 
-    typename ImageRGB<T>::PixelType map(const T &x){
+    Color map(const T &x){
         T pas = T(1) / T(palette.rbegin()->first);
 
         for(auto it = palette.begin();it!=palette.end();++it){
@@ -32,11 +32,9 @@ public:
                 Color c_inf = it->second;
                 Color c_sup = (++it)->second;
                 //it--;
-                return ImageRGB<T>::itkPixel((1 - t) * c_inf + t * c_sup);
+                return (1 - t) * c_inf + t * c_sup;
             }
         }
-
-        return ImageRGB<T>::itkPixel(0);
     }
 
     std::string to_string(){
@@ -65,12 +63,20 @@ public:
     }
 
     void export_courbe(const std::string &filename = "data.txt"){
-        std::ofstream fd;
+        std::ofstream fd,fd2;
         fd.open(filename);
+        for(auto it = palette.begin();it!= palette.end();it++)
+        {
+            fd << it->second[0] << " " << it->second[1] << " " << it->second[2] << std::endl;
+        }
+        fd << std::endl << std::endl;
         for (int i =0; i < 100; i++) {
             T x( T(i) / T(100));
-            fd << x << " " << map(x)[0] << std::endl;
+            Color c = map(x);
+            fd << c[0] << " " << c[1] << " " << c[2] << std::endl;
         }
+
+        fd.close();
     }
 };
 
