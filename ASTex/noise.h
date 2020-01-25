@@ -45,7 +45,7 @@ public :
         phases = frequences = orientations = nullptr;
     }
 
-    T basic2D(const T &x, const T &y){
+    T basic2D(const T &x, const T &y) const{
         T sum_cosines(0);
         T p,f,o;
         for (int i = 0; i < nb_cosines; ++i) {

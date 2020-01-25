@@ -3,7 +3,6 @@
 #include <ASTex/color_map.h>
 #include <Eigen/Eigen>
 #include <ASTex/mipmap.h>
-#include <ASTex/imageviewer.h>
 
 using namespace ASTex;
 
