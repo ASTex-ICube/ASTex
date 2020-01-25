@@ -12,7 +12,7 @@ private:
     int nb_cosines;
     T *phases,*frequences,*orientations;
 
-public : 
+public :
     Noise(const int &n, const T &fr_min, const T &fr_max) : nb_cosines(n) {
         phases = new T[nb_cosines];
         frequences = new T[nb_cosines];

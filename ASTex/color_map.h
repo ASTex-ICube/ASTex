@@ -37,6 +37,40 @@ public:
         }
     }
 
+    ImageRGB<T> filter(const int &w, const int &h,const int &nb_bins, const T &sigma_max){
+        const T Pi = 4 * std::atan(T(1));
+        Color * tab = new Color[nb_bins];
+        for(int i=0;i<nb_bins;++i){
+            tab[i] = map(T(i)/T(nb_bins));
+        }
+
+        ImageRGB<T> c0_(w,h);
+        c0_.parallel_for_all_pixels([&](typename ImageRGB<T>::PixelType &p,int i,int j)
+        {
+            T f = T(j) / T(h);
+            T sigma = T(i) / T(w) * sigma_max;
+            Color c(0,0,0);
+
+            if(sigma != 0){
+                for(int k = 0; k < nb_bins;k++){
+                    T v = T(k) / T(nb_bins);
+                    T gauss( std::exp(- (v-f) * (v-f) / (T(2) * sigma * sigma) ));
+                    gauss /= sigma * std::sqrt(2 * Pi);
+                    c += tab[k] * gauss;
+                }
+            }
+            else
+                c = tab[j];
+
+            p = ImageRGB<T>::itkPixel(c);
+
+        });
+
+        delete[] tab;
+        return c0_;
+
+    }
+
     std::string to_string(){
         std::stringstream s;
         auto it = palette.begin();
@@ -63,7 +97,7 @@ public:
     }
 
     void export_courbe(const std::string &filename = "data.txt"){
-        std::ofstream fd,fd2;
+        std::ofstream fd;
         fd.open(filename);
         for(auto it = palette.begin();it!= palette.end();it++)
         {

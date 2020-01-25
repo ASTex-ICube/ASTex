@@ -3,14 +3,17 @@
 #include <ASTex/color_map.h>
 #include <Eigen/Eigen>
 #include <ASTex/mipmap.h>
+#include <ASTex/imageviewer.h>
 
 using namespace ASTex;
 
-int main()
+int main(int argc, char **argv)
 {
+    //QApplication app(argc, argv);
     using T = double;
     using Vec2 = Eigen::Matrix<T,2,1>;
     using Mat22 = Eigen::Matrix<T,2,2>;
+    using Color = Color_map<T>::Color;
     ImageGray<T> im_f(512,512);
     ImageGray<T> im_f2(512,512);
 
@@ -18,25 +21,16 @@ int main()
 
     Noise<T> noise;
     Color_map<T> cm;
-    cm.add_color(0,Color_map<T>::Color(0,0,0));
-    cm.add_color(1,Color_map<T>::Color(0,0,1));
-    cm.add_color(3,Color_map<T>::Color(0,1,0));
-    cm.add_color(4,Color_map<T>::Color(1,0,0));
-    cm.add_color(6,Color_map<T>::Color(1,1,1));
+    cm.add_color(0,Color(0,0,0));
+    cm.add_color(1,Color(0,0,1));
+    cm.add_color(3,Color(0,1,0));
+    cm.add_color(4,Color(1,0,0));
+    cm.add_color(6,Color(1,1,1));
 
-    cm.export_palette(TEMPO_PATH + "palette.gnu");
-    cm.export_courbe(TEMPO_PATH + "data.txt");
+    //cm.export_palette(TEMPO_PATH + "palette.gnu");
+    //cm.export_courbe(TEMPO_PATH + "data.txt");
 
-
-    ImageRGB<T> c0_(512,512);
-    T sigma_max(6);
-    c0_.parallel_for_all_pixels([&](ImageRGB<T>::PixelType &p,int i,int j)
-    {
-        T f = j / c0_.height();
-        T sigma = i / c0_.width() * sigma_max;
-
-
-    });
+    ImageRGB<T> c0_ = cm.filter(512,512,10,T(1)/T(2));
 
     Mat22 borns;
     borns << 2, 0, 0, 2;
@@ -60,10 +54,13 @@ int main()
     m.generate();
     m2.generate();
 
+    auto start_chrono = std::chrono::system_clock::now();
     filtered.parallel_for_all_pixels([&] (ImageRGB<T>::PixelType &p, int i, int j)
     {
-        p = cm.map(im_f.pixelAbsolute(i,j));
+        p = ImageRGB<T>::itkPixel(cm.map(im_f.pixelAbsolute(i,j)));
     });
+    std::chrono::duration<double> elapsed_seconds = std::chrono::system_clock::now() - start_chrono;
+    std::cout << "synthe timing: " << elapsed_seconds.count() << " s." << std::endl;
 
     ImageGray<T> fmp;
     m.fullMipmap(fmp);
@@ -74,7 +71,11 @@ int main()
 
     IO::save01_in_u8(fmp,TEMPO_PATH + "noise.png");
     IO::save01_in_u8(fmp2,TEMPO_PATH + "noise2.png");
+    IO::save01_in_u8(c0_,TEMPO_PATH + "color_map_filtered.png");
     IO::save01_in_u8(filtered,TEMPO_PATH + "noise_filtered.png");
 
+    //auto iv = image_view(f,"noise",&app);
+
     return 0;
+    //return app.exec();
 }
