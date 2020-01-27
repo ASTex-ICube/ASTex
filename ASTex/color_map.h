@@ -14,18 +14,27 @@ public :
     using Color = Eigen::Matrix<T,3,1>;
 private:
     std::map<int, Color > palette;
+    T step = T(0);
+
+    ImageRGB<T> filtered;
+    T sigma_max;
+    int width, height;
 public:
     Color_map() {}
     void add_color(const int &pos,const Color &col) {
         palette.insert(std::pair<int, Color>(pos,col));
+        step = T(1) / T(palette.rbegin()->first);;
     }
 
-    Color map(const T &x){
-        T pas = T(1) / T(palette.rbegin()->first);
+    ImageRGB<T> get_filtered() const {
+        return filtered;
+    }
+
+    Color map(const T &x) const {
 
         for(auto it = palette.begin();it!=palette.end();++it){
-            T inf = T(it->first) * pas;
-            T sup = T((++it)->first) * pas;
+            T inf = T(it->first) * step;
+            T sup = T((++it)->first) * step;
             T t = (x - inf) / (sup -inf);
             it--;
             if (x >= inf && x <= sup) {
@@ -35,17 +44,29 @@ public:
                 return (1 - t) * c_inf + t * c_sup;
             }
         }
+
+        return Color(0,0,0);
     }
 
-    ImageRGB<T> filter(const int &w, const int &h,const int &nb_bins, const T &sigma_max){
+    typename ImageRGB<T>::PixelType map(const T &f, const T &sigma) const {
+        int y = f * height;
+        int x = sigma * width / sigma_max;
+
+        return filtered.pixelAbsolute(x,y);
+    }
+
+    void filter(const int &w, const int &h,const int &nb_bins, const T &sm){
         const T Pi = 4 * std::atan(T(1));
+        width = w;
+        height = h;
+        sigma_max = sm;
         Color * tab = new Color[nb_bins];
         for(int i=0;i<nb_bins;++i){
             tab[i] = map(T(i)/T(nb_bins));
         }
 
-        ImageRGB<T> c0_(w,h);
-        c0_.parallel_for_all_pixels([&](typename ImageRGB<T>::PixelType &p,int i,int j)
+        filtered = ImageRGB<T>(width,height);
+        filtered.for_all_pixels([&](typename ImageRGB<T>::PixelType &p,int i,int j)
         {
             T f = T(j) / T(h);
             T sigma = T(i) / T(w) * sigma_max;
@@ -54,24 +75,23 @@ public:
             if(sigma != 0){
                 for(int k = 0; k < nb_bins;k++){
                     T v = T(k) / T(nb_bins);
-                    T gauss( std::exp(- (v-f) * (v-f) / (T(2) * sigma * sigma) ));
+                    T gauss = std::exp(-std::pow((v-f)/sigma,2)/T(2));
                     gauss /= sigma * std::sqrt(2 * Pi);
                     c += tab[k] * gauss;
                 }
             }
             else
-                c = tab[j];
+                c = map(f);
 
             p = ImageRGB<T>::itkPixel(c);
 
         });
 
         delete[] tab;
-        return c0_;
 
     }
 
-    std::string to_string(){
+    std::string to_string() const {
         std::stringstream s;
         auto it = palette.begin();
         s << "(" << it->first << " ";
@@ -87,7 +107,7 @@ public:
         return s.str();
     }
 
-    void export_palette(const std::string &filename){
+    void export_palette(const std::string &filename) const {
         std::ofstream fd;
         fd.open(filename);
         fd << "set palette defined ";
@@ -96,7 +116,7 @@ public:
         fd.close();
     }
 
-    void export_courbe(const std::string &filename = "data.txt"){
+    void export_courbe(const std::string &filename = "data.txt") const {
         std::ofstream fd;
         fd.open(filename);
         for(auto it = palette.begin();it!= palette.end();it++)

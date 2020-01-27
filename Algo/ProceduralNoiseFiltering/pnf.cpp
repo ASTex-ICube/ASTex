@@ -6,9 +6,8 @@
 
 using namespace ASTex;
 
-int main(int argc, char **argv)
+int main()
 {
-    //QApplication app(argc, argv);
     using T = double;
     using Vec2 = Eigen::Matrix<T,2,1>;
     using Mat22 = Eigen::Matrix<T,2,2>;
@@ -27,9 +26,11 @@ int main(int argc, char **argv)
     cm.add_color(6,Color(1,1,1));
 
     //cm.export_palette(TEMPO_PATH + "palette.gnu");
-    //cm.export_courbe(TEMPO_PATH + "data.txt");
+    cm.export_courbe(TEMPO_PATH + "data.txt");
 
-    ImageRGB<T> c0_ = cm.filter(512,512,10,T(1)/T(2));
+    cm.filter(512,512,1000,T(1)/T(2));
+
+    ImageRGB<T> c0_ = cm.get_filtered();
 
     Mat22 borns;
     borns << 2, 0, 0, 2;
@@ -73,8 +74,5 @@ int main(int argc, char **argv)
     IO::save01_in_u8(c0_,TEMPO_PATH + "color_map_filtered.png");
     IO::save01_in_u8(filtered,TEMPO_PATH + "noise_filtered.png");
 
-    //auto iv = image_view(f,"noise",&app);
-
     return 0;
-    //return app.exec();
 }
