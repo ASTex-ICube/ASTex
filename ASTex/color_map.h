@@ -3,6 +3,7 @@
 
 #include <ASTex/image_rgb.h>
 #include <map>
+#include <ASTex/utils.h>
 
 namespace ASTex {
 
@@ -19,6 +20,44 @@ private:
     ImageRGB<T> filtered;
     T sigma_max;
     int width, height;
+
+    T gauss(const T &x, const T &y, const T &mu, const T &sigma) const
+    {
+        const T Pi = 4 * std::atan(T(1));
+
+        T ret = std::exp(- (std::pow(x-mu,2) + std::pow(y-mu,2)) / (T(2) * std::pow(sigma,2)));
+        ret /= sigma * sigma * T(2) * Pi;
+
+        return ret;
+    }
+
+    T numeric_integration_gauss(const T&a, const T&b, const int &n, const T&mu, const T& sigma){
+        T sum(0);
+        for(int i= 1; i <= n-1; ++i)
+            for (int j=1; j<=n-1 ;++j)
+                sum += gauss(a + T(i) * (b - a) / T(n * n), a + T(j) * (b - a) / T(n * n), mu, sigma);
+        sum += (gauss(a, a, mu, sigma) + gauss(b, b, mu, sigma)) / T(2);
+        sum *= (b-a) / T(n);
+
+        return sum;
+    }
+
+    Color numeric_integration_col_gauss(const T&a, const T&b, const int &n, const T&mu, const T& sigma){
+        Color sum(0,0,0);
+        //T sum_gauss = numeric_integration_gauss(a,b,n,mu,sigma);
+        for(int i= 1; i <= n-1; ++i){
+            T x = a + T(i) * (b - a) / T(n);
+            for (int j =1;j <= n-1; ++j){
+                T y = a + T(j) * (b - a) / T(n);
+                sum += map((x+y)/T(2)) * gauss(x, y, mu, sigma);
+            }
+        }
+        sum += (map(a) * gauss(a, a, mu, sigma) + map(b) * gauss(b, b, mu, sigma)) / T(2);
+        sum *= (b-a) / T(n);
+
+        return sum;
+    }
+
 public:
     Color_map() {}
     void add_color(const int &pos,const Color &col) {
@@ -31,7 +70,7 @@ public:
     }
 
     Color map(const T &x) const {
-
+        Color ret;
         for(auto it = palette.begin();it!=palette.end();++it){
             T inf = T(it->first) * step;
             T sup = T((++it)->first) * step;
@@ -40,12 +79,12 @@ public:
             if (x >= inf && x <= sup) {
                 Color c_inf = it->second;
                 Color c_sup = (++it)->second;
-                //it--;
-                return (1 - t) * c_inf + t * c_sup;
+                it--;
+                ret = (1 - t) * c_inf + t * c_sup;
+                break;
             }
         }
-
-        return Color(0,0,0);
+        return ret;
     }
 
     typename ImageRGB<T>::PixelType map(const T &f, const T &sigma) const {
@@ -56,7 +95,6 @@ public:
     }
 
     void filter(const int &w, const int &h,const int &nb_bins, const T &sm){
-        const T Pi = 4 * std::atan(T(1));
         width = w;
         height = h;
         sigma_max = sm;
@@ -66,19 +104,15 @@ public:
         }
 
         filtered = ImageRGB<T>(width,height);
-        filtered.for_all_pixels([&](typename ImageRGB<T>::PixelType &p,int i,int j)
+        filtered.parallel_for_all_pixels([&](typename ImageRGB<T>::PixelType &p,int i,int j)
         {
             T f = T(j) / T(h);
             T sigma = T(i) / T(w) * sigma_max;
             Color c(0,0,0);
 
             if(sigma != 0){
-                for(int k = 0; k < nb_bins;k++){
-                    T v = T(k) / T(nb_bins);
-                    T gauss = std::exp(-std::pow((v-f)/sigma,2)/T(2));
-                    gauss /= sigma * std::sqrt(2 * Pi);
-                    c += tab[k] * gauss;
-                }
+                //assert(compare_scalar(1.0,numeric_integration_gauss(0,1,nb_bins,f,sigma)));
+                c = numeric_integration_col_gauss(0,1,nb_bins,f,sigma);
             }
             else
                 c = map(f);

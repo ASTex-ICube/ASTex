@@ -254,7 +254,27 @@ private:
 
 	inline void keyPressEvent(QKeyEvent* event)
 	{
+        switch (event->key())
+        {
+        case Qt::Key_PageUp:
+            scale_win_ *= 2;
+            zoom_ *= 2;
+            scale_window();
+            break;
+        case Qt::Key_PageDown:
+            if (scale_win_ >= 2)
+            {
+                scale_win_ /= 2;
+                zoom_ /= 2;
+                scale_window();
+            }
+            break;
+        case Qt::Key_Escape:
+            QApplication::quit();
+            break;
+        default:
             app_key_pressed_(event->key(), event->text().toStdString()[0]);
+        }
 	}
 
 

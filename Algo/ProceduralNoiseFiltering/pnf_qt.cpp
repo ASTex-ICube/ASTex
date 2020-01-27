@@ -1,7 +1,7 @@
 #include <ASTex/noise.h>
 #include <ASTex/color_map.h>
 #include <Eigen/Eigen>
-#include <ASTex/mipmap.h>
+#include <ASTex/rpn_utils.h>
 #include "imageviewer.h"
 
 using namespace ASTex;
@@ -38,7 +38,12 @@ int main(int argc, char **argv)
     Noise<T> noise;
     T size_x(6);
     T size_y(6);
-    ImageGray<T> f = computeNoiseIMG(size_x,size_y,noise);
+    ImageGray<T> psd;
+    psd.load(TEMPO_PATH + "spectra/spectrum_5.png");
+
+    ImageGray<T> f(512,512) ;
+    gray_RPN(psd,f,0,0);
+    IO::save01_in_u8(f,TEMPO_PATH + "noise_psd.png");
 
     auto iv = image_viewer(f,"noise",&app);
 
