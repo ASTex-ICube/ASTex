@@ -13,6 +13,7 @@ class Color_map
 {
 public :
     using Color = Eigen::Matrix<T,3,1>;
+    using Vec2 = Eigen::Matrix<T,2,1>;
 private:
     std::map<int, Color > palette;
     T step = T(0);
@@ -21,42 +22,80 @@ private:
     T sigma_max;
     int width, height;
 
-    T gauss(const T &x, const T &y, const T &mu, const T &sigma) const
+    T gauss1D(const T &x, const T &mu, const T &sigma) const
     {
         const T Pi = 4 * std::atan(T(1));
 
-        T ret = std::exp(- (std::pow(x-mu,2) + std::pow(y-mu,2)) / (T(2) * std::pow(sigma,2)));
-        ret /= sigma * sigma * T(2) * Pi;
+        T ret = std::exp(-T(0.5) * std::pow((x-mu)/sigma,2));
+        ret /= sigma * std::sqrt(2 * Pi);
 
         return ret;
     }
 
-    T numeric_integration_gauss(const T&a, const T&b, const int &n, const T&mu, const T& sigma){
+    T numeric_integration_gauss1D(const T&a, const T&b, const int &n, const T&mu, const T& sigma){
         T sum(0);
-        for(int i= 1; i <= n-1; ++i)
-            for (int j=1; j<=n-1 ;++j)
-                sum += gauss(a + T(i) * (b - a) / T(n * n), a + T(j) * (b - a) / T(n * n), mu, sigma);
-        sum += (gauss(a, a, mu, sigma) + gauss(b, b, mu, sigma)) / T(2);
-        sum *= (b-a) / T(n);
-
-        return sum;
-    }
-
-    Color numeric_integration_col_gauss(const T&a, const T&b, const int &n, const T&mu, const T& sigma){
-        Color sum(0,0,0);
-        //T sum_gauss = numeric_integration_gauss(a,b,n,mu,sigma);
-        for(int i= 1; i <= n-1; ++i){
-            T x = a + T(i) * (b - a) / T(n);
-            for (int j =1;j <= n-1; ++j){
-                T y = a + T(j) * (b - a) / T(n);
-                sum += map((x+y)/T(2)) * gauss(x, y, mu, sigma);
-            }
+        for(int k= 1; k <= n-1; ++k){
+            T v =a + T(k) * (b - a) / T(n);
+            sum += gauss1D(v, mu, sigma);
         }
-        sum += (map(a) * gauss(a, a, mu, sigma) + map(b) * gauss(b, b, mu, sigma)) / T(2);
+        sum += (gauss1D(a, mu, sigma) + gauss1D(b, mu, sigma)) * T(0.5);
         sum *= (b-a) / T(n);
 
         return sum;
     }
+
+    Color numeric_integration_col_gauss1D(const T&a, const T&b, const int &n, const T&mu, const T& sigma){
+        Color sum(0,0,0);
+
+        for(int k= 1; k <= n-1; ++k){
+            T v = a + T(k) * (b - a) / T(n);
+            sum += map(v) * gauss1D(v, mu, sigma);
+        }
+        sum += (map(a) * gauss1D(a, mu, sigma) + map(b) * gauss1D(b, mu, sigma)) * T(0.5);
+        sum *= (b-a) / T(n);
+
+        return sum;
+    }
+
+
+
+//    T gauss(const T &x, const T &y, const Vec2 &mu, const Vec2 &sigma) const
+//    {
+//        const T Pi = 4 * std::atan(T(1));
+
+//        //1/(sigma.x * sigma.y *2Pi) * exp(- 0.5 * ((x-mu.x)² / sigma.x² + (y-mu)² / sigma.y² ))
+
+//        T ret = std::exp(- T(0.5) * (std::pow(x-mu(0),2) / std::pow(sigma(0),2) + std::pow(y-mu(1),2) / std::pow(sigma(1),2)));
+//        ret /= sigma(0) * sigma(1) * T(2) * Pi;
+
+//        return ret;
+//    }
+
+//    T numeric_integration_gauss(const T&a, const T&b, const int &n, const Vec2 &mu, const Vec2& sigma){
+//        T sum(0);
+//        for(int i= 0; i < n; ++i){
+//            T y = a + T(i) * (b - a) / T(n);
+//            for (int j=0; j<n ;++j){
+//                T x = a + T(j) * (b - a) / T(n);
+//                sum += gauss(x, y, mu, sigma);
+//            }
+//        }
+//        return sum * std::pow((b - a)/T(n),2);
+//    }
+
+//    Color numeric_integration_col_gauss(const T&a, const T&b, const int &n, const Vec2 &mu, const Vec2& sigma){
+//        Color sum(0,0,0);
+//        //T sum_gauss = numeric_integration_gauss(a,b,n,mu,sigma);
+//        for(int i= 0; i < n; ++i){
+//            T y = a + T(i) * (b - a) / T(n);
+//            for (int j =0;j < n; ++j){
+//                T x = a + T(j) * (b - a) / T(n);
+//                sum += map((x+T(n)*y)/T(n)) * gauss(x, y, mu, sigma);
+//            }
+//        }
+
+//        return sum * std::pow((b - a)/T(n),2);
+//    }
 
 public:
     Color_map() {}
@@ -69,27 +108,40 @@ public:
         return filtered;
     }
 
+    void set_filtered(const ImageRGB<T> &i,const T &sm) {
+        height = i.height();
+        width = i.width();
+        filtered = i;
+        sigma_max = sm;
+    }
+
     Color map(const T &x) const {
         Color ret;
-        for(auto it = palette.begin();it!=palette.end();++it){
-            T inf = T(it->first) * step;
-            T sup = T((++it)->first) * step;
-            T t = (x - inf) / (sup -inf);
-            it--;
-            if (x >= inf && x <= sup) {
-                Color c_inf = it->second;
-                Color c_sup = (++it)->second;
+        if(x < T(0))
+            ret = palette.begin()->second;
+        else if ( x > T(1))
+            ret = palette.rbegin()->second;
+        else {
+            for(auto it = palette.begin();it!=palette.end();++it){
+                T inf = T(it->first) * step;
+                T sup = T((++it)->first) * step;
+                T t = (x - inf) / (sup -inf);
                 it--;
-                ret = (1 - t) * c_inf + t * c_sup;
-                break;
+                if (x >= inf && x <= sup) {
+                    Color c_inf = it->second;
+                    Color c_sup = (++it)->second;
+                    it--;
+                    ret = (1 - t) * c_inf + t * c_sup;
+                    break;
+                }
             }
         }
         return ret;
     }
 
     typename ImageRGB<T>::PixelType map(const T &f, const T &sigma) const {
-        int y = f * height;
-        int x = sigma * width / sigma_max;
+        int y = f * (height-1);
+        int x = sigma * (width-1) / sigma_max;
 
         return filtered.pixelAbsolute(x,y);
     }
@@ -98,30 +150,22 @@ public:
         width = w;
         height = h;
         sigma_max = sm;
-        Color * tab = new Color[nb_bins];
-        for(int i=0;i<nb_bins;++i){
-            tab[i] = map(T(i)/T(nb_bins));
-        }
 
         filtered = ImageRGB<T>(width,height);
         filtered.parallel_for_all_pixels([&](typename ImageRGB<T>::PixelType &p,int i,int j)
         {
             T f = T(j) / T(h);
-            T sigma = T(i) / T(w) * sigma_max;
+            T s = T(i) / T(w) * sigma_max;
             Color c(0,0,0);
 
-            if(sigma != 0){
-                //assert(compare_scalar(1.0,numeric_integration_gauss(0,1,nb_bins,f,sigma)));
-                c = numeric_integration_col_gauss(0,1,nb_bins,f,sigma);
-            }
+            if(s != 0)
+                c = numeric_integration_col_gauss1D(-3*s+f,3*s+f,nb_bins,f,s);
             else
                 c = map(f);
 
             p = ImageRGB<T>::itkPixel(c);
 
         });
-
-        delete[] tab;
 
     }
 
