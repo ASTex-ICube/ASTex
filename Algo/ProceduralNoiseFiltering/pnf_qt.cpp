@@ -19,7 +19,7 @@ inline ImageRGB<T> computeNoiseIMG(const Vec2 & w_size, const Vec2 &im_size,cons
     Vec2 s(w_size(0) / im_size(0), w_size(1) / im_size(1));
 
     std::random_device rd;
-    std::mt19937 gen(0);
+    std::mt19937 gen(rd());
 
     ImageRGB<T> im(static_cast<int>(im_size(0)),static_cast<int>(im_size(1)));
     im.for_all_pixels([&](ImageRGB<T>::PixelType &p,int i,int j)
@@ -30,9 +30,6 @@ inline ImageRGB<T> computeNoiseIMG(const Vec2 & w_size, const Vec2 &im_size,cons
 
         T f(0), f2(0);
 
-        if(i==41 && j==346)
-            std::cerr << "toto" << std::endl;
-
         T ax = vec(0) - s(0)/T(2);
         T bx = vec(0) + s(0)/T(2);
         T ay = vec(1) - s(1)/T(2);
@@ -40,7 +37,7 @@ inline ImageRGB<T> computeNoiseIMG(const Vec2 & w_size, const Vec2 &im_size,cons
         std::uniform_real_distribution<T> dis_x(ax, bx);
         std::uniform_real_distribution<T> dis_y(ay, by);
 
-        int nb_sample = 100;
+        int nb_sample = 10;
         for (int u =0; u < nb_sample; ++u) {
                 T x = dis_x(gen);
                 T y = dis_y(gen);
@@ -51,7 +48,9 @@ inline ImageRGB<T> computeNoiseIMG(const Vec2 & w_size, const Vec2 &im_size,cons
         f /= nb_sample;
         f2 /= nb_sample;
         T sigma = std::sqrt(f2 - f*f);
-        p = cm.map(f,sigma);
+        p = cm.map(f,sigma); // our filtered
+//        p = ImageRGB<T>::itkPixel(cm.map(f)); // naive filtered
+//        p = ImageRGB<T>::itkPixel(cm.map(n.basic2D(vec(0),vec(1)))); // unfiltered
     });
 
     return im;
@@ -82,7 +81,7 @@ int main(int argc, char **argv)
     IO::loadu8_in_01(c0_,TEMPO_PATH+ "color_map_filtered.png");
     cm.set_filtered(c0_,T(0.5));
 
-    Vec2 w_size(2,2);
+    Vec2 w_size(256,256);
     Vec2 im_size(512,512);
 
     ImageRGB<T> f = computeNoiseIMG(w_size,im_size,noise,cm);
