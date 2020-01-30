@@ -17,7 +17,7 @@ if (Qt5Widgets_FOUND)
 endif()
 
 add_executable(pnf "")
-target_sources(pnf PRIVATE pnf.cpp)
+target_sources(pnf PRIVATE pnf.cpp texture_noise.h)
 target_link_libraries(pnf ASTex)
 
 
