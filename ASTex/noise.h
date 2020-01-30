@@ -23,7 +23,7 @@ public :
         const T Pi = 4 * std::atan(T(1));
 
         std::random_device rd;
-        std::mt19937 gen(0);
+        std::mt19937 gen(rd());
         //[0;2Pi[
         std::uniform_real_distribution<T> phases_dis(T(0), T(2) * Pi);
         //[10;20[

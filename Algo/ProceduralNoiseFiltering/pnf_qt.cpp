@@ -41,7 +41,7 @@ inline ImageRGB<T> computeNoiseIMG(const Vec2 & w_size, const Vec2 &im_size,cons
         for (int u =0; u < nb_sample; ++u) {
                 T x = dis_x(gen);
                 T y = dis_y(gen);
-                T r = n.basic2D(x,y) ;
+                T r = n.basic2D(Vec2(x,y)) ;
                 f += r;
                 f2 += r * r;
         }

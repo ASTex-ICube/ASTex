@@ -57,46 +57,6 @@ private:
         return sum;
     }
 
-
-
-//    T gauss(const T &x, const T &y, const Vec2 &mu, const Vec2 &sigma) const
-//    {
-//        const T Pi = 4 * std::atan(T(1));
-
-//        //1/(sigma.x * sigma.y *2Pi) * exp(- 0.5 * ((x-mu.x)² / sigma.x² + (y-mu)² / sigma.y² ))
-
-//        T ret = std::exp(- T(0.5) * (std::pow(x-mu(0),2) / std::pow(sigma(0),2) + std::pow(y-mu(1),2) / std::pow(sigma(1),2)));
-//        ret /= sigma(0) * sigma(1) * T(2) * Pi;
-
-//        return ret;
-//    }
-
-//    T numeric_integration_gauss(const T&a, const T&b, const int &n, const Vec2 &mu, const Vec2& sigma){
-//        T sum(0);
-//        for(int i= 0; i < n; ++i){
-//            T y = a + T(i) * (b - a) / T(n);
-//            for (int j=0; j<n ;++j){
-//                T x = a + T(j) * (b - a) / T(n);
-//                sum += gauss(x, y, mu, sigma);
-//            }
-//        }
-//        return sum * std::pow((b - a)/T(n),2);
-//    }
-
-//    Color numeric_integration_col_gauss(const T&a, const T&b, const int &n, const Vec2 &mu, const Vec2& sigma){
-//        Color sum(0,0,0);
-//        //T sum_gauss = numeric_integration_gauss(a,b,n,mu,sigma);
-//        for(int i= 0; i < n; ++i){
-//            T y = a + T(i) * (b - a) / T(n);
-//            for (int j =0;j < n; ++j){
-//                T x = a + T(j) * (b - a) / T(n);
-//                sum += map((x+T(n)*y)/T(n)) * gauss(x, y, mu, sigma);
-//            }
-//        }
-
-//        return sum * std::pow((b - a)/T(n),2);
-//    }
-
 public:
     Color_map() {}
     void add_color(const int &pos,const Color &col) {
