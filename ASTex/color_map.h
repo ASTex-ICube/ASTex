@@ -101,7 +101,7 @@ public:
     Color_map() {}
     void add_color(const int &pos,const Color &col) {
         palette.insert(std::pair<int, Color>(pos,col));
-        step = T(1) / T(palette.rbegin()->first);;
+        step = T(1) / T(palette.rbegin()->first);
     }
 
     ImageRGB<T> get_filtered() const {

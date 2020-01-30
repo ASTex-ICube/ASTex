@@ -13,6 +13,8 @@ private:
     T *phases,*frequences,*orientations;
 
 public :
+    using Vec2 = Eigen::Matrix<T,2,1>;
+
     Noise(const int &n, const T &fr_min, const T &fr_max) : nb_cosines(n) {
         phases = new T[nb_cosines];
         frequences = new T[nb_cosines];
@@ -45,22 +47,59 @@ public :
         phases = frequences = orientations = nullptr;
     }
 
-    T basic2D(const T &x, const T &y) const{
-        T sum_cosines(0);
-        T p,f,o;
-        for (int i = 0; i < nb_cosines; ++i) {
-            p = phases[i];
-            f = frequences[i];
-            o = orientations[i];
-            sum_cosines += std::cos(p + f * std::cos(o) * x + f * std::sin(o) * y );
+private:
+    template<typename func>
+    T get_over_footprint(const Vec2 &pos, const Vec2 &footprint,const int & nb_sample, const func &f) const{
+
+        T ret(0);
+        T step(T(1)/T(nb_sample));
+        Vec2 corner = pos - footprint * T(0.5);
+
+        for (int i =0; i < nb_sample; ++i) {
+            T y = corner(1) + i * step;
+            for(int j=0; j < nb_sample; ++j) {
+                T x = corner(0) + j * step;
+
+                T value_noise = basic2D(Vec2(x,y)) ;
+                ret += f(value_noise);
+            }
         }
+        ret /= nb_sample * nb_sample;
 
-        sum_cosines *= T(1)/ T(6) * std::sqrt(T(2) / T(nb_cosines));
-        sum_cosines += T(0.5);
-        sum_cosines = clamp_scalar(sum_cosines,T(0),T(1));
-
-        return sum_cosines;
+        return ret;
     }
+
+public:
+
+    T basic2D(const Vec2 &pos) const{
+           T sum_cosines(0);
+           T ph,fr,o;
+           for (int i = 0; i < nb_cosines; ++i) {
+               ph = phases[i];
+               fr = frequences[i];
+               o = orientations[i];
+               sum_cosines += std::cos(ph + fr * std::cos(o) * pos(0) + fr * std::sin(o) * pos(1) );
+           }
+
+           sum_cosines *= T(1)/ T(6) * std::sqrt(T(2) / T(nb_cosines));
+           sum_cosines += T(0.5);
+           sum_cosines = clamp_scalar(sum_cosines,T(0),T(1));
+
+           return sum_cosines;
+    }
+
+    T get_noise_mean_over_footprint(const Vec2 &pos, const Vec2 &footprint, const int &nb_sample) const{
+        return get_over_footprint(pos, footprint, nb_sample, [](const T&x) {
+            return x;
+        });
+    }
+
+    T get_squared_noise_mean_over_footprint(const Vec2 &pos, const Vec2 &footprint, const int &nb_sample) const{
+        return get_over_footprint(pos, footprint, nb_sample, [](const T&x) {
+            return x * x;
+        });
+    }
+
 };
 }
 
