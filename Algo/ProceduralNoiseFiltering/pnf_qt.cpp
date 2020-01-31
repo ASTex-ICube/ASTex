@@ -11,20 +11,22 @@ int main(int argc, char **argv)
     QApplication app(argc, argv);
 
     ImageSpectrald psd;
-    IO::loadu8_in_01(psd, TEMPO_PATH + "spectra/spectrum_6.png");
+    IO::loadu8_in_01(psd, TEMPO_PATH + "spectra/spectrum_9.png");
 
     TextureNoise<T> texture_noise(psd);
     Color_map<T> cm;
+
     cm.add_color(0,Color(1,1,0));
-    cm.add_color(1,Color(1,0,0));
-    cm.add_color(2,Color(0,0,0));
-    cm.add_color(3,Color(1,1,1));
+    cm.add_color(40,Color(1,0,0));
+    cm.add_color(59,Color(0,0,0));
+    cm.add_color(60,Color(1,1,1));
+    cm.add_color(100,Color(1,1,1));
 
     ImageRGB<T> c0_;
     IO::loadu8_in_01(c0_,TEMPO_PATH+ "color_map_filtered.png");
     cm.set_filtered(c0_,T(1)/T(2));
 
-    Vec2 w_size(256,256);
+    Vec2 w_size(16384,16384);
     Vec2 im_size(512,512);
 
 
