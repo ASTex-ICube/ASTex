@@ -12,12 +12,12 @@ if (Qt5Widgets_FOUND)
   set(CMAKE_INCLUDE_CURRENT_DIR ON)
   set(CMAKE_AUTOMOC ON)
   add_executable(pnf_qt "")
-  target_sources(pnf_qt PUBLIC pnf_qt.cpp imageviewer.h pnf.h)
+  target_sources(pnf_qt PUBLIC pnf_qt.cpp imageviewer.h texture_noise.h pnf.h)
   target_link_libraries(pnf_qt Qt5::Widgets ASTex)
 endif()
 
 add_executable(pnf "")
-target_sources(pnf PRIVATE pnf.cpp texture_noise.h pnf.h)
+target_sources(pnf PRIVATE pnf.cpp pnf.h)
 target_link_libraries(pnf ASTex)
 
 

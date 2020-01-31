@@ -13,15 +13,13 @@ int main()
     cm.add_color(60,Color(1,1,1));
     cm.add_color(100,Color(1,1,1));
 
-
-    //cm.export_palette(TEMPO_PATH + "palette.gnu");
     cm.export_courbe(TEMPO_PATH + "data.txt");
 
 
     //filtrage color map
     auto start_chrono = std::chrono::system_clock::now();
 
-    cm.filter(512,512,200,T(1)/T(6));
+    cm.filter(512,512,200,T(1)/T(2));
 
     std::chrono::duration<double> elapsed_seconds = std::chrono::system_clock::now() - start_chrono;
     std::cout << "filtrage de la color map timing: " << elapsed_seconds.count() << " s." << std::endl;

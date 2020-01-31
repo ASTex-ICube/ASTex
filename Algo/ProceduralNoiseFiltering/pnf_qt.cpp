@@ -1,76 +1,19 @@
-#include <ASTex/noise.h>
+#include "texture_noise.h"
+#include "pnf.h"
 #include <ASTex/color_map.h>
-#include <Eigen/Eigen>
 #include <ASTex/rpn_utils.h>
 #include "imageviewer.h"
 
 using namespace ASTex;
-using T = double;
-using Vec2 = Eigen::Matrix<T,2,1>;
-using Mat22 = Eigen::Matrix<T,2,2>;
-using Color = Color_map<T>::Color;
-
-inline ImageRGB<T> computeNoiseIMG(const Vec2 & w_size, const Vec2 &im_size,const Noise<T> &n,const Color_map<T> &cm){
-    Mat22 borns;
-    borns << w_size(0), 0, 0, w_size(1);
-    Vec2 center = Vec2(borns(0),borns(3)) / T(2);
-
-    //footprint pixel
-    Vec2 s(w_size(0) / im_size(0), w_size(1) / im_size(1));
-
-    std::random_device rd;
-    std::mt19937 gen(rd());
-
-    ImageRGB<T> im(static_cast<int>(im_size(0)),static_cast<int>(im_size(1)));
-    im.for_all_pixels([&](ImageRGB<T>::PixelType &p,int i,int j)
-    {
-        // x = vec(0) between [-center(0),center(0)]
-        // y = vec(1) between [-center(1),center(1)]
-        Vec2 vec =  borns * Vec2(T(i) / T(im.width()), T(j) / T(im.height())) - center;
-
-        T f(0), f2(0);
-
-        T ax = vec(0) - s(0)/T(2);
-        T bx = vec(0) + s(0)/T(2);
-        T ay = vec(1) - s(1)/T(2);
-        T by = vec(1) + s(1)/T(2);
-        std::uniform_real_distribution<T> dis_x(ax, bx);
-        std::uniform_real_distribution<T> dis_y(ay, by);
-
-        int nb_sample = 10;
-        for (int u =0; u < nb_sample; ++u) {
-                T x = dis_x(gen);
-                T y = dis_y(gen);
-                T r = n.basic2D(Vec2(x,y)) ;
-                f += r;
-                f2 += r * r;
-        }
-        f /= nb_sample;
-        f2 /= nb_sample;
-        T sigma = std::sqrt(f2 - f*f);
-        p = cm.map(f,sigma); // our filtered
-//        p = ImageRGB<T>::itkPixel(cm.map(f)); // naive filtered
-//        p = ImageRGB<T>::itkPixel(cm.map(n.basic2D(vec(0),vec(1)))); // unfiltered
-    });
-
-    return im;
-}
 
 int main(int argc, char **argv)
 {
     QApplication app(argc, argv);
 
-//    Noise<T> noise;
-//    T size_x(6);
-//    T size_y(6);
-//    ImageGray<T> psd;
-//    psd.load(TEMPO_PATH + "spectra/donut_black.png");
+    ImageSpectrald psd;
+    IO::loadu8_in_01(psd, TEMPO_PATH + "spectra/spectrum_6.png");
 
-//    ImageGray<T> f(512,512) ;
-//    gray_RPN(psd,f,0,0);
-//    IO::save01_in_u8(f,TEMPO_PATH + "noise_psd.png");
-
-    Noise<T> noise;
+    TextureNoise<T> texture_noise(psd);
     Color_map<T> cm;
     cm.add_color(0,Color(1,1,0));
     cm.add_color(1,Color(1,0,0));
@@ -79,45 +22,63 @@ int main(int argc, char **argv)
 
     ImageRGB<T> c0_;
     IO::loadu8_in_01(c0_,TEMPO_PATH+ "color_map_filtered.png");
-    cm.set_filtered(c0_,T(0.5));
+    cm.set_filtered(c0_,T(1)/T(2));
 
     Vec2 w_size(256,256);
     Vec2 im_size(512,512);
 
-    ImageRGB<T> f = computeNoiseIMG(w_size,im_size,noise,cm);
 
-    auto iv = image_viewer(f,"noise",&app);
+    // compute
 
-    iv->set_mouse_cb([&f](int b, int x, int y)
-    {
-        std::cout << "color value = "<< f.pixelAbsolute(x,y) << " at " << x << " , " << y <<std::endl;
-    });
+    ImageGray<T> noise = texture_noise.getNoise();
 
-    iv->set_key_cb([&](int code, char c)
-    {
-        std::ignore = code; // for warning
-        switch(c)
-        {
-        case '+' :
-            if(w_size(0) > 0 && w_size(1) > 0){
-                w_size(0)--;
-                w_size(1)--;
-                f = computeNoiseIMG(w_size,im_size,noise,cm);
-                iv->update(f);
-                iv->show();
-            }
-            break;
-        case '-' :
-                w_size(0)++;
-                w_size(1)++;
-                f = computeNoiseIMG(w_size,im_size,noise,cm);
-                iv->update(f);
-                iv->show();
-            break;
-        default:
-            std::cout << "key "<< c << std::endl;
-        }
-    });
+
+    auto start_chrono = std::chrono::system_clock::now();
+
+    ImageRGB<T> im_noise_cm = compute_unfiltered_IMG(w_size, im_size, texture_noise, cm);
+
+    std::chrono::duration<double> elapsed_seconds = std::chrono::system_clock::now() - start_chrono;
+    std::cout << "synthe unfiltering timing: " << elapsed_seconds.count() << " s." << std::endl;
+
+    start_chrono = std::chrono::system_clock::now();
+
+    ImageRGB<T> im_noise_cm_naive_filter = compute_naive_filter_IMG(w_size, im_size, texture_noise, cm);
+
+    elapsed_seconds = std::chrono::system_clock::now() - start_chrono;
+    std::cout << "synthe naive filtering timing: " << elapsed_seconds.count() << " s." << std::endl;
+
+    start_chrono = std::chrono::system_clock::now();
+
+    ImageRGB<T> im_noise_cm_good_filter = compute_good_filter_IMG(w_size, im_size, texture_noise, cm);
+
+    elapsed_seconds = std::chrono::system_clock::now() - start_chrono;
+    std::cout << "synthe good filtering timing: " << elapsed_seconds.count() << " s." << std::endl;
+
+
+    //show window
+    ImageViewer iv_psd("PSD");
+    iv_psd.update(psd);
+    iv_psd.show();
+
+    ImageViewer iv_noise("Noise");
+    iv_noise.update(noise);
+    iv_noise.show();
+
+    ImageViewer iv_cm("Noise");
+    iv_cm.update(cm.get_filtered());
+    iv_cm.show();
+
+    ImageViewer iv_noise_cm("Noise color mapped");
+    iv_noise_cm.update(im_noise_cm);
+    iv_noise_cm.show();
+
+    ImageViewer iv_noise_cm_naive_filter("Noise color mapped with naive filtering");
+    iv_noise_cm_naive_filter.update(im_noise_cm_naive_filter);
+    iv_noise_cm_naive_filter.show();
+
+    ImageViewer iv_noise_cm_good_filter("Noise color mapped with good filtering");
+    iv_noise_cm_good_filter.update(im_noise_cm_good_filter);
+    iv_noise_cm_good_filter.show();
 
     return app.exec();
 }

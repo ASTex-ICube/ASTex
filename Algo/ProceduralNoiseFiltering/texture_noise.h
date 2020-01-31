@@ -15,24 +15,52 @@ class TextureNoise
 private:
     ImageGray<T> noise;
 public:
-    TextureNoise() {}
-    TextureNoise(const std::string &filename) {
-        ImageSpectrald psd;
-        IO::loadu8_in_01(psd, filename);
+    using Vec2 = Eigen::Matrix<T,2,1>;
 
-        noise.initItk(psd.width(),psd.height());
-        psd.for_all_pixels([] (ImageSpectrald::PixelType &pix)
+    TextureNoise() {}
+    TextureNoise(const ImageSpectrald psd) {
+
+        ImageSpectrald sqrt_psd(psd.width(),psd.height());
+        sqrt_psd.for_all_pixels([&] (ImageSpectrald::PixelType &pix,int i, int j)
         {
-            if(pix>0)
-                pix /= pix;
+            ImageSpectrald::PixelType p = psd.pixelAbsolute(i,j);
+            pix = std::sqrt(p);
         });
 
         ImageSpectrald phase;
-        rpn_scalar(psd, phase, noise);
+        noise.initItk(psd.width(),psd.height());
+        rpn_scalar(sqrt_psd, phase, noise);
         noise.for_all_pixels([] (typename ImageGray<T>::PixelType &pix)
         {
             pix = clamp_scalar(pix, T(0), T(1));
         });
+        std::cout << getMean(noise) << std::endl;
+        std::cout << getStDev(noise) << std::endl;
+    }
+
+    ImageGray<T> getNoise() const {
+        return noise;
+    }
+
+    int width() const {
+        return noise.width();
+    }
+
+    int height() const {
+        return noise.height();
+    }
+
+    T get(const int &i, const int &j) const {
+        int x = (i % width() + width()) % width();
+        int y = (j % height() + height()) % height();
+
+        return noise.pixelAbsolute(x, y);
+    }
+
+    T get(const Vec2 &pos) const {
+        int x = static_cast<int>(pos(0));
+        int y = static_cast<int>(pos(1));
+        return get(x,y);
     }
 };
 
