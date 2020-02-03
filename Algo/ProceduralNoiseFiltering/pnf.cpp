@@ -19,7 +19,7 @@ int main()
     //filtrage color map
     auto start_chrono = std::chrono::system_clock::now();
 
-    cm.filter(512,512,200,T(1)/T(2));
+    cm.filter(512,512,200,0.5);
 
     std::chrono::duration<double> elapsed_seconds = std::chrono::system_clock::now() - start_chrono;
     std::cout << "filtrage de la color map timing: " << elapsed_seconds.count() << " s." << std::endl;
@@ -42,6 +42,16 @@ int main()
     std::cout << "synthe unfiltering timing: " << elapsed_seconds.count() << " s." << std::endl;
 
     IO::save01_in_u8(unfiltered,TEMPO_PATH + "noise_unfiltered.png");
+
+    //ground truth
+
+    start_chrono = std::chrono::system_clock::now();
+    ImageRGB<T> ground_truth = compute_ground_truth_IMG(w_size,im_size,noise,cm,10);
+
+    elapsed_seconds = std::chrono::system_clock::now() - start_chrono;
+    std::cout << "synthe ground_truth timing: " << elapsed_seconds.count() << " s." << std::endl;
+
+    IO::save01_in_u8(ground_truth,TEMPO_PATH + "ground_truth.png");
 
     //naive filtering
     start_chrono = std::chrono::system_clock::now();

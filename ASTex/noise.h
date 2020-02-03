@@ -3,6 +3,7 @@
 
 #include <ASTex/utils.h>
 #include <random>
+#include <ASTex/color_map.h>
 
 namespace ASTex {
 
@@ -14,6 +15,7 @@ private:
 
 public :
     using Vec2 = Eigen::Matrix<T,2,1>;
+    using Color = typename Color_map<T>::Color;
 
     Noise(const int &n, const T &fr_min, const T &fr_max) : nb_cosines(n) {
         phases = new T[nb_cosines];
@@ -48,10 +50,10 @@ public :
     }
 
 private:
-    template<typename func>
-    T get_over_footprint(const Vec2 &pos, const Vec2 &footprint,const int & nb_sample, const func &f) const{
+    template<typename T2,typename init, typename func>
+    T2 get_over_footprint(const Vec2 &pos, const Vec2 &footprint,const int & nb_sample,const init &initialisation, const func &f) const{
 
-        T ret(0);
+        T2 ret = initialisation();
         T step(T(1)/T(nb_sample));
         Vec2 corner = pos - footprint * T(0.5);
 
@@ -89,14 +91,23 @@ public:
     }
 
     T get_noise_mean_over_footprint(const Vec2 &pos, const Vec2 &footprint, const int &nb_sample) const{
-        return get_over_footprint(pos, footprint, nb_sample, [](const T&x) {
+        return get_over_footprint<T>(pos, footprint, nb_sample, [](){return T(0);}, [](const T&x) {
             return x;
         });
     }
 
     T get_squared_noise_mean_over_footprint(const Vec2 &pos, const Vec2 &footprint, const int &nb_sample) const{
-        return get_over_footprint(pos, footprint, nb_sample, [](const T&x) {
+        return get_over_footprint<T>(pos, footprint, nb_sample, [](){return T(0);}, [](const T&x) {
             return x * x;
+        });
+    }
+
+    Color get_color_mean_over_footprint(const Vec2 &pos,
+                                        const Vec2 &footprint,
+                                        const Color_map<T> &cm,
+                                        const int &nb_sample) const{
+        return get_over_footprint<Color>(pos, footprint, nb_sample, [](){return Color(0,0,0);}, [&](const T&x) {
+            return cm.map(x, 0);
         });
     }
 

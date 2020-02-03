@@ -22,6 +22,30 @@ private:
     T sigma_max;
     int width, height;
 
+    Color map(const T &x) const {
+        Color ret;
+        if(x < T(0))
+            ret = palette.begin()->second;
+        else if ( x > T(1))
+            ret = palette.rbegin()->second;
+        else {
+            for(auto it = palette.begin();it!=palette.end();++it){
+                T inf = T(it->first) * step;
+                T sup = T((++it)->first) * step;
+                T t = (x - inf) / (sup -inf);
+                it--;
+                if (x >= inf && x <= sup) {
+                    Color c_inf = it->second;
+                    Color c_sup = (++it)->second;
+                    it--;
+                    ret = (1 - t) * c_inf + t * c_sup;
+                    break;
+                }
+            }
+        }
+        return ret;
+    }
+
     T gauss1D(const T &x, const T &mu, const T &sigma) const
     {
         const T Pi = 4 * std::atan(T(1));
@@ -75,35 +99,11 @@ public:
         sigma_max = sm;
     }
 
-    Color map(const T &x) const {
-        Color ret;
-        if(x < T(0))
-            ret = palette.begin()->second;
-        else if ( x > T(1))
-            ret = palette.rbegin()->second;
-        else {
-            for(auto it = palette.begin();it!=palette.end();++it){
-                T inf = T(it->first) * step;
-                T sup = T((++it)->first) * step;
-                T t = (x - inf) / (sup -inf);
-                it--;
-                if (x >= inf && x <= sup) {
-                    Color c_inf = it->second;
-                    Color c_sup = (++it)->second;
-                    it--;
-                    ret = (1 - t) * c_inf + t * c_sup;
-                    break;
-                }
-            }
-        }
-        return ret;
-    }
-
-    typename ImageRGB<T>::PixelType map(const T &f, const T &sigma) const {
+    Color map(const T &f, const T &sigma) const {
         int y = f * (height-1);
         int x = sigma * (width-1) / sigma_max;
 
-        return filtered.pixelAbsolute(x,y);
+        return filtered.pixelEigenAbsolute(x,y);
     }
 
     void filter(const int &w, const int &h,const int &nb_bins, const T &sm){
