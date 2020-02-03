@@ -11,7 +11,7 @@ int main(int argc, char **argv)
     QApplication app(argc, argv);
 
     ImageSpectrald psd;
-    IO::loadu8_in_01(psd, TEMPO_PATH + "spectra/spectrum_4.png");
+    IO::loadu8_in_01(psd, TEMPO_PATH + "spectra/spectrum_5.png");
 
     TextureNoise<T> texture_noise(psd);
     Color_map<T> cm;
@@ -20,7 +20,7 @@ int main(int argc, char **argv)
     IO::loadu8_in_01(c0_,TEMPO_PATH+ "color_map_filtered.png");
     cm.set_filtered(c0_,0.5);
 
-    Vec2 w_size(512,512);
+    Vec2 w_size(2048,2048);
     Vec2 im_size(512,512);
 
 
@@ -70,6 +70,8 @@ int main(int argc, char **argv)
     ImageViewer iv_noise("Noise");
     iv_noise.update(noise);
     iv_noise.show();
+
+    IO::save01_in_u8(noise, TEMPO_PATH + "noise_PSD.png");
 
     ImageViewer iv_cm("Color map");
     iv_cm.update(cm.get_filtered());
