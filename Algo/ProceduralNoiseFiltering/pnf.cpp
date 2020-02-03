@@ -5,7 +5,7 @@ using namespace ASTex;
 
 int main()
 {
-    Noise<T> noise;
+    Noise<T> noise(1000,10.,20.);
     Color_map<T> cm;
     cm.add_color(0,Color(1,1,0));
     cm.add_color(40,Color(1,0,0));
@@ -14,6 +14,7 @@ int main()
     cm.add_color(100,Color(1,1,1));
 
     cm.export_courbe(TEMPO_PATH + "data.txt");
+    cm.export_img_palette(512, TEMPO_PATH + "palette.png");
 
 
     //filtrage color map

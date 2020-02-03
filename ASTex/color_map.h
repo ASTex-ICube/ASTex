@@ -4,6 +4,7 @@
 #include <ASTex/image_rgb.h>
 #include <map>
 #include <ASTex/utils.h>
+#include <ASTex/easy_io.h>
 
 namespace ASTex {
 
@@ -21,6 +22,7 @@ private:
     ImageRGB<T> filtered;
     T sigma_max;
     int width, height;
+    bool isfiltered = false;
 
     Color map(const T &x) const {
         Color ret;
@@ -55,6 +57,7 @@ private:
 
         return ret;
     }
+
 
     T numeric_integration_gauss1D(const T&a, const T&b, const int &n, const T&mu, const T& sigma){
         T sum(0);
@@ -127,6 +130,8 @@ public:
 
         });
 
+        isfiltered = true;
+
     }
 
     std::string to_string() const {
@@ -152,6 +157,19 @@ public:
         fd << to_string();
 
         fd.close();
+    }
+
+    void export_img_palette(const int & h, const std::string &filename) const {
+        ImageRGB<T> im(20, h);
+        im.parallel_for_all_pixels([&](typename ImageRGB<T>::PixelType &pix, int i, int j){
+            T y = T(j) / T(im.height());
+            if (!isfiltered)
+                pix = ImageRGB<T>::itkPixel(map(y));
+            else
+                pix = ImageRGB<T>::itkPixel(map(y,0));
+        });
+        IO::save01_in_u8(im, filename);
+
     }
 
     void export_courbe(const std::string &filename = "data.txt") const {
