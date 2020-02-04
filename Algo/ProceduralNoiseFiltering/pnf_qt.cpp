@@ -10,8 +10,15 @@ int main(int argc, char **argv)
 {
     QApplication app(argc, argv);
 
-    ImageSpectrald psd;
-    IO::loadu8_in_01(psd, TEMPO_PATH + "spectra/spectrum_5.png");
+    ImageSpectrald psd(256,256);
+    psd.for_all_pixels([](ImageSpectrald::PixelType &pix, int x,int y){
+        if(std::sqrt(std::pow(x-128,2) + std::pow(y-128,2)) <= 40)
+            pix = 1.;
+        else
+            pix = 0.;
+    });
+    //psd.load(TEMPO_PATH + "spectra/spectrum_1.png");
+    //IO::loadu8_in_01(psd, TEMPO_PATH + "spectra/spectrum_5.png");
 
     TextureNoise<T> texture_noise(psd);
     Color_map<T> cm;
@@ -20,7 +27,7 @@ int main(int argc, char **argv)
     IO::loadu8_in_01(c0_,TEMPO_PATH+ "color_map_filtered.png");
     cm.set_filtered(c0_,0.5);
 
-    Vec2 w_size(2048,2048);
+    Vec2 w_size(256,256);
     Vec2 im_size(512,512);
 
 

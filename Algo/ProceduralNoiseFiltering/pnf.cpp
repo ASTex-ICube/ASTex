@@ -7,11 +7,31 @@ int main()
 {
     Noise<T> noise(1000,10.,20.);
     Color_map<T> cm;
+
+//  palette 1
     cm.add_color(0,Color(1,1,0));
     cm.add_color(40,Color(1,0,0));
     cm.add_color(59,Color(0,0,0));
     cm.add_color(60,Color(1,1,1));
     cm.add_color(100,Color(1,1,1));
+
+
+//  palette 2
+//    cm.add_color(0,Color(0,0,1));
+//    cm.add_color(1,Color(0,1,0));
+//    cm.add_color(2,Color(1,0,0));
+
+//  palette 3
+//    cm.add_color(0, Color(154./255., 173./255., 213./255.));
+//    cm.add_color(1, Color(196./255., 192./255., 144./255.));
+
+//  palette 4
+//    cm.add_color(0, Color(0,0,0));
+//    cm.add_color(4, Color(0,0,0));
+//    cm.add_color(5, Color(1,1,1));
+//    cm.add_color(7, Color(1,1,1));
+//    cm.add_color(9, Color(199./255., 139./255., 105./255.));
+//    cm.add_color(10, Color(199./255., 139./255., 105./255.));
 
     cm.export_courbe(TEMPO_PATH + "data.txt");
     cm.export_img_palette(512, TEMPO_PATH + "palette.png");

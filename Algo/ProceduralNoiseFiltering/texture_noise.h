@@ -22,16 +22,22 @@ public:
     TextureNoise() {}
     TextureNoise(ImageSpectrald &psd) {
 
-        psd.for_all_pixels([&] (ImageSpectrald::PixelType &pix)
+        T var(0);
+        T mean(psd.pixelAbsolute(psd.width()/2, psd.height()/2));
+        psd.for_all_pixels([&] (ImageSpectrald::PixelType &pix,int x, int y)
         {
-            pix = std::sqrt(pix);
+            if(x != psd.width()/2 && y != psd.height()/2)
+                var += std::pow(std::abs(pix), 2);
+            //pix = std::sqrt(pix);
         });
+
 
         ImageSpectrald phase;
         noise.initItk(psd.width(),psd.height());
         rpn_scalar(psd, phase, noise);
-        noise.for_all_pixels([] (typename ImageGray<T>::PixelType &pix)
+        noise.for_all_pixels([&] (typename ImageGray<T>::PixelType &pix)
         {
+            pix = var * pix + mean;
             pix = clamp_scalar(pix, T(0), T(1));
         });
 
@@ -71,9 +77,9 @@ private :
         Vec2 corner = pos - footprint * T(0.5);
         T2 ret = initialisation();
         T nb(0);
-        for(int i = 0; i < static_cast<int>(footprint(1)); ++i){
+        for(int i = 0; i <= static_cast<int>(footprint(1)) ; ++i){
             int y = static_cast<int>(corner(1)) + i;
-            for (int j=0; j < static_cast<int>(footprint(0)); ++j) {
+            for (int j=0; j <= static_cast<int>(footprint(0)); ++j) {
                 int x = static_cast<int>(corner(0)) + j;
                 T value_noise = get(x,y);
                 ret += f(value_noise);

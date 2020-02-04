@@ -25,7 +25,7 @@ public :
         const T Pi = 4 * std::atan(T(1));
 
         std::random_device rd;
-        std::mt19937 gen(rd());
+        std::mt19937 gen(0);
         //[0;2Pi[
         std::uniform_real_distribution<T> phases_dis(T(0), T(2) * Pi);
         //[10;20[
@@ -58,9 +58,9 @@ private:
         Vec2 corner = pos - footprint * T(0.5);
 
         for (int i =0; i < nb_sample; ++i) {
-            T y = corner(1) + i * step;
+            T y = corner(1) + i * step * footprint(1);
             for(int j=0; j < nb_sample; ++j) {
-                T x = corner(0) + j * step;
+                T x = corner(0) + j * step * footprint(0);
 
                 T value_noise = basic2D(Vec2(x,y)) ;
                 ret += f(value_noise);

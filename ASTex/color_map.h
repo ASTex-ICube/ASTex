@@ -160,7 +160,7 @@ public:
     }
 
     void export_img_palette(const int & h, const std::string &filename) const {
-        ImageRGB<T> im(20, h);
+        ImageRGB<T> im(25, h);
         im.parallel_for_all_pixels([&](typename ImageRGB<T>::PixelType &pix, int i, int j){
             T y = T(j) / T(im.height());
             if (!isfiltered)

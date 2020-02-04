@@ -22,7 +22,7 @@ inline ImageRGB<T> computeIMG(const Vec2 & w_size, const Vec2 &im_size, const fu
     Vec2 center = Vec2(borns(0),borns(3)) / T(2);
 
     ImageRGB<T> im(static_cast<int>(im_size(0)),static_cast<int>(im_size(1)));
-    im.parallel_for_all_pixels([&](ImageRGB<T>::PixelType &pix,int i,int j)
+    im.for_all_pixels([&](ImageRGB<T>::PixelType &pix,int i,int j)
     {
         // x = pos(0) between [-center(0),center(0)]
         // y = pos(1) between [-center(1),center(1)]
@@ -124,12 +124,9 @@ inline ImageRGB<T> compute_ground_truth_IMG(const Vec2 & w_size,
     Vec2 t_size(n.width(), n.height());
     Vec2 footprint(w_size(0) / t_size(0), w_size(1) / t_size(1));
 
-    if(footprint(0) < T(1) || footprint(1) < T(1))
-        return compute_unfiltered_IMG(w_size, im_size, n, cm);
-    else
-        return computeIMG(offset, w_size, im_size, [&](const Vec2 &pos) {
-            return n.get_color_mean_over_footprint(pos, footprint, cm);
-        });
+    return computeIMG(offset, w_size, im_size, [&](const Vec2 &pos) {
+        return n.get_color_mean_over_footprint(pos, footprint, cm);
+    });
 }
 
 inline ImageRGB<T> compute_naive_filter_IMG(const Vec2 & w_size,
@@ -143,13 +140,10 @@ inline ImageRGB<T> compute_naive_filter_IMG(const Vec2 & w_size,
     Vec2 t_size(n.width(), n.height());
     Vec2 footprint(w_size(0) / t_size(0), w_size(1) / t_size(1));
 
-    if(footprint(0) < T(1) || footprint(1) < T(1))
-        return compute_unfiltered_IMG(w_size, im_size, n, cm);
-    else
-        return computeIMG(offset, w_size, im_size, [&](const Vec2 &pos) {
-            T mean = n.get_noise_mean_over_footprint(pos, footprint);
-            return cm.map(mean, 0);
-        });
+    return computeIMG(offset, w_size, im_size, [&](const Vec2 &pos) {
+        T mean = n.get_noise_mean_over_footprint(pos, footprint);
+        return cm.map(mean, 0);
+    });
 }
 
 inline ImageRGB<T> compute_good_filter_IMG(const Vec2 & w_size,
@@ -163,15 +157,12 @@ inline ImageRGB<T> compute_good_filter_IMG(const Vec2 & w_size,
     Vec2 t_size(n.width(), n.height());
     Vec2 footprint(w_size(0) / t_size(0), w_size(1) / t_size(1));
 
-    if(footprint(0) < T(1) || footprint(1) < T(1))
-        return compute_unfiltered_IMG(w_size, im_size, n, cm);
-    else
-        return computeIMG(offset, w_size, im_size, [&](const Vec2 &pos) {
-            T mean = n.get_noise_mean_over_footprint(pos, footprint);
-            T squared_mean = n.get_squared_noise_mean_over_footprint(pos, footprint);
-            T sigma = std::sqrt(squared_mean - mean * mean);
-            return cm.map(mean,sigma);
-        });
+    return computeIMG(offset, w_size, im_size, [&](const Vec2 &pos) {
+        T mean = n.get_noise_mean_over_footprint(pos, footprint);
+        T squared_mean = n.get_squared_noise_mean_over_footprint(pos, footprint);
+        T sigma = std::sqrt(squared_mean - mean * mean);
+        return cm.map(mean,sigma);
+    });
 }
 
 }
