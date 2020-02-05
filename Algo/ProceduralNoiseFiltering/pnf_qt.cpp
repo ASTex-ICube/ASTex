@@ -10,15 +10,16 @@ int main(int argc, char **argv)
 {
     QApplication app(argc, argv);
 
-    ImageSpectrald psd(256,256);
-    psd.for_all_pixels([](ImageSpectrald::PixelType &pix, int x,int y){
-        if(std::sqrt(std::pow(x-128,2) + std::pow(y-128,2)) <= 40)
-            pix = 1.;
-        else
-            pix = 0.;
-    });
-    //psd.load(TEMPO_PATH + "spectra/spectrum_1.png");
-    //IO::loadu8_in_01(psd, TEMPO_PATH + "spectra/spectrum_5.png");
+
+//    ImageSpectrald psd;
+//    IO::loadu8_in_01(psd, TEMPO_PATH + "spectra/psd.png");
+//    IO::load_spectrum(psd , TEMPO_PATH + "spectra/psd.png");
+
+    ImageGray<T> example_noise;
+    IO::loadu8_in_01(example_noise, TEMPO_PATH + "gray_png/g00.png");
+
+    ImageSpectrald psd, phase;
+    Fourier::fftForwardModulusAndPhase(example_noise, psd, phase);
 
     TextureNoise<T> texture_noise(psd);
     Color_map<T> cm;
@@ -27,7 +28,7 @@ int main(int argc, char **argv)
     IO::loadu8_in_01(c0_,TEMPO_PATH+ "color_map_filtered.png");
     cm.set_filtered(c0_,0.5);
 
-    Vec2 w_size(256,256);
+    Vec2 w_size(512,512);
     Vec2 im_size(512,512);
 
 
@@ -70,6 +71,11 @@ int main(int argc, char **argv)
 
 
     //show window
+
+//    ImageViewer iv_en("Example noise");
+//    iv_en.update(example_noise);
+//    iv_en.show();
+
     ImageViewer iv_psd("PSD");
     iv_psd.update(psd);
     iv_psd.show();

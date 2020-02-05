@@ -106,6 +106,9 @@ public:
         int y = f * (height-1);
         int x = sigma * (width-1) / sigma_max;
 
+        x = static_cast<int>(clamp_scalar(T(x), T(0), T(width-1)));
+        y = static_cast<int>(clamp_scalar(T(y), T(0), T(height-1)));
+
         return filtered.pixelEigenAbsolute(x,y);
     }
 
@@ -161,7 +164,7 @@ public:
 
     void export_img_palette(const int & h, const std::string &filename) const {
         ImageRGB<T> im(25, h);
-        im.parallel_for_all_pixels([&](typename ImageRGB<T>::PixelType &pix, int i, int j){
+        im.parallel_for_all_pixels([&](typename ImageRGB<T>::PixelType &pix, int , int j){
             T y = T(j) / T(im.height());
             if (!isfiltered)
                 pix = ImageRGB<T>::itkPixel(map(y));

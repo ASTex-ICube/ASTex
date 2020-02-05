@@ -22,22 +22,23 @@ public:
     TextureNoise() {}
     TextureNoise(ImageSpectrald &psd) {
 
-        T var(0);
-        T mean(psd.pixelAbsolute(psd.width()/2, psd.height()/2));
-        psd.for_all_pixels([&] (ImageSpectrald::PixelType &pix,int x, int y)
+        psd.for_all_pixels([&] (ImageSpectrald::PixelType &pix)
         {
-            if(x != psd.width()/2 && y != psd.height()/2)
-                var += std::pow(std::abs(pix), 2);
-            //pix = std::sqrt(pix);
+            //pix = std::sqrt(pix / T(psd.width()));
+            std::cout << pix << std::endl;
         });
 
 
-        ImageSpectrald phase;
         noise.initItk(psd.width(),psd.height());
+//        Fourier::RPnoise_mosaic_periodique(psd, noise);
+        ImageSpectrald phase;
         rpn_scalar(psd, phase, noise);
+        IO::save_phase(phase, TEMPO_PATH + "phases.png");
+        IO::save01_in_u8(psd, TEMPO_PATH + "psd.png");
         noise.for_all_pixels([&] (typename ImageGray<T>::PixelType &pix)
         {
-            pix = var * pix + mean;
+            //pix /= 6;
+            //pix += 0.5;
             pix = clamp_scalar(pix, T(0), T(1));
         });
 
