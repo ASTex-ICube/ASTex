@@ -22,7 +22,7 @@ inline ImageRGB<T> computeIMG(const Vec2 & w_size, const Vec2 &im_size, const fu
     Vec2 center = Vec2(borns(0),borns(3)) / T(2);
 
     ImageRGB<T> im(static_cast<int>(im_size(0)),static_cast<int>(im_size(1)));
-    im.for_all_pixels([&](ImageRGB<T>::PixelType &pix,int i,int j)
+    im.parallel_for_all_pixels([&](ImageRGB<T>::PixelType &pix,int i,int j)
     {
         // x = pos(0) between [-center(0),center(0)]
         // y = pos(1) between [-center(1),center(1)]

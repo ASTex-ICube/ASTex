@@ -11,15 +11,14 @@ int main(int argc, char **argv)
     QApplication app(argc, argv);
 
 
-//    ImageSpectrald psd;
-//    IO::loadu8_in_01(psd, TEMPO_PATH + "spectra/psd.png");
-//    IO::load_spectrum(psd , TEMPO_PATH + "spectra/psd.png");
+    ImageSpectrald psd;
+    IO::EXR::load(psd, TEMPO_PATH + "spectra/donut_black.exr");
 
-    ImageGray<T> example_noise;
-    IO::loadu8_in_01(example_noise, TEMPO_PATH + "gray_png/g00.png");
+//    ImageGray<T> example_noise;
+//    IO::loadu8_in_01(example_noise, TEMPO_PATH + "gray_png/gc04.png");
 
-    ImageSpectrald psd, phase;
-    Fourier::fftForwardModulusAndPhase(example_noise, psd, phase);
+//    ImageSpectrald psd, phase;
+//    Fourier::fftForwardModulusAndPhase(example_noise, psd, phase);
 
     TextureNoise<T> texture_noise(psd);
     Color_map<T> cm;
@@ -28,7 +27,7 @@ int main(int argc, char **argv)
     IO::loadu8_in_01(c0_,TEMPO_PATH+ "color_map_filtered.png");
     cm.set_filtered(c0_,0.5);
 
-    Vec2 w_size(512,512);
+    Vec2 w_size(64,64);
     Vec2 im_size(512,512);
 
 

@@ -6,6 +6,7 @@
 #include <ASTex/image_spectral.h>
 #include <ASTex/rpn_utils.h>
 #include <ASTex/color_map.h>
+#include <ASTex/exr_io.h>
 
 namespace ASTex {
 
@@ -21,20 +22,14 @@ public:
 
     TextureNoise() {}
     TextureNoise(ImageSpectrald &psd) {
-
-        psd.for_all_pixels([&] (ImageSpectrald::PixelType &pix)
-        {
-            //pix = std::sqrt(pix / T(psd.width()));
-            std::cout << pix << std::endl;
-        });
-
-
         noise.initItk(psd.width(),psd.height());
-//        Fourier::RPnoise_mosaic_periodique(psd, noise);
+
         ImageSpectrald phase;
         rpn_scalar(psd, phase, noise);
-        IO::save_phase(phase, TEMPO_PATH + "phases.png");
-        IO::save01_in_u8(psd, TEMPO_PATH + "psd.png");
+
+        //IO::save_phase(phase, TEMPO_PATH + "phases.png");
+        //IO::EXR::save(psd, TEMPO_PATH + "psd.exr");
+
         noise.for_all_pixels([&] (typename ImageGray<T>::PixelType &pix)
         {
             //pix /= 6;
