@@ -52,7 +52,7 @@ int main()
 //    IO::loadu8_in_01(c0_,TEMPO_PATH+ "color_map_filtered.png");
 //    cm.set_filtered(c0_,T(0.5));
 
-    Vec2 w_size(512,512);
+    Vec2 w_size(32,32);
     Vec2 im_size(512,512);
 
     //unfilterd noise
@@ -62,7 +62,7 @@ int main()
     elapsed_seconds = std::chrono::system_clock::now() - start_chrono;
     std::cout << "synthe unfiltering timing: " << elapsed_seconds.count() << " s." << std::endl;
 
-    IO::save01_in_u8(unfiltered,TEMPO_PATH + "noise_unfiltered.png");
+    IO::save01_in_u8(unfiltered,TEMPO_PATH + "noise_unfiltered_sum_cosines_32x32.png");
 
     //ground truth
 
@@ -72,7 +72,7 @@ int main()
     elapsed_seconds = std::chrono::system_clock::now() - start_chrono;
     std::cout << "synthe ground_truth timing: " << elapsed_seconds.count() << " s." << std::endl;
 
-    IO::save01_in_u8(ground_truth,TEMPO_PATH + "ground_truth.png");
+    IO::save01_in_u8(ground_truth,TEMPO_PATH + "ground_truth_sum_cosines_32x32.png");
 
     //naive filtering
     start_chrono = std::chrono::system_clock::now();
@@ -81,7 +81,7 @@ int main()
     elapsed_seconds = std::chrono::system_clock::now() - start_chrono;
     std::cout << "synthe naive filtering timing: " << elapsed_seconds.count() << " s." << std::endl;
 
-    IO::save01_in_u8(naive,TEMPO_PATH + "noise_naive_filtered.png");
+    IO::save01_in_u8(naive,TEMPO_PATH + "noise_naive_filtered_sum_cosines_32x32.png");
 
     //good filtering
     start_chrono = std::chrono::system_clock::now();
@@ -90,7 +90,7 @@ int main()
     elapsed_seconds = std::chrono::system_clock::now() - start_chrono;
     std::cout << "synthe good filtering timing: " << elapsed_seconds.count() << " s." << std::endl;
 
-    IO::save01_in_u8(filtered,TEMPO_PATH + "noise_filtered.png");
+    IO::save01_in_u8(filtered,TEMPO_PATH + "noise_filtered_sum_cosines_32x32.png");
 
     return 0;
 }
