@@ -22,13 +22,20 @@ public:
 
     TextureNoise() {}
     TextureNoise(ImageSpectrald &psd) {
+
+        T var(0);
+        psd.for_all_pixels([](typename ImageGray<T>::PixelType &pix){
+            //pix *=0.5;
+        });
+
         noise.initItk(psd.width(),psd.height());
 
         ImageSpectrald phase;
         rpn_scalar(psd, phase, noise);
 
         //IO::save_phase(phase, TEMPO_PATH + "phases.png");
-        //IO::EXR::save(psd, TEMPO_PATH + "psd.exr");
+        IO::save01_in_u8(psd, TEMPO_PATH + "psd.png");
+        IO::EXR::save(psd, TEMPO_PATH + "psd.exr");
 
         noise.for_all_pixels([&] (typename ImageGray<T>::PixelType &pix)
         {
@@ -44,6 +51,10 @@ public:
 
     ImageGray<T> getNoise() const {
         return noise;
+    }
+
+    void setNoise(const ImageGray<T> &im){
+        noise = im;
     }
 
     int width() const {
