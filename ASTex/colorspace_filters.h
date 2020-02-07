@@ -509,7 +509,39 @@ template< class TInput, class TOutput>
 using FilterGray01To255 = itk::UnaryFunctorImageFilter< TInput, TOutput,
 						fonctorGray01To255< typename TInput::PixelType, typename TOutput::PixelType> >;
 
+// 65535 -> 01
+template< class TInput, class TOutput>
+class fonctorGray65535To01
+{
+public:
+    inline TOutput operator()( const TInput & p ) const
+    {
+        return 1.0/65535.0*p;
+    }
+};
 
+
+
+template< class TInput, class TOutput>
+using FilterGray65535To01 = itk::UnaryFunctorImageFilter< TInput, TOutput,
+                        fonctorGray65535To01< typename TInput::PixelType, typename TOutput::PixelType> >;
+
+
+template< class TInput, class TOutput>
+class fonctorGray01To65535
+{
+public:
+    inline TOutput operator()( const TInput & p ) const
+    {
+        return 65535.0*p;
+    }
+};
+
+
+/// \brief type definition for filter LAB -> XYZ
+template< class TInput, class TOutput>
+using FilterGray01To65535 = itk::UnaryFunctorImageFilter< TInput, TOutput,
+                        fonctorGray01To65535< typename TInput::PixelType, typename TOutput::PixelType> >;
 
 
 
@@ -553,6 +585,44 @@ using FilterRGB01To255 = itk::UnaryFunctorImageFilter< TInput, TOutput,
 						fonctorRGB01To255< typename TInput::PixelType, typename TOutput::PixelType> >;
 
 
+template< class TInput, class TOutput>
+class fonctorRGB65535To01
+{
+public:
+    inline TOutput operator()( const TInput & p ) const
+    {
+        TOutput q;
+        for (uint32_t i=0; i<TInput::Length; ++i)
+            q[i] = 1.0/65535.0*p[i];
+        return q;
+    }
+};
+
+
+/// \brief type definition for filter LAB -> XYZ
+template< class TInput, class TOutput>
+using FilterRGB65535To01 = itk::UnaryFunctorImageFilter< TInput, TOutput,
+                        fonctorRGB65535To01< typename TInput::PixelType, typename TOutput::PixelType> >;
+
+
+template< class TInput, class TOutput>
+class fonctorRGB01To65535
+{
+public:
+    inline TOutput operator()( const TInput & p ) const
+    {
+        TOutput q;
+        for (uint32_t i=0; i<TInput::Length; ++i)
+            q[i] = 65535.0*p[i];
+        return q;
+    }
+};
+
+
+
+template< class TInput, class TOutput>
+using FilterRGB01To65535 = itk::UnaryFunctorImageFilter< TInput, TOutput,
+                        fonctorRGB01To65535< typename TInput::PixelType, typename TOutput::PixelType> >;
 
 
 
