@@ -8,7 +8,7 @@ find_package(Qt5 COMPONENTS Widgets)
 add_definitions(-DTEMPO_PATH=std::string\(\"${ASTEX_TEMPO_PATH}/\"\) )
 
 add_executable(pnf_texture "")
-target_sources(pnf_texture PRIVATE pnf_texture.cpp pnf.h)
+target_sources(pnf_texture PRIVATE pnf_texture.cpp pnf.h texture_noise.h)
 target_link_libraries(pnf_texture ASTex)
 
 add_executable(pnf "")

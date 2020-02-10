@@ -22,11 +22,26 @@ public:
 
     TextureNoise() {}
     TextureNoise(ImageSpectrald &psd) {
+        noise.initItk(psd.width(),psd.height());
 
-        T var(0);
-        psd.for_all_pixels([](typename ImageGray<T>::PixelType &pix){
-            //pix *=0.5;
+        ImageSpectrald phase;
+        rpn_scalar(psd, phase, noise);
+
+        noise.for_all_pixels([] (typename ImageGray<T>::PixelType &pix)
+        {
+            pix = clamp_scalar(pix, T(0), T(1));
         });
+    }
+
+    TextureNoise(ImageSpectrald &psd, const T &m, const T &s) {
+
+//        T var(0),mean(0);
+//        psd.for_all_pixels([&](typename ImageGray<T>::PixelType &pix, int x, int y){
+//            if( x == psd.width() /2 && y == psd.height()/2)
+//                mean = pix;
+//            else
+//                var += pix * pix ;
+//        });
 
         noise.initItk(psd.width(),psd.height());
 
@@ -35,12 +50,16 @@ public:
 
         //IO::save_phase(phase, TEMPO_PATH + "phases.png");
         IO::save01_in_u8(psd, TEMPO_PATH + "psd.png");
-        IO::EXR::save(psd, TEMPO_PATH + "psd.exr");
+        //IO::EXR::save(psd, TEMPO_PATH + "psd.exr");
+        T mean = getMean(noise);
+        T sigma = getStDev(noise);
+        std::cout << mean << std::endl;
+        std::cout << sigma << std::endl;
 
         noise.for_all_pixels([&] (typename ImageGray<T>::PixelType &pix)
         {
-            //pix /= 6;
-            //pix += 0.5;
+            pix *= s * 1.0/sigma;
+            pix += m - mean;
             pix = clamp_scalar(pix, T(0), T(1));
         });
 
