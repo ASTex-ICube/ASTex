@@ -183,7 +183,7 @@ public:
             fd << it->second[0] << " " << it->second[1] << " " << it->second[2] << std::endl;
         }
         fd << std::endl << std::endl;
-        for (int i =0; i < 100; i++) {
+        for (int i =0; i <= 100; i++) {
             T x( T(i) / T(100));
             Color c = map(x);
             fd << c[0] << " " << c[1] << " " << c[2] << std::endl;
