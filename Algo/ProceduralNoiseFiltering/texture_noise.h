@@ -92,8 +92,8 @@ public:
     }
 
     T get(const Vec2 &pos) const {
-        int x = static_cast<int>(pos(0));
-        int y = static_cast<int>(pos(1));
+        int x = static_cast<int>(std::floor(pos(0)));
+        int y = static_cast<int>(std::floor(pos(1)));
         return get(x,y);
     }
 
@@ -101,21 +101,52 @@ private :
     template<typename T2,typename init, typename func>
     T2 get_over_footprint(const Vec2 &pos, const Vec2 &footprint, const init &initialisation, const func &f) const{
         Vec2 corner = pos - footprint * T(0.5);
+        int nb_texel_x = static_cast<int>(std::ceil(footprint(0)));
+        int nb_texel_y = static_cast<int>(std::ceil(footprint(1)));
         T2 ret = initialisation();
-        T nb(0);
-        for(int i = 0; i <= static_cast<int>(footprint(1)) ; ++i){
-            int y = static_cast<int>(corner(1)) + i;
-            for (int j=0; j <= static_cast<int>(footprint(0)); ++j) {
-                int x = static_cast<int>(corner(0)) + j;
+        for(int i = 0; i < nb_texel_y ; ++i){
+            int y = static_cast<int>(std::floor(corner(1))) + i;
+            for (int j=0; j < nb_texel_x ; ++j) {
+                int x = static_cast<int>(std::floor(corner(0))) + j;
                 T value_noise = get(x,y);
                 ret += f(value_noise);
-                nb++;
             }
         }
 
-        ret /= nb;
+        ret /= nb_texel_x * nb_texel_y;
 
         return ret;
+
+//        Vec2 corner_start = pos - footprint * T(0.5);
+//        T2 ret = initialisation();
+//        int nb_texel_x = static_cast<int>(std::ceil(footprint(0)));
+//        int nb_texel_y = static_cast<int>(std::ceil(footprint(1)));
+
+//        for(int i = 0; i < nb_texel_y ; ++i){
+//            //int y = static_cast<int>(std::floor(corner_start(1))) + i;
+//            T y  = corner_start(1) + i;
+//            T y_floor = std::floor(y);
+//            T y_ceil = std::ceil(y);
+//            T u = y - y_floor;
+
+//            for (int j=0; j < nb_texel_x; ++j) {
+//                //int x = static_cast<int>(std::floor(corner_start(0))) + j;
+//                T x = corner_start(0) + j;
+//                T x_floor = std::floor(x);
+//                T x_ceil = std::ceil(x);
+//                T v = x - x_floor;
+
+//                T v1 = (1 - u) * get(x_floor, y_floor) + u * get(x_floor, y_ceil);
+//                T v2 = (1 - u) * get(x_ceil, y_floor) + u * get(x_ceil, y_ceil);
+
+//                T value_noise = (1 - v) * v1 + v * v2;
+//                ret += f(value_noise);
+//            }
+//        }
+
+//        ret /= nb_texel_x * nb_texel_y;
+
+//        return ret;
     }
 
 public:
