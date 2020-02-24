@@ -8,10 +8,10 @@ using namespace ASTex;
 int main()
 {
     ImageGray<T> noise;
-    IO::loadu16_in_01(noise, TEMPO_PATH + "noise/voronoi_repeat_non_gauss.png");
+    IO::loadu16_in_01(noise, TEMPO_PATH + "noise/voronoi_repeat_gauss.png");
 
 //    ImageSpectrald psd;
-//    IO::loadu8_in_01(psd, TEMPO_PATH + "spectra/donut_black.png");
+//    IO::EXR::load(psd, TEMPO_PATH + "spectra/donut_black.exr");
 
 //    ImageGray<T> example_noise;
 //    IO::loadu8_in_01(example_noise, TEMPO_PATH + "gray_png/gc12.png");
@@ -27,22 +27,38 @@ int main()
     IO::loadu8_in_01(c0_,TEMPO_PATH+ "color_map_filtered.png");
     cm.set_filtered(c0_,0.3);
 
-    Vec2 w_size(noise.width()*0.125, noise.height()*0.125);
+    Vec2 w_size(noise.width()*16, noise.height()*16);
     Vec2 im_size(1024,1024);
 
 
     // compute
 
-//    ImageGray<T> noise = texture_noise.getNoise();
+    //ImageGray<T> noise = texture_noise.getNoise();
 
-
-    // noise unfiltered
+    //noise unfilered
     auto start_chrono = std::chrono::system_clock::now();
+
+    ImageGray<T> im_noise_unfiltered = compute_noise_unfiltered(w_size, im_size, texture_noise);
+
+    std::chrono::duration<double> elapsed_seconds = std::chrono::system_clock::now() - start_chrono;
+    std::cout << "synthe noise unfiltered timing: " << elapsed_seconds.count() << " s." << std::endl;
+
+    //noise filtered
+    start_chrono = std::chrono::system_clock::now();
+
+    ImageGray<T> im_noise_filtered = compute_noise_filtered(w_size, im_size, texture_noise);
+
+    elapsed_seconds = std::chrono::system_clock::now() - start_chrono;
+    std::cout << "synthe noise filtered timing: " << elapsed_seconds.count() << " s." << std::endl;
+
+
+    // noise mapped unfiltered
+    start_chrono = std::chrono::system_clock::now();
 
     ImageRGB<T> im_noise_cm = compute_unfiltered_IMG(w_size, im_size, texture_noise, cm);
 
-    std::chrono::duration<double> elapsed_seconds = std::chrono::system_clock::now() - start_chrono;
-    std::cout << "synthe unfiltering timing: " << elapsed_seconds.count() << " s." << std::endl;
+    elapsed_seconds = std::chrono::system_clock::now() - start_chrono;
+    std::cout << "synthe noise mapped unfiltered timing: " << elapsed_seconds.count() << " s." << std::endl;
 
 
     // ground truth
@@ -51,7 +67,7 @@ int main()
     ImageRGB<T> im_ground_truth = compute_ground_truth_IMG(w_size, im_size, texture_noise, cm);
 
     elapsed_seconds = std::chrono::system_clock::now() - start_chrono;
-    std::cout << "synthe ground_truth timing: " << elapsed_seconds.count() << " s." << std::endl;
+    std::cout << "synthe ground truth timing: " << elapsed_seconds.count() << " s." << std::endl;
 
 
     // naive filter
@@ -60,7 +76,7 @@ int main()
     ImageRGB<T> im_noise_cm_naive_filter = compute_naive_filter_IMG(w_size, im_size, texture_noise, cm);
 
     elapsed_seconds = std::chrono::system_clock::now() - start_chrono;
-    std::cout << "synthe naive filtering timing: " << elapsed_seconds.count() << " s." << std::endl;
+    std::cout << "synthe noise mapped naive filtering timing: " << elapsed_seconds.count() << " s." << std::endl;
 
     //good filter
     start_chrono = std::chrono::system_clock::now();
@@ -68,19 +84,23 @@ int main()
     ImageRGB<T> im_noise_cm_good_filter = compute_good_filter_IMG(w_size, im_size, texture_noise, cm);
 
     elapsed_seconds = std::chrono::system_clock::now() - start_chrono;
-    std::cout << "synthe good filtering timing: " << elapsed_seconds.count() << " s." << std::endl;
+    std::cout << "synthe noise mapped good filtering timing: " << elapsed_seconds.count() << " s." << std::endl;
 
 //    IO::save01_in_u8(noise, TEMPO_PATH + "texture_noise.png");
+//    IO::save01_in_u8(im_noise_filtered,TEMPO_PATH + "texture_noise_unfilered.png");
+//    IO::save01_in_u8(im_noise_unfiltered,TEMPO_PATH + "texture_noise_filered.png");
 //    IO::save01_in_u8(im_noise_cm,TEMPO_PATH + "texture_noise_unfilered.png");
 //    IO::save01_in_u8(im_ground_truth,TEMPO_PATH + "texture_ground_truth.png");
 //    IO::save01_in_u8(im_noise_cm_naive_filter,TEMPO_PATH + "texture_noise_naive_filtering.png");
 //    IO::save01_in_u8(im_noise_cm_good_filter,TEMPO_PATH + "texture_noise_goood_filtering.png");
 
-//    IO::save01_in_u16(noise, TEMPO_PATH + "texture2_noise.png");
-    IO::save01_in_u16(im_noise_cm,TEMPO_PATH + "texture2_noise_unfilered.png");
-    IO::save01_in_u16(im_ground_truth,TEMPO_PATH + "texture2_ground_truth.png");
-    IO::save01_in_u16(im_noise_cm_naive_filter,TEMPO_PATH + "texture2_noise_naive_filtering.png");
-    IO::save01_in_u16(im_noise_cm_good_filter,TEMPO_PATH + "texture2_noise_goood_filtering.png");
+    IO::save01_in_u16(noise, TEMPO_PATH + "texture_noise_example.png");
+    IO::save01_in_u16(im_noise_unfiltered,TEMPO_PATH + "texture_noise_scalar_unfilered.png");
+    IO::save01_in_u16(im_noise_filtered,TEMPO_PATH + "texture_noise_scalar_filered.png");
+    IO::save01_in_u16(im_noise_cm,TEMPO_PATH + "texture_noise_mapped_unfilered.png");
+    IO::save01_in_u16(im_ground_truth,TEMPO_PATH + "texture_noise_mapped_ground_truth.png");
+    IO::save01_in_u16(im_noise_cm_naive_filter,TEMPO_PATH + "texture_noise_mapped_naive_filtering.png");
+    IO::save01_in_u16(im_noise_cm_good_filter,TEMPO_PATH + "texture_noise_mapped_goood_filtering.png");
 
     return 0;
 }
