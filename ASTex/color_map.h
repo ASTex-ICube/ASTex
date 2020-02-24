@@ -59,29 +59,65 @@ private:
     }
 
 
-    T numeric_integration_gauss1D(const T&a, const T&b, const int &n, const T&mu, const T& sigma){
-        T sum(0);
+//    T numeric_integration_gauss1D(const T&a, const T&b, const int &n, const T&mu, const T& sigma){
+//        T sum(0);
+//        for(int k= 1; k <= n-1; ++k){
+//            T v =a + T(k) * (b - a) / T(n);
+//            sum += gauss1D(v, mu, sigma);
+//        }
+//        sum += (gauss1D(a, mu, sigma) + gauss1D(b, mu, sigma)) * T(0.5);
+//        sum *= (b-a) / T(n);
+
+//        return sum;
+//    }
+
+//    Color numeric_integration_col_gauss1D(const T&a, const T&b, const int &n, const T&mu, const T& sigma){
+//        Color sum(0,0,0);
+
+//        for(int k= 1; k <= n-1; ++k){
+//            T v = a + T(k) * (b - a) / T(n);
+//            sum += map(v) * gauss1D(v, mu, sigma);
+//        }
+//        sum += (map(a) * gauss1D(a, mu, sigma) + map(b) * gauss1D(b, mu, sigma)) * T(0.5);
+//        sum *= (b-a) / T(n);
+
+//        return sum;
+//    }
+
+    template<typename T2, typename init, typename func>
+    inline T2 numeric_integration_1D(const T&a, const T&b, const int &n,const init &initialisation,const func &f){
+        T2 sum = initialisation();
         for(int k= 1; k <= n-1; ++k){
             T v =a + T(k) * (b - a) / T(n);
-            sum += gauss1D(v, mu, sigma);
+            sum += f(v);
         }
-        sum += (gauss1D(a, mu, sigma) + gauss1D(b, mu, sigma)) * T(0.5);
+        sum += (f(a) + f(b)) * T(0.5);
         sum *= (b-a) / T(n);
 
         return sum;
     }
 
-    Color numeric_integration_col_gauss1D(const T&a, const T&b, const int &n, const T&mu, const T& sigma){
-        Color sum(0,0,0);
+    T numeric_integration_gauss1D(const T&a,
+                                  const T&b,
+                                  const int &n,
+                                  const T&mu,
+                                  const T& sigma)
+    {
+        return numeric_integration_1D<T>(a, b, n, [](){return T(0);}, [&](const T &x){
+            return gauss1D(x, mu, sigma);
+        });
+    }
 
-        for(int k= 1; k <= n-1; ++k){
-            T v = a + T(k) * (b - a) / T(n);
-            sum += map(v) * gauss1D(v, mu, sigma);
-        }
-        sum += (map(a) * gauss1D(a, mu, sigma) + map(b) * gauss1D(b, mu, sigma)) * T(0.5);
-        sum *= (b-a) / T(n);
-
-        return sum;
+    Color numeric_integration_col_gauss1D(const T&a,
+                                          const T&b,
+                                          const int &n,
+                                          const T& mu,
+                                          const T& sigma)
+    {
+        return numeric_integration_1D<Color>(a, b, n, [](){return Color(0,0,0);}, [&](const T &x){
+            Color ret = map(x) * gauss1D(x, mu, sigma);
+            return ret;
+        });
     }
 
 public:
@@ -122,7 +158,7 @@ public:
         {
             T f = T(j) / T(h);
             T s = T(i) / T(w) * sigma_max;
-            Color c(0,0,0);
+            Color c;
 
             if(s != 0)
                 c = numeric_integration_col_gauss1D(-3*s+f,3*s+f,nb_bins,f,s);
