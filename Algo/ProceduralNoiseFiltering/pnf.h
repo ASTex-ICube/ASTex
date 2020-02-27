@@ -2,8 +2,8 @@
 #define PNF_H
 
 #include <Eigen/Eigen>
-#include <ASTex/color_map.h>
-#include <ASTex/noise.h>
+#include "color_map.h"
+#include "noise.h"
 #include "texture_noise.h"
 
 namespace ASTex {
@@ -12,7 +12,6 @@ using T = double;
 using Vec2 = Eigen::Matrix<T,2,1>;
 using Mat22 = Eigen::Matrix<T,2,2>;
 using Color = Color_map<T>::Color;
-
 
 //function noise
 template<typename IMG, typename func>

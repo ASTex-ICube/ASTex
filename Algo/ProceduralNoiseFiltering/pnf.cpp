@@ -5,15 +5,15 @@ using namespace ASTex;
 
 int main()
 {
-    Noise<T> noise(100,10.,20.);
+    Noise<T> noise(1000,10.,20.);
     Color_map<T> cm;
 
 //  palette a
-    cm.add_color(0,Color(1,1,0));
-    cm.add_color(40,Color(1,0,0));
-    cm.add_color(59,Color(0,0,0));
-    cm.add_color(60,Color(1,1,1));
-    cm.add_color(100,Color(1,1,1));
+//    cm.add_color(0,Color(1,1,0));
+//    cm.add_color(40,Color(1,0,0));
+//    cm.add_color(59,Color(0,0,0));
+//    cm.add_color(60,Color(1,1,1));
+//    cm.add_color(100,Color(1,1,1));
 
 //  palette b
 //    cm.add_color(0, Color(0,0,0));
@@ -28,9 +28,9 @@ int main()
 //    cm.add_color(1, Color(1., 0., 0.));
 
 //  palette d
-//    cm.add_color(0,Color(0,0,1));
-//    cm.add_color(1,Color(0,1,0));
-//    cm.add_color(2,Color(1,0,0));
+    cm.add_color(0,Color(0,0,1));
+    cm.add_color(1,Color(0,1,0));
+    cm.add_color(2,Color(1,0,0));
 
     cm.export_courbe(TEMPO_PATH + "data.txt");
 //    cm.export_img_palette(512, TEMPO_PATH + "palette.png");
@@ -39,10 +39,12 @@ int main()
     //filtrage color map
     auto start_chrono = std::chrono::system_clock::now();
 
-    cm.filter(512,512,200,0.3);
+    cm.filter(128,128,200,0.5);
 
     std::chrono::duration<double> elapsed_seconds = std::chrono::system_clock::now() - start_chrono;
     std::cout << "filtrage de la color map timing: " << elapsed_seconds.count() << " s." << std::endl;
+
+    cm.export_filtered_courbe(TEMPO_PATH + "data2.txt");
 
     ImageRGB<T> c0_ = cm.get_filtered();
     IO::save01_in_u8(c0_,TEMPO_PATH + "color_map_filtered.png");
@@ -51,7 +53,7 @@ int main()
 //    IO::loadu8_in_01(c0_,TEMPO_PATH+ "color_map_filtered.png");
 //    cm.set_filtered(c0_,T(0.5));
 
-    Vec2 w_size(2*256,2*256);
+    Vec2 w_size(2,2);
     Vec2 im_size(512,512);
 
     //unfiltered noise

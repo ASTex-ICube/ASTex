@@ -5,7 +5,7 @@
 #include <ASTex/easy_io.h>
 #include <ASTex/image_spectral.h>
 #include <ASTex/rpn_utils.h>
-#include <ASTex/color_map.h>
+#include "color_map.h"
 #include <ASTex/exr_io.h>
 
 namespace ASTex {
