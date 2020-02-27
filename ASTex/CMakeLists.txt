@@ -59,8 +59,6 @@ target_sources (${PROJECT_NAME} PRIVATE
         Stamping/stamper.h
         PCTS/pcts.h
 
-        noise.h
-        color_map.h
 )
 
 target_sources (${PROJECT_NAME} PRIVATE
