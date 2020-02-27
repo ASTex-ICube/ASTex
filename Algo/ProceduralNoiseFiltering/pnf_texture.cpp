@@ -1,12 +1,62 @@
 #include "texture_noise.h"
 #include "pnf.h"
-#include <ASTex/color_map.h>
+#include "color_map.h"
+#include "gaussian_transfer.h"
+#include "histogram.h"
 #include <ASTex/rpn_utils.h>
 
 using namespace ASTex;
 
 int main()
 {
+    using IMG = ImageGrayf;
+    IMG input;
+    IO::loadu16_in_01(input, TEMPO_PATH + "noise/voronoi_repeat_non_gauss.png");
+
+    Histogram<IMG> h;
+    h.computeHisto(input,256);
+    h.exportHisto(TEMPO_PATH+"histo_input");
+
+    ImageRGBf output;
+    IO::loadu8_in_01(output, TEMPO_PATH + "output.png");
+
+    IMG input_t(input.width(), input.height());
+    Gaussian_transfer::ComputeTinput(input,input_t);
+
+    h.computeHisto(input_t,256);
+    h.exportHisto(TEMPO_PATH+"histo_input_t");
+
+    IO::save01_in_u16(input_t,TEMPO_PATH + "input_t.png");
+
+    IMG lut(256,1);
+    Gaussian_transfer::ComputeinvT(input,lut);
+
+    IO::save01_in_u8(lut,TEMPO_PATH + "lut.png");
+
+    IMG input_t_t_1(input_t.width(), input_t.height());
+    input_t_t_1.parallel_for_all_pixels([&](IMG::PixelType &pix,int x,int y){
+       auto p = input_t.pixelAbsolute(x,y);
+//       auto p = output.pixelAbsolute(x,y);
+//       float r = p.GetRed() * (lut.width()-1);
+//       float g = p.GetGreen() * (lut.width()-1);
+//       float b = p.GetBlue() * (lut.width()-1);
+
+//       r = lut.pixelAbsolute((int)r,0).GetRed();
+//       g = lut.pixelAbsolute((int)g,0).GetGreen();
+//       b = lut.pixelAbsolute((int)b,0).GetBlue();
+
+//       pix =  IMG::itkPixel(r, g, b);
+
+       pix = lut.pixelAbsolute(int(p * (lut.width()-1)),0);
+    });
+
+    h.computeHisto(input_t_t_1,256);
+    h.exportHisto(TEMPO_PATH+"histo_input_t_t_1");
+
+    IO::save01_in_u16(input_t_t_1, TEMPO_PATH + "input_t_t_1.png");
+
+    return EXIT_SUCCESS;
+
     ImageGray<T> noise;
     IO::loadu16_in_01(noise, TEMPO_PATH + "noise/voronoi_repeat_gauss.png");
 
@@ -27,7 +77,7 @@ int main()
     IO::loadu8_in_01(c0_,TEMPO_PATH+ "color_map_filtered.png");
     cm.set_filtered(c0_,0.3);
 
-    Vec2 w_size(noise.width()*16, noise.height()*16);
+    Vec2 w_size(noise.width(), noise.height());
     Vec2 im_size(1024,1024);
 
 
@@ -102,5 +152,5 @@ int main()
     IO::save01_in_u16(im_noise_cm_naive_filter,TEMPO_PATH + "texture_noise_mapped_naive_filtering.png");
     IO::save01_in_u16(im_noise_cm_good_filter,TEMPO_PATH + "texture_noise_mapped_goood_filtering.png");
 
-    return 0;
+    return EXIT_SUCCESS;
 }
