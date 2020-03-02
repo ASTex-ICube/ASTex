@@ -48,7 +48,7 @@ int main(int argc, char **argv)
 	//these import functions turn a texton file into a vizualizable image
 	if(!import_texton(im_texton, filename_source))
 	{
-		assert(import_texton_from_png(im_texton, filename_source));
+		import_texton_from_png(im_texton, filename_source);
 	}
 
 	HistogramRGBd histo_texton(im_texton);

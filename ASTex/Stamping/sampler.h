@@ -31,6 +31,7 @@ public:
 	 * @brief SamplerBase constructor for SamplerBase.
 	 */
 	SamplerBase() {}
+	virtual ~SamplerBase() {}
 
 	/**
 	 * @brief generate a function which yields an array of floating point coordinates.
@@ -46,7 +47,7 @@ public:
 class SamplerOrigin : public SamplerBase
 {
 public:
-	SamplerOrigin(int nbPoints=1):
+	SamplerOrigin(unsigned nbPoints=1):
 		SamplerBase(),
 		m_nbPoints(nbPoints)
 	{}
@@ -72,7 +73,7 @@ public:
 	 * @brief SamplerRegular constructor for SamplerRegular.
 	 * @param nbPoints is the default number of points the generate() function yields.
 	 */
-	SamplerRegular(int nbPoints=0) :
+	SamplerRegular(unsigned nbPoints=0) :
 		SamplerBase(),
 		m_nbPoints(nbPoints)
 	{}
@@ -104,7 +105,7 @@ public:
 	 * @brief SamplerUniform constructor for SamplerUniform.
 	 * @param nbPoints is the default number of points the generate() function yields.
 	 */
-	SamplerUniform(int nbPoints=0) :
+	SamplerUniform(unsigned nbPoints=0) :
 		SamplerBase(),
 		m_nbPoints(nbPoints)
 	{}
@@ -136,7 +137,7 @@ public:
 	 * @brief SamplerPoisson constructor for SamplerPoisson.
 	 * @param nbPoints the default number of points the generate() function yields.
 	 */
-	SamplerPoissonGrid(int nbPoints=0) :
+	SamplerPoissonGrid(unsigned nbPoints=0) :
 		SamplerBase(),
 		m_nbPoints(nbPoints),
 		m_generator(),
