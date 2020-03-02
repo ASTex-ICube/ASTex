@@ -508,6 +508,12 @@ public:
 		return pix==s_zero;
 	}
 
+	static PixelType zero()
+	{
+		static PixelType s_zero;
+		return s_zero;
+	}
+
 	template <typename IMG>
 	auto is_initialized_as(const IMG& img) const -> typename std::enable_if<std::is_base_of<ImageBase,IMG>::value, bool>::type
 	{
@@ -521,6 +527,7 @@ public:
 
 	NOT_CONST auto initItk(int width, int height, bool init_to_zero = false) -> RETURNED_TYPE(void)
 	{
+		static PixelType zero; //Easy zero but requires an access to the static memory
 		this->itk_img_ = ItkImg::New();
 		Region region;
 		region.SetIndex(0,0);
@@ -528,10 +535,12 @@ public:
 		region.SetSize(0,width);
 		region.SetSize(1,height);
 		this->itk_img_->SetRegions(region);
-		this->itk_img_->Allocate(init_to_zero);
+		this->itk_img_->Allocate(init_to_zero); //does not seem to work for arrays?
 
-		for (auto it = this->beginIterator(); !it.IsAtEnd(); ++it)
-			it.Value() = INHERIT::itkPixel(0);
+		if(init_to_zero)
+			for (auto it = this->beginIterator(); !it.IsAtEnd(); ++it)
+				//it.Value() = INHERIT::itkPixel(0); //This does not seem to work for arrays either?
+				it.Value() = zero;
 	}
 
 	NOT_CONST auto initItkValue(int width, int height, const PixelType& value ) -> RETURNED_TYPE(void)
