@@ -567,26 +567,12 @@ ImageRGBd computeGradient(const ImageGrayd &heightField)
 {
 	assert(heightField.is_initialized());
 	ImageRGBd gradientMap;
-	gradientMap.initItk(heightField.width(), heightField.height());
+	gradientMap.initItk(heightField.width()-1, heightField.height()-1);
 	gradientMap.for_all_pixels([&] (ImageRGBd::PixelType &pix, int x, int y)
 	{
-		if(x == heightField.width()-1 || y == heightField.height()-1)//border condition
-		{
-			if(x == heightField.width()-1)
-				pix[0] = (heightField.pixelAbsolute(x, y) - heightField.pixelAbsolute(x-1, y)+1.0) / 2;
-			else
-				pix[0] = (heightField.pixelAbsolute(x+1, y) - heightField.pixelAbsolute(x, y)+1.0) / 2;
-			if(y == heightField.height()-1)
-				pix[1] = (heightField.pixelAbsolute(x, y) - heightField.pixelAbsolute(x, y-1)+1.0) / 2;
-			else
-				pix[1] = (heightField.pixelAbsolute(x, y+1) - heightField.pixelAbsolute(x, y)+1.0) / 2;
-		}
-		else //normal condition
-		{
 			pix[0] = (heightField.pixelAbsolute(x+1, y) - heightField.pixelAbsolute(x, y)+1.0) / 2;
 			pix[1] = (heightField.pixelAbsolute(x, y+1) - heightField.pixelAbsolute(x, y)+1.0) / 2;
-		}
-		pix[2] = 1.0;
+			pix[2] = 1.0;
 	});
 	return gradientMap;
 }

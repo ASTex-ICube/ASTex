@@ -27,15 +27,15 @@ int main(int argc, char **argv)
 //	pProcessor.contents_initRandom();
 	pProcessor.fullProcess_oldMethod();
 
-	create_directory(out_dir);
 	if(argc>3 && std::atoi(argv[3])!=0)
 	{
+		create_directory(out_dir);
 		std::string renderingPackDir = out_dir + "/" + name_noext + "_renderingPack";
 		create_directory(renderingPackDir);
 		pProcessor.saveRenderingPack(renderingPackDir);
 	}
 	pProcessor.setOutputSize(2*im_in.width(), 2*im_in.height());
-	pProcessor.generate().texture().save(out_dir + "/" + name_noext + "_" + std::to_string(time(0)) + ".png");
+	pProcessor.generate().texture().save(out_dir + "/" + name_noext + "_contentExchange" + ".png");
 
 	return 0;
 }

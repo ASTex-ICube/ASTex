@@ -247,7 +247,7 @@ void Atlas<I>::_regenerate(int contentId)
 	//resize image
 
 	init_emplaceAlgorithm(width, height);
-	unsigned x=0, y=0;
+	unsigned y=0;
 	//first emplace the main image, unless patches overlap
 	if(!m_patchProcessor.patchesOverlap() && m_storeHighestLevel)
 		for(unsigned n=0; n<m_patchProcessor.nbPatches(); ++n)
@@ -463,7 +463,7 @@ void Atlas<I>::loadOrigins(const std::string &path)
 template<typename I>
 void Atlas<I>::generateAndSaveAtlas(std::string directory)
 {
-    for(size_t i=0; i<m_patchProcessor.nbContents(); ++i)
+    for(size_t i=0; i<m_patchProcessor.nbContentsPerPatch(); ++i)
     {
         generate(i);
         m_generativeAtlas.save(directory + "/contentAtlas_" + std::to_string(i) + ".png");

@@ -114,7 +114,6 @@ void crop_image(const IMG& input, IMG& output, int i_min, int i_max, int j_min, 
 	static typename IMG::PixelType pix_zero;
 	assert(0<=i_min && i_min < i_max && i_max < input.width() && 0<=j_min && j_min < j_max && j_max < input.height());
 	output.initItk(i_max-i_min+1, j_max-j_min+1, true);
-	nullify_image(output);
 	for(int x = i_min; x <= i_max; x++)
 	{
 		for(int y = j_min; y <= j_max; y++)
@@ -316,7 +315,7 @@ double mse(const I& i1, const I& i2, int x1, int y1, int x2, int y2, int neighbo
 			}
 		}
 	if(hit==0)
-		return std::numeric_limits<double>::infinity(); //Maybe crash the program instead?
+		return std::numeric_limits<double>::infinity();
 	delete[](a_pixi1);
 	delete[](a_pixi2);
 	return error/arraySize/hit; //It returns a double but you may want an array,
@@ -449,6 +448,32 @@ typename I::PixelType bilinear_interpolation(const I& image,
 	}
 	delete[] pixelArray;
 	return outputValue;
+}
+
+template<typename I, typename MASK_TYPE, typename std::enable_if<std::is_floating_point<MASK_TYPE>::value>::type> //I need masks able to
+typename I::PixelType normalize(I &image, const ImageGray<MASK_TYPE> &mask)
+{
+	using PixelType = typename I::PixelType;
+	double pixelCount = 0;
+	PixelType norm = I::zero();
+	image.for_all_pixels([&] (PixelType &pix, int x, int y)
+	{
+		double maskPix = double(mask.pixelAbsolute(x, y));
+		if(maskPix>0)
+		{
+			pixelCount += maskPix;
+			norm += pix * maskPix;
+		}
+	});
+	image.for_all_pixels([&] (PixelType &pix, int x, int y)
+	{
+		double maskPix = double(mask.pixelAbsolute(x, y));
+		if(maskPix>0)
+		{
+			pixelCount += maskPix;
+			norm += pix * maskPix;
+		}
+	});
 }
 
 }

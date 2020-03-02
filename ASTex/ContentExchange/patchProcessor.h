@@ -129,9 +129,9 @@ public:
 
 	/**
 	 * @brief nbContents
-	 * @return the expected number of contents. For boundary check, patches' content vector's sizes should be checked.
+	 * @return the expected number of contents.
 	 */
-	size_t nbContents() const {return m_nbContentsPerPatch;}
+	size_t nbContentsPerPatch() const {return m_nbContentsPerPatch;}
 
 	void setOutputSize(size_t width, size_t height) {m_outputWidth = width; m_outputHeight = height;}
 
@@ -147,7 +147,7 @@ public:
 	 */
 	void setFilteringMode(mipmap_mode_t defaultMipmapMode);
 
-	void setSeed(unsigned seed);
+	void setSeed(time_t seed);
 
 	//////////////////////////////
 	/////    INITIALIZERS    /////
@@ -217,8 +217,6 @@ public:
 
 	/**
 	* @brief generate returns a synthesized output texture + mipmaps (same size as the input).
-	* @param textureWidth expected output width. (TODO)
-	* @param textureHeight expected output height.
 	* @return the output mipmap. Use generate(...).texture() or generate(...).mipmap(0, 0) to get the output texture.
 	*/
 	Mipmap<I> generate() const;
@@ -238,7 +236,7 @@ public:
 	 * TODO: could change easily.
 	 * @return the overall memory cost of the datas to be stored in the GPU.
 	 */
-	size_t analysis_getGPUMemoryCost() const;
+	size_t debug_getGPUMemoryCost() const;
 
 	/**
 	 * @brief analysis_getNumberOfTextureAccessForMipmap
@@ -246,7 +244,9 @@ public:
 	 * @param j reduction in height
 	 * @return the number of accesses needed to compute an output mipmap of reduction level k, l.
 	 */
-	size_t analysis_getNumberOfTextureAccessForMipmap(unsigned k, unsigned l) const;
+	size_t debug_getNumberOfTextureAccessForMipmap(unsigned k, unsigned l) const;
+
+	void debug_savePatchMap(const std::string &outputPath) const;
 
 	bool patchesOverlap() const {return m_patchesOverlap;}
 
@@ -380,7 +380,7 @@ void PatchProcessor<I>::setFilteringMode(mipmap_mode_t mipmapMode)
 }
 
 template<typename I>
-void PatchProcessor<I>::setSeed(unsigned seed)
+void PatchProcessor<I>::setSeed(time_t seed)
 {
 	m_seed = seed;
 }
@@ -396,7 +396,7 @@ void PatchProcessor<I>::patches_initRegularGrid(unsigned nbPatches)
 		   "PatchProcessor::initializePatches: synthesis cannot allow that many patches (max given by CTEXCH_MAX_PATCHES)");
 	srand(m_seed);
 	double nbPixelsInWidthPerPatch, nbPixelsInHeightPerPatch;
-	int nbPatchesPerSide = int(std::sqrt(nbPatches));
+	unsigned nbPatchesPerSide = unsigned(std::sqrt(nbPatches));
 	nbPatches = nbPatchesPerSide * nbPatchesPerSide;
 	ImageMask64 patchMap;
 	patchMap.initItk(m_tile.width(), m_tile.height());
@@ -405,9 +405,9 @@ void PatchProcessor<I>::patches_initRegularGrid(unsigned nbPatches)
 
 	patchMap.for_all_pixels([&] (ImageMask64::PixelType &pix, int x, int y)
 	{
-		int xId = x/nbPixelsInWidthPerPatch;
-		int yId = y/nbPixelsInHeightPerPatch;
-		int id = yId * nbPatchesPerSide + xId;
+		unsigned xId = unsigned(x/nbPixelsInWidthPerPatch);
+		unsigned yId = unsigned(y/nbPixelsInHeightPerPatch);
+		unsigned id = yId * nbPatchesPerSide + xId;
 		pix = uint64_t(std::pow(2, id));
 	});
 
@@ -428,7 +428,7 @@ void PatchProcessor<I>::patches_initCircles(unsigned nbPatches)
 	std::vector<Eigen::Vector2f> centroids = sampler.generate();
 	ImageMask64 patchMap;
 	patchMap.initItk(m_tile.width(), m_tile.height());
-	float r = m_tile.width() * m_tile.height() / float(nbPatches*nbPatches*2);
+	double r = m_tile.width() * m_tile.height() / float(nbPatches*nbPatches*2);
 	int i = 0;
 	for(std::vector<Eigen::Vector2f>::const_iterator cit = centroids.begin(); cit != centroids.end(); ++cit, ++i)
 	{
@@ -439,7 +439,7 @@ void PatchProcessor<I>::patches_initCircles(unsigned nbPatches)
 			int x0, y0;
 			x0 = (*cit)[0]*m_tile.width();
 			y0 = (*cit)[1]*m_tile.height();
-			if(std::sqrt((x0-x) * (x0-x) + (y0-y) * (y0-y)) < r)
+			if(std::sqrt((x0-x) * (x0-x) + (y0-y) * (y0-y)) < double(r))
 				reinterpret_cast<word64&>(pix) |= w;
 		});
 	}
@@ -461,7 +461,6 @@ void PatchProcessor<I>::patches_initRandom(unsigned nbPatches)
 	{
 		pix = zero;
 	});
-
 	//sampler poisson but with the correct number of samples
 	std::vector< Eigen::Vector2d > samples;
 	std::vector< Eigen::Vector2d > samplesValidated;
@@ -523,7 +522,7 @@ void PatchProcessor<I>::patches_initRandom(unsigned nbPatches)
 			grownTexelCountdownVector[i++]+=64; //whatever average number is fine, this is used to add more pixels in case the image isn't filled
 		}
 	}
-	while(totalNumberOfMarkedPixels < m_tile.width()*m_tile.height());
+	while(totalNumberOfMarkedPixels < unsigned(m_tile.width()*m_tile.height()));
 
 	//Debug only
 	ASTex::ImageGrayu8 patches;
@@ -614,12 +613,12 @@ void PatchProcessor<I>::patches_dilate(bool con8)
 	word64 w = 0x1;
 	bool existsPatchw=true;
 
-	for(int i=0; existsPatchw && i<64; ++i, w*=2)
+	for(uint64_t i=0; existsPatchw && i<64; ++i, w*=2)
 	{
 		existsPatchw = false;
 		originalPatchmap.for_all_pixels([&](const ImageMask64::PixelType &pix, int x, int y)
 		{
-			if(pix == w)
+			if(pix & (uint64_t(1) << i))
 			{
 				x+=width;
 				y+=height;
@@ -645,7 +644,6 @@ template<typename I>
 void PatchProcessor<I>::patches_fill(unsigned nbPatches)
 {
 	m_patchesOverlap = true;
-	static ImageMask64::PixelType zero;
 	ImageMask64 patchMap;
 	word64 w=0x1, wFill=0x0;
 	for(unsigned i=0; i<nbPatches; ++i)
@@ -704,7 +702,8 @@ void PatchProcessor<I>::contents_initDefault()
 			{
 				//check how many patches there are
 				int n=0;
-				for(int i=0, w = 0x1; i<lg; ++i, w*=2)
+				w = 0x1;
+				for(int i=0; i<lg; ++i, w*=2)
 				{
 					if((w & pix)!=0)
 						++n;
@@ -835,7 +834,7 @@ void PatchProcessor<I>::fullProcess_oldMethod(unsigned fragmentMinSize, unsigned
 	pProc.createPatches( int(requiredPatchNumber) );
 	pProc.computePatchBoundaries();
 
-	ASTex::ImageRGBu8::PixelType *idColors = new ASTex::ImageRGBu8::PixelType [ fProc.fragmentCount() ];
+	ASTex::ImageRGBu8::PixelType *idColors = new ASTex::ImageRGBu8::PixelType [ unsigned(fProc.fragmentCount()) ];
 	for( int i=0; i<pProc.patchCount(); ++i )
 	{
 		idColors[i].SetRed  ( uint8_t((i * 255)/pProc.patchCount()-1) );
@@ -890,8 +889,8 @@ void PatchProcessor<I>::fullProcess_oldMethod(unsigned fragmentMinSize, unsigned
 
 				Eigen::Vector2d transformedPixel = (transform * Eigen::Vector2d(p.centroid[0] + x, p.centroid[1] + y) ) + Eigen::Vector2d(c.offset[0]+0.5,c.offset[1]+0.5);
 				itk::Index<2> shiftedPixel;
-				shiftedPixel[0] = ((int) transformedPixel[0] + 4*shiftedTile.width ()) % shiftedTile.width ();
-				shiftedPixel[1] = ((int) transformedPixel[1] + 4*shiftedTile.height()) % shiftedTile.height();
+				shiftedPixel[0] = (int(transformedPixel[0]) + 4*shiftedTile.width ()) % shiftedTile.width();
+				shiftedPixel[1] = (int(transformedPixel[1]) + 4*shiftedTile.height()) % shiftedTile.height();
 
 				pix = m_tile.pixelAbsolute(shiftedPixel);
 			});
@@ -913,19 +912,6 @@ void PatchProcessor<I>::fullProcess_oldMethod(unsigned fragmentMinSize, unsigned
 		for( auto &frag : p.fragments )
 			for( auto &pixel : fProc.fragmentById(int(frag)).pixels )
 				imgPatch->pixelAbsolute(pixel) = idColors[p.id];
-}
-
-template<typename I>
-void PatchProcessor<I>::fullProcess_GIOptimization(unsigned int nbPatchesPerDimension)
-{
-	ImageMask64 patchMask;
-	patchMask.initItk(m_tile.width(), m_tile.height(), true);
-	patchMask.for_all_pixels([&] (const typename I::PixelType &pix)
-	{
-		word64 &wPixel=reinterpret_cast<word64&>(pix);
-		wPixel = 0x0;
-	});
-
 }
 
 //Generator
@@ -1031,7 +1017,7 @@ void PatchProcessor<I>::saveRenderingPack(const std::string &outputDirectory, bo
     //saving useful data
     std::ofstream ofs_data_out(outputDirectory + "/data.csv");
     ofs_data_out << m_patches.size() << std::endl;
-    ofs_data_out << nbContents() << std::endl;
+	ofs_data_out << nbContentsPerPatch() << std::endl;
     ofs_data_out << (unsigned int)m_patchMapMipmap.mode() << std::endl;
     ofs_data_out << m_patchMapMipmap.numberMipmapsWidth() << std::endl;
     ofs_data_out << m_patchMapMipmap.numberMipmapsHeight() << std::endl;
@@ -1082,7 +1068,7 @@ void PatchProcessor<I>::saveRenderingPack(const std::string &outputDirectory, bo
     for(i = 0; i<m_patches.size(); ++i)
     {
         const Patch<I> &patch = m_patches[i];
-        for(j = 1; j<nbContents(); ++j)
+		for(j = 1; j<nbContentsPerPatch(); ++j)
         {
             ofs_transformations_out << patch.contentAt(j).translationTag()[0] << ' '
                                     << patch.contentAt(j).translationTag()[1] << std::endl;
@@ -1189,7 +1175,7 @@ void PatchProcessor<I>::loadRenderingPack(const std::string &inputDirectory)
 }
 
 template<typename I>
-size_t PatchProcessor<I>::analysis_getGPUMemoryCost() const
+size_t PatchProcessor<I>::debug_getGPUMemoryCost() const
 {
 	unsigned i, j, k, l;
 	size_t s=0;
@@ -1232,7 +1218,7 @@ size_t PatchProcessor<I>::analysis_getGPUMemoryCost() const
 }
 
 template<typename I>
-size_t PatchProcessor<I>::analysis_getNumberOfTextureAccessForMipmap(unsigned k, unsigned l) const
+size_t PatchProcessor<I>::debug_getNumberOfTextureAccessForMipmap(unsigned k, unsigned l) const
 {
 	const ImageMask64& mipmap=m_patchMapMipmap.mipmap(k, l);
 	unsigned access = 0; //counts the number of texture access
@@ -1251,6 +1237,30 @@ size_t PatchProcessor<I>::analysis_getNumberOfTextureAccessForMipmap(unsigned k,
 	});
 
 	return access;
+}
+
+template<typename I>
+void PatchProcessor<I>::debug_savePatchMap(const std::string &outputPath) const
+{
+	assert(m_patchMapMipmap.isTextureSet());
+	const ImageMask64& patchmap = m_patchMapMipmap.texture();
+	ImageRGBd colorPatchmap;
+	colorPatchmap.initItk(patchmap.width(), patchmap.height(), true);
+	word64 w=0x1;
+	for(size_t p=0; p<m_patches.size(); ++p)
+	{
+		ImageRGBd::PixelType color;
+		color[0] = std::rand()/double(RAND_MAX);
+		color[1] = std::rand()/double(RAND_MAX);
+		color[2] = std::rand()/double(RAND_MAX);
+		colorPatchmap.for_all_pixels([&] (ImageRGBd::PixelType &pix, int x, int y)
+		{
+			if(patchmap.pixelAbsolute(x, y) == w)
+				pix = color;
+		});
+		w *= 2;
+	}
+	IO::save01_in_u8(colorPatchmap, outputPath);
 }
 
 }//namespace

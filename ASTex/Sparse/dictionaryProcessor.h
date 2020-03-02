@@ -20,13 +20,16 @@ public:
 
 	std::string external_imageMatcher_path; //< the alien attribute
 
+	using ImageType = I;
 	using DictionaryType = Dictionary<I>;
 	using AtomType = Atom<I>;
-	using PixelType = typename I::PixelType;
-	using DataType = typename I::DataType;
+	using PixelType = typename ImageType::PixelType;
+	using DataType = typename ImageType::DataType;
+	using SizeType = itk::Size<2>;
+	using IndexType = itk::Index<2>;
 
 	DictionaryProcessor();
-	DictionaryProcessor(DictionaryType &dictionary);
+	DictionaryProcessor(const DictionaryType &dictionary);
 
 	//step 1
 
@@ -36,14 +39,19 @@ public:
 	void setSparsity(unsigned sparsity);
 	void setMaxAtomsNb(unsigned nbAtoms);
 	void setPatchOffset(unsigned offsetX, unsigned offsetY);
+	void setEnableHistogramMatching(bool b);
+	void setEnableFourierMatching(bool b);
 
 
 	unsigned nbAtoms() const;
 	unsigned sparsity() const;
-	itk::Size<2> patchSize() const;
-	itk::Size<2> patchOffset() const;
+	SizeType patchSize() const;
+	SizeType patchOffset() const;
+	bool histogramMatchingEnabled() const;
+	bool fourierMatchingEnabled() const;
 
-	void setShowDebugMessages(bool b) {m_showDebugMessages = b;}
+	void setShowDebugMessages(bool b);
+	void setIntermediateOutputPath(const std::string &path);
 
 	//step 2
 
@@ -55,10 +63,10 @@ public:
 	const DictionaryType &dictionary() const					{return m_dictionary;}
 	const std::vector<std::vector<PixelType>> &weights() const	{return m_weights;}
 
-	I reconstructInput() const;
+	ImageType reconstructInput() const;
 
 	template<typename Compare = std::less<PixelType>>
-	I synthesize(unsigned width, unsigned height, unsigned nbIterations);
+	ImageType synthesize(unsigned width, unsigned height, unsigned nbIterations, const I* imageInitialize = nullptr);
 
 	void save(const std::string &directory) const;
 	bool load(const std::string &directory);
@@ -77,19 +85,19 @@ private:
 
 	template<typename Compare = std::less<PixelType>>
 	void orthogonalMatchingPursuit(const DictionaryType &dictionary, size_t patchIndex,
-								   const std::vector<std::pair<itk::Index<2>, I>>&patches,
+								   const std::vector<std::pair<IndexType, I>>&patches,
 								   std::vector<std::vector<PixelType>> &weights);
 	void updateDictionaryApproximateKSVD(size_t atomId);
 
 	void readInput();
 
-	void readImage(const I &image, std::vector<std::pair<itk::Index<2>, I>> &patches) const;
+	void readImage(const I &image, std::vector<std::pair<IndexType, I>> &patches) const;
 
 	I reconstructImage(const DictionaryType &dictionary, const std::vector<std::vector<PixelType>> &weights, unsigned width, unsigned height) const;
 
 	DictionaryType m_dictionary;
 	std::vector<std::vector<PixelType>> m_weights; //lost on the dimensionality? m_weights[patch][atom]
-	std::vector<std::pair<itk::Index<2>, I>> m_patches;
+	std::vector<std::pair<IndexType, I>> m_patches;
 	I m_input;
 
 	unsigned m_patchOffsetX;
@@ -97,22 +105,50 @@ private:
 
 	unsigned m_sparsity;
 	unsigned m_nbAtoms;
-	itk::Size<2> m_patchSize;
+	SizeType m_patchSize;
 
 	bool m_showDebugMessages;
+	std::string m_intermediateOutputPath;
+
+	bool m_histogramMatchingEnabled;
+	bool m_fourierMatchingEnabled;
 };
 
 template<typename I>
 DictionaryProcessor<I>::DictionaryProcessor() :
-	external_imageMatcher_path(), m_dictionary(), m_weights(), m_patches(), m_input(),
-	m_patchOffsetX(1), m_patchOffsetY(1), m_sparsity(8), m_nbAtoms(32), m_patchSize({{5, 5}}), m_showDebugMessages(false)
+	external_imageMatcher_path(),
+	m_dictionary(),
+	m_weights(),
+	m_patches(),
+	m_input(),
+	m_patchOffsetX(1),
+	m_patchOffsetY(1),
+	m_sparsity(8),
+	m_nbAtoms(32),
+	m_patchSize({{5, 5}}),
+	m_showDebugMessages(false),
+	m_intermediateOutputPath(""),
+	m_histogramMatchingEnabled(false),
+	m_fourierMatchingEnabled(false)
 {
 }
 
 template<typename I>
-DictionaryProcessor<I>::DictionaryProcessor(DictionaryType &dictionary) :
-	external_imageMatcher_path(), m_dictionary(dictionary), m_weights(), m_patches(), m_input(),
-	m_patchOffsetX(1), m_patchOffsetY(1), m_sparsity(8), m_nbAtoms(32), m_patchSize({{5, 5}}), m_showDebugMessages(false)
+DictionaryProcessor<I>::DictionaryProcessor(const DictionaryType &dictionary) :
+	external_imageMatcher_path(),
+	m_dictionary(dictionary),
+	m_weights(),
+	m_patches(),
+	m_input(),
+	m_patchOffsetX(1),
+	m_patchOffsetY(1),
+	m_sparsity(8),
+	m_nbAtoms(32),
+	m_patchSize({{5, 5}}),
+	m_showDebugMessages(false),
+	m_intermediateOutputPath(""),
+	m_histogramMatchingEnabled(false),
+	m_fourierMatchingEnabled(false)
 {}
 
 template<typename I>
@@ -149,6 +185,18 @@ void DictionaryProcessor<I>::setPatchOffset(unsigned offsetX, unsigned offsetY)
 }
 
 template<typename I>
+void DictionaryProcessor<I>::setEnableHistogramMatching(bool b)
+{
+	m_histogramMatchingEnabled = b;
+}
+
+template<typename I>
+void DictionaryProcessor<I>::setEnableFourierMatching(bool b)
+{
+	m_fourierMatchingEnabled = b;
+}
+
+template<typename I>
 unsigned DictionaryProcessor<I>::nbAtoms() const
 {
 	return m_nbAtoms;
@@ -161,13 +209,13 @@ unsigned DictionaryProcessor<I>::sparsity() const
 }
 
 template<typename I>
-itk::Size<2> DictionaryProcessor<I>::patchSize() const
+typename DictionaryProcessor<I>::SizeType DictionaryProcessor<I>::patchSize() const
 {
 	return m_patchSize;
 }
 
 template<typename I>
-itk::Size<2> DictionaryProcessor<I>::patchOffset() const
+typename DictionaryProcessor<I>::SizeType DictionaryProcessor<I>::patchOffset() const
 {
 	itk::Size<2> offsets;
 	offsets[0] = m_patchOffsetX;
@@ -175,11 +223,35 @@ itk::Size<2> DictionaryProcessor<I>::patchOffset() const
 	return offsets;
 }
 
+template<typename I>
+bool DictionaryProcessor<I>::histogramMatchingEnabled() const
+{
+	return m_histogramMatchingEnabled;
+}
+
+template<typename I>
+bool DictionaryProcessor<I>::fourierMatchingEnabled() const
+{
+	return m_fourierMatchingEnabled;
+}
+
+template<typename I>
+void DictionaryProcessor<I>::setShowDebugMessages(bool b)
+{
+	m_showDebugMessages = b;
+}
+
+template<typename I>
+void DictionaryProcessor<I>::setIntermediateOutputPath(const std::string &path)
+{
+	m_intermediateOutputPath = path;
+}
+
 //step 2
 
 //private but the two following functions go well together
 template<typename I>
-void DictionaryProcessor<I>::readImage(const I& image, std::vector<std::pair<itk::Index<2>, I>> &patches) const
+void DictionaryProcessor<I>::readImage(const I& image, std::vector<std::pair<IndexType, I> > &patches) const
 {
 	assert(image.is_initialized() && image.width()>=m_patchSize[0] && image.height()>=m_patchSize[1] && "Dictionnary::read: exemplar uninitialized or too small compared to atoms size");
 	unsigned int previousPatchSize=patches.size();
@@ -191,13 +263,13 @@ void DictionaryProcessor<I>::readImage(const I& image, std::vector<std::pair<itk
 	auto makePatch = [&] (int x, int y)
 	{
 		reg = gen_region(x, y, m_patchSize[0], m_patchSize[1]);
-		I patch;
+		ImageType patch;
 		patch.initItk(m_patchSize[0], m_patchSize[1]);
 		image.for_region_pixels(reg, [&] (const typename I::PixelType& pix, int w, int h)
 		{
 			patch.pixelAbsolute(w-x, h-y)=pix;
 		});
-		itk::Index<2> origin = {{x, y}};
+		IndexType origin = {{x, y}};
 		patches.push_back(std::make_pair(origin, patch));
 	};
 	for(x=0; x+m_patchSize[0]<=unsigned(image.width()); x+=m_patchOffsetX)
@@ -250,7 +322,7 @@ I DictionaryProcessor<I>::reconstructImage(const DictionaryType &dictionary, con
 
 	//first compute the hitmap which finds the number of time each texel will be written
 	ASTex::ImageGrayu32 hitmap;
-	hitmap.initItk(width, height, true);
+	hitmap.initItk(int(width), int(height), true);
 
 	for(auto &patch : m_patches)
 	{
@@ -264,12 +336,12 @@ I DictionaryProcessor<I>::reconstructImage(const DictionaryType &dictionary, con
 	for(auto &patch : m_patches)
 	{
 		I reconstructedPatch = dictionary * weights[w++];
-		reconstructedPatch.for_all_pixels([&] (const typename I::PixelType &pix, int x, int y)
+		reconstructedPatch.for_all_pixels([&] (const PixelType &pix, int x, int y)
 		{
 			reconstructedImage.pixelAbsolute(patch.first[0]+x, patch.first[1]+y) += pix;
 		});
 	}
-	reconstructedImage.for_all_pixels([&] (typename I::PixelType &pix, int x, int y)
+	reconstructedImage.for_all_pixels([&] (PixelType &pix, int x, int y)
 	{
 		pix = pix*(1.0/hitmap.pixelAbsolute(x, y));
 		for(unsigned k=0; k<pixSize; ++k)
@@ -282,7 +354,7 @@ I DictionaryProcessor<I>::reconstructImage(const DictionaryType &dictionary, con
 }
 
 template<typename I>
-I DictionaryProcessor<I>::reconstructInput() const
+typename DictionaryProcessor<I>::ImageType DictionaryProcessor<I>::reconstructInput() const
 {
 	size_t pixelSize = sizeof(PixelType)/sizeof(DataType);
 	if(m_showDebugMessages)
@@ -338,6 +410,9 @@ void DictionaryProcessor<I>::dictionaryLearning(unsigned nbIterations)
 		for(size_t w=0; w<m_patches.size(); ++w) //2. Sparse coding (update weights)
 			orthogonalMatchingPursuit<Compare>(m_dictionary, w, m_patches, m_weights);
 
+		if(m_intermediateOutputPath != "")
+			IO::save01_in_u8(reconstructInput(), m_intermediateOutputPath + "/dp_learning_" + std::to_string(i) + ".png");
+
 		for(size_t a=0; a<m_dictionary.nbAtoms(); ++a)
 			updateDictionaryApproximateKSVD(a);
 	}
@@ -374,7 +449,7 @@ void DictionaryProcessor<I>::dictionaryLearning(unsigned nbIterations)
 
 template<typename I>
 template<typename Compare>
-I DictionaryProcessor<I>::amplify(const I& lowResMap, unsigned scale)
+typename DictionaryProcessor<I>::ImageType DictionaryProcessor<I>::amplify(const I& lowResMap, unsigned scale)
 {
 	float invScale = 1.0f/scale;
 	if(m_patchSize[0]<=1 || m_patchSize[1]<=1)
@@ -386,7 +461,7 @@ I DictionaryProcessor<I>::amplify(const I& lowResMap, unsigned scale)
 	dictionaryLowRes.setAtomSize(	std::min(std::max(1, int(m_patchSize[0] * invScale)), int(m_patchSize[0]-1)),
 									std::min(std::max(1, int(m_patchSize[1] * invScale)), int(m_patchSize[1]-1)));
 	dictionaryLowRes.initEmpty(m_dictionary.nbAtoms());
-	typename I::ItkImg::SizeType atomSize;
+	SizeType atomSize;
 	atomSize[0]=dictionaryLowRes.atomWidth();
 	atomSize[1]=dictionaryLowRes.atomHeight();
 
@@ -400,10 +475,10 @@ I DictionaryProcessor<I>::amplify(const I& lowResMap, unsigned scale)
 		spacing[0] = spacing[0] * scale;
 		spacing[1] = spacing[1] * scale;
 
-		itk::Index<2> centralPixel;
+		IndexType centralPixel;
 		centralPixel[0] = size[0]/2;
 		centralPixel[1] = size[0]/2;
-		itk::Point< typename I::DataType, 2 > centralPoint;
+		itk::Point< DataType, 2 > centralPoint;
 		centralPoint[0] = centralPixel[0];
 		centralPoint[1] = centralPixel[1];
 
@@ -434,11 +509,9 @@ I DictionaryProcessor<I>::amplify(const I& lowResMap, unsigned scale)
 		dictionaryLowRes.atom(i).content() = filterOutput;
 	}
 	DictionaryProcessor dpLowRes(dictionaryLowRes);
-	saveVizualisableAtoms("/home/nlutz/inputAtoms");
-	dpLowRes.saveVizualisableAtoms("/home/nlutz/outputAtoms");
-	std::vector<std::pair<itk::Index<2>, I>> patches;
+	std::vector<std::pair<IndexType, I>> patches;
 	std::vector<std::vector<PixelType>> weights;
-	itk::Size<2> savePatchSize = m_patchSize;
+	SizeType savePatchSize = m_patchSize;
 	m_patchSize[0] = m_patchSize[0] * invScale;
 	m_patchSize[1] = m_patchSize[1] * invScale;
 	readImage(lowResMap, patches);
@@ -452,7 +525,6 @@ I DictionaryProcessor<I>::amplify(const I& lowResMap, unsigned scale)
 		m_patches[w].second = patches[w].second;
 	}
 	I reconstructedLowResMap = reconstructImage(dictionaryLowRes, weights, lowResMap.width(), lowResMap.height());
-	IO::save01_in_u8(reconstructedLowResMap, "/home/nlutz/reconstructedLowResMap.png");
 	for(size_t w=0; w<patches.size(); ++w)
 	{
 		m_patches[w].first[0] = patches[w].first[0] * scale;
@@ -469,7 +541,7 @@ I DictionaryProcessor<I>::amplify(const I& lowResMap, unsigned scale)
 template<typename I>
 template<typename Compare>
 void DictionaryProcessor<I>::orthogonalMatchingPursuit(const DictionaryType &dictionary, size_t patchIndex,
-													   const std::vector<std::pair<itk::Index<2>, I>>&patches,
+													   const std::vector<std::pair<IndexType, I>>&patches,
 													   std::vector<std::vector<PixelType>> &weights)
 {
 	static PixelType s_zero;
@@ -482,7 +554,7 @@ void DictionaryProcessor<I>::orthogonalMatchingPursuit(const DictionaryType &dic
 	I residual;
 	residual.initItk(patch.width(), patch.height());
 	residual.copy_pixels(patch);
-	assert(unsigned(residual.width()) == dictionary.atomWidth() && unsigned(residual.height()) == dictionary.atomWidth());
+	assert(unsigned(residual.width()) == dictionary.atomWidth() && unsigned(residual.height()) == dictionary.atomHeight());
 	unsigned i = 0;
 	Compare comparatorLeast;
 	size_t pixelSize = sizeof(PixelType)/sizeof(DataType);
@@ -498,7 +570,7 @@ void DictionaryProcessor<I>::orthogonalMatchingPursuit(const DictionaryType &dic
 		}
 	});
 
-	while(i++ < s && residualEvaluation > std::numeric_limits<float>::epsilon()) //customizable stop condition (sparsity constraint)
+	while(i++ < s && residualEvaluation > std::numeric_limits<double>::epsilon()) //customizable stop condition (sparsity constraint)
 	{
 		residualEvaluation = 0;
 		PixelType bestCorrelation = s_zero;
@@ -668,21 +740,37 @@ void DictionaryProcessor<I>::updateDictionaryApproximateKSVD(size_t atomId)
 
 template<typename I>
 template<typename Compare>
-I DictionaryProcessor<I>::synthesize(unsigned width, unsigned height, unsigned nbIterations)
+typename DictionaryProcessor<I>::ImageType DictionaryProcessor<I>::synthesize(unsigned width, unsigned height, unsigned nbIterations, const ImageType *imageInitializer)
 {
 	I output;
 	std::vector<std::vector<PixelType>> weights;
 	std::vector<std::pair<itk::Index<2>, I>> patches;
 	const unsigned pixelSize = sizeof(PixelType)/sizeof(DataType);
 	output.initItk(width, height);
-	output.for_all_pixels([&] (PixelType &pix)
+	if(imageInitializer!=nullptr)
 	{
-		for(unsigned k=0; k<pixelSize; ++k)
+		ImageType scaledInitializer;
+		scaledInitializer.initItk(width, height, true);
+		scaledInitializer.for_all_pixels([&] (PixelType &pix, int x, int y)
 		{
-			reinterpret_cast<DataType *>(&pix)[k] = DataType(std::rand())/RAND_MAX;
-			CHECK_FOR_NAN(reinterpret_cast<DataType *>(&pix)[k]);
-		}
-	});
+			double xd, yd;
+			xd = double(x)/(scaledInitializer.width()-1) * (scaledInitializer.width()-1);
+			yd = double(y)/(scaledInitializer.height()-1) * (scaledInitializer.height()-1);
+			pix = bilinear_interpolation(*imageInitializer, xd, yd, false);
+		});
+		output.copy_pixels(*imageInitializer);
+	}
+	else //white noise
+	{
+		output.for_all_pixels([&] (PixelType &pix)
+		{
+			for(unsigned k=0; k<pixelSize; ++k)
+			{
+				reinterpret_cast<DataType *>(&pix)[k] = DataType(std::rand())/RAND_MAX;
+				CHECK_FOR_NAN(reinterpret_cast<DataType *>(&pix)[k]);
+			}
+		});
+	}
 	readImage(output, patches);
 	weights.resize(patches.size());
 	unsigned currentProgress=0;
@@ -706,9 +794,9 @@ I DictionaryProcessor<I>::synthesize(unsigned width, unsigned height, unsigned n
 			orthogonalMatchingPursuit<Compare>(m_dictionary, w, patches, weights);
 		}
 		output=reconstructImage(m_dictionary, weights, output.width(), output.height());
-		if(i!=i/*nbIterations-1*/)
+		if(i!=i) //TODO : change this idiot
 			matchImage(output, m_input, external_imageMatcher_path);
-		if(i!=i/*nbIterations-1*/)
+		if(i!=i)
 		{
 			ImageGrayd r_source, g_source, b_source, r_target, g_target, b_target;
 			extract3Channels(output, r_source, g_source, b_source);
@@ -733,6 +821,8 @@ I DictionaryProcessor<I>::synthesize(unsigned width, unsigned height, unsigned n
 
 			fold3Channels(output, r_source, g_source, b_source);
 		}
+		if(m_intermediateOutputPath != "")
+			IO::save01_in_u8(output, m_intermediateOutputPath + "/dp_synthesis_" + std::to_string(i) + ".png");
 	}
 	if(m_showDebugMessages)
 		std::cout << " Done!" << std::endl;

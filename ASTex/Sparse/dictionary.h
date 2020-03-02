@@ -285,8 +285,7 @@ I Dictionary<I>::operator*(const std::vector<typename I::PixelType> &other) cons
 template <typename I>
 bool Dictionary<I>::save(const std::string &directory) const
 {
-	if(!create_directory(directory))
-		return false;
+	create_directory(directory);
 	unsigned i=0;
 	for(typename std::vector<Atom<I>>::const_iterator it=m_atoms.begin(); it!=m_atoms.end(); ++it, ++i)
 	{

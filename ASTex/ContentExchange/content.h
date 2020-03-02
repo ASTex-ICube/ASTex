@@ -70,8 +70,12 @@ template<typename I>
 void MipmapCEContent<I>::generate()
 {
 	static typename I::PixelType zero;
-	assert(m_parentPatch && "MipmapCEContent::generate: parent patch has not been given (try MipmapCEContent::setParentPatch)");
-	assert(this->isTextureSet() && "MipmapCEContent::generate: no content texture was set (try MipmapCEContent::setTexture)");
+	assert(m_parentPatch
+		   && "MipmapCEContent::generate: parent patch has not been given (try MipmapCEContent::setParentPatch)");
+	assert(m_parentPatch->alphaMipmap().isGenerated()
+		   && "MipmapCEContent::generate: parent patch's mipmap was not generated");
+	assert(this->isTextureSet()
+		   && "MipmapCEContent::generate: no content texture was set (try MipmapCEContent::setTexture)");
 
 	//clean content before generating
 	const MipmapCEPatch &patchMipmapAlpha = m_parentPatch->alphaMipmap();
@@ -85,11 +89,11 @@ void MipmapCEContent<I>::generate()
 	});
 	correspondingPatchAlphaTexture.for_all_pixels([&] (const ImageGrayd::PixelType &pix, int x, int y)
 	{
-		if(pix>0) //delete this idiot
+		if(pix>0)
 		{
 			int xShift=(x+patchOrigin[0])%cleanedTexture.width();
 			int yShift=(y+patchOrigin[1])%cleanedTexture.height();
-			if(!std::is_floating_point<typename I::DataType>::value) //TODO: multiplicating RGBu8 with a double yields 0 (current bug)
+			if(!std::is_floating_point<typename I::DataType>::value)
 			{
 				size_t arraySize = sizeof(typename I::PixelType) / sizeof(typename I::DataType);
 				typename I::DataType *pix2 = new typename I::DataType[arraySize];

@@ -229,8 +229,8 @@ void MipmapCEPatch::setOriginsSize(unsigned kMax, unsigned lMax)
 const MipmapCEPatch::PixelPos &MipmapCEPatch::originAt(unsigned k, unsigned l) const
 {
 	size_t xBoundedIndex, yBoundedIndex;
-	xBoundedIndex=std::min((size_t)k, m_pixelOriginMap.size()-1);
-	yBoundedIndex=std::min((size_t)l, m_pixelOriginMap[xBoundedIndex].size()-1);
+	xBoundedIndex=std::min(size_t(k), m_pixelOriginMap.size()-1);
+	yBoundedIndex=std::min(size_t(l), m_pixelOriginMap[xBoundedIndex].size()-1);
 	return m_pixelOriginMap[xBoundedIndex][yBoundedIndex];
 }
 

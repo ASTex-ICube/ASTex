@@ -24,6 +24,7 @@ public:
 	 * \brief constructs an empty histogram
 	 */
 	Histogram();
+	virtual ~Histogram();
 
 	/**
 	 * \brief constructs a histogram based on the first parameter
@@ -85,7 +86,7 @@ public:
      * \param [in] bin the bin to find or add in the histogram
      * \param [in] occ the number of pixels equal to the bin to be added
      */
-    void addPixel(const PixelType &bin, int occ=1);
+	void addPixel(const PixelType &bin, int occ=1);
 
     /**
      * \brief removes a maximum of "occ" occurences for the bin "bin" in the histogram
@@ -184,9 +185,9 @@ protected:
                         F_firstExists &lambdaFirstExists,
                         F_secondExists &lambdaSecondExists) const;
 
-	I m_input;
-	MapStruct m_histogram;
-    int             m_size;
+	I			m_input;
+	MapStruct	m_histogram;
+	int			m_size;
 };
 
 
@@ -195,14 +196,17 @@ protected:
 
 
 template <class I, class Compare>
-Histogram<I, Compare>::Histogram() : m_histogram(), m_size(0)
-{
-
-}
-
+Histogram<I, Compare>::Histogram() :
+	m_input(), m_histogram(), m_size(0)
+{}
 
 template <class I, class Compare>
-Histogram<I, Compare>::Histogram(const I &image) : m_histogram(), m_size(0), m_input(image)
+Histogram<I, Compare>::~Histogram()
+{}
+
+template <class I, class Compare>
+Histogram<I, Compare>::Histogram(const I &image) :
+	m_input(image), m_histogram(), m_size(0)
 {
 	compute(image);
 }
@@ -413,8 +417,8 @@ typename Histogram<I, Compare>::real Histogram<I, Compare>::compareB2BWith(const
 		p1=(*std::get<1>(its)).first;
 		a1=(*std::get<1>(its)).second;
 
-		fa0=(real)a0/size();
-		fa1=(real)a1/size();
+		fa0=real(a0)/size();
+		fa1=real(a1)/size();
 
 		//compare p0 and p1
 		if(lmbd_compare(p0, p1)) //no occurence of p0 in H1
@@ -438,14 +442,14 @@ typename Histogram<I, Compare>::real Histogram<I, Compare>::compareB2BWith(const
 	while(std::get<0>(its)!=end()) //finish iteration over first histogram if necessary
 	{
 		a0=(*std::get<0>(its)).second;
-		fa0=(real)a0/size();
+		fa0=real(a0)/size();
 		d+=lmbd_matchH1(fa0);
 		++std::get<0>(its);
 	}
 	while(std::get<1>(its)!=other.end()) //finish iteration over second histogram if necessary
 	{
 		a1=(*std::get<1>(its)).second;
-		fa1=(real)a1/size();
+		fa1=real(a1)/size();
 		d+=lmbd_matchH2(fa1);
 		++std::get<1>(its);
 	}
@@ -477,12 +481,12 @@ typename Histogram<I, Compare>::real Histogram<I, Compare>::compareMinkowskiWith
 {
 	auto lmbd_minkowski_match = [](real fa0, real fa1) -> real
 	{
-		return std::pow((fa0-fa1), (real)L_norm);
+		return std::pow((fa0-fa1), real(L_norm));
 	};
 
 	auto lmbd_minkowski_noMatch = [](real f) -> real
 	{
-		return std::pow(f, (real)L_norm);
+		return std::pow(f, real(L_norm));
 	};
 
 	return std::pow(compareB2BWith(other, lmbd_minkowski_match, lmbd_minkowski_noMatch, lmbd_minkowski_noMatch), 1.0/L_norm) / size();
@@ -521,7 +525,7 @@ typename Histogram<I, Compare>::real Histogram<I, Compare>::fitsUniformKS(NUMBER
 
 	auto scaleBetween0and1 = [inf, sup] (NUMBER x) -> real //< used to normalize between 0 and 1
 	{
-		return ((real)x - inf) / (sup - inf);
+		return (real(x) - inf) / (sup - inf);
 	};
 
 	for(const auto& it : *this)
@@ -531,9 +535,9 @@ typename Histogram<I, Compare>::real Histogram<I, Compare>::fitsUniformKS(NUMBER
 
 		real x=scaleBetween0and1(it.first);
 		i+=1;
-		d = std::max( d, std::abs(x - (real)(i-1)/size()) );  //< if we look at the first element of the bin, we want to compare it with D-
+		d = std::max( d, std::abs(x - real(i-1)/size()) );  //< if we look at the first element of the bin, we want to compare it with D-
 		i+=it.second-1;
-		d = std::max( d, std::abs(x - ((real)i/size())) );    //< if we look at the last element of the bin, we want to compare it with D+
+		d = std::max( d, std::abs(x - (real(i)/size())) );    //< if we look at the last element of the bin, we want to compare it with D+
 	}
 
 	return d;
@@ -645,7 +649,7 @@ void HistogramRGBBase<T>::updateStatistics()
 	{
 		for(int i=0; i<3; ++i)
 		{
-			m_mean[i] += (real)bin.first[i]*bin.second;
+			m_mean[i] += real(bin.first[i])*bin.second;
 		}
 	}
 	for(int i=0; i<3; ++i)
@@ -690,7 +694,7 @@ HistogramRGBBase<int> HistogramRGBBase<T>::quantize(PixelType inf, PixelType sup
 
 	if(nb_classes_per_dimension<=0)
 	{
-		nb_classes_per_dimension=(int)std::ceil(std::log2(this->size())+1.0); //Sturges formula
+		nb_classes_per_dimension=int(std::ceil(std::log2(this->size())+1.0)); //Sturges formula
 	}
 
 	//fill histogram
@@ -699,7 +703,7 @@ HistogramRGBBase<int> HistogramRGBBase<T>::quantize(PixelType inf, PixelType sup
 		int intervalInt3[3];
 		for(int i=0; i<3; ++i)
 		{
-			intervalInt3[i] = std::max(0, std::min(nb_classes_per_dimension-1, (int) ( (real)(bin.first[i] - inf[i]) * nb_classes_per_dimension / (sup[i] - inf[i]) )));
+			intervalInt3[i] = std::max(0, std::min(nb_classes_per_dimension-1, int (( real((bin.first[i] - inf[i])) * nb_classes_per_dimension / (sup[i] - inf[i]) ))));
 		}
 		HistogramRGBBase<int>::PixelType currentInterval( intervalInt3 );
 		histogramQuantized.addPixel(currentInterval, bin.second);
@@ -729,7 +733,7 @@ typename HistogramRGBBase<T>::PixelType HistogramRGBBase<T>::meanPixelType() con
 	PixelType mean;
 	for(int i=0; i<3; ++i)
 	{
-		mean[i]=(T)m_mean[i];
+		mean[i]=T(m_mean[i]);
 
 	}
 
@@ -769,6 +773,7 @@ public:
 	 * @brief meanPixelType
 	 * @return the mean except it's of the type of the PixelType. (why again?)
 	 */
+	using Histogram<ImageCommon<ImageGrayBase<T>, false>, std::less<T>>::meanPixelType;
 	PixelType       meanPixelType();
 
 	/**
@@ -856,8 +861,8 @@ template <typename T>
 void HistogramGrayBase<T>::updateStatistics()
 {
 	//reset
-	m_min=std::numeric_limits<int>::max();
-	m_max=std::numeric_limits<int>::min();
+	m_min=std::numeric_limits<real>::max();
+	m_max=std::numeric_limits<real>::min();
 	m_mean=0;
 	m_variance=0;
 	//mean, min and max
@@ -865,7 +870,7 @@ void HistogramGrayBase<T>::updateStatistics()
 	{
 		m_min = std::min(m_min, real(bin.first));
 		m_max = std::max(m_max, real(bin.first));
-		m_mean+=(real)bin.first*bin.second / this->size();
+		m_mean+=real(bin.first*bin.second) / this->size();
 	}
 
 	for(const auto& bin : *this)
@@ -894,7 +899,7 @@ template <typename T>
 typename HistogramGrayBase<T>::PixelType HistogramGrayBase<T>::meanPixelType()
 {
 	PixelType mean;
-	mean=(PixelType)m_mean;
+	mean=PixelType(m_mean);
 	return mean;
 }
 
@@ -907,13 +912,13 @@ HistogramGrayBase<int> HistogramGrayBase<T>::quantize(PixelType inf, PixelType s
 
 	if(nb_classes==0)
 	{
-		nb_classes=(unsigned int)std::log(this->size())+2.0;
+		nb_classes=unsigned(std::log(this->size())+2.0);
 	}
 
 	//then, fill the histogram
 	for(const auto& bin : *this)
 	{
-		int currentInterval = (int) ( (real)(bin.first - inf) * nb_classes / (sup - inf) );
+		int currentInterval = int ( real((bin.first - inf)) * nb_classes / (sup - inf) );
 		histogramQuantized.addPixel(currentInterval, bin.second);
 	}
 	histogramQuantized.updateStatistics();
@@ -928,7 +933,7 @@ typename HistogramGrayBase<T>::real HistogramGrayBase<T>::fitsNormalChi2() const
 	for(const auto& bin : *this)
 	{
 		//to change
-		real chiNotSquared=((real)(bin.first*bin.second)/this->size() - m_mean)/m_variance;
+		real chiNotSquared=(real(bin.first*bin.second)/this->size() - m_mean)/m_variance;
 		d+=chiNotSquared*chiNotSquared;
 	}
 	return d;
