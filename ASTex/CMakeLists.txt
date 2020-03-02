@@ -69,6 +69,11 @@ target_sources (${PROJECT_NAME} PRIVATE
         PCTS/pcts.h
 	#filters.h
 	colorMatching.h
+	RegionFinder/exploreTextures.h
+	RegionFinder/comparePixels.h
+	RegionFinder/regionFinder.h
+	Quilting/quilting.h
+	texture_pool.h
 )
 
 target_sources (${PROJECT_NAME} PRIVATE

@@ -32,42 +32,56 @@ int main(int argc, char **argv)
 	create_directory(out_dir);
 
 	ContentExchange::MultiTextureProcessor<ImageType> pProcessor(im_tile);
+	ASTex::TexturePool<ImageType, double> texturePool;
 
 	///Argument file
 	std::ifstream ifs_args(argv[3]);
+	if(!ifs_args)
+	{
+		std::cerr << "Error: could not open argument file" << std::endl;
+		exit(EXIT_FAILURE);
+	}
 	unsigned nb_patches, nb_contents, output_width, output_height, seed, gradientManipulation;
 	ifs_args >> nb_patches >> nb_contents >> output_width >> output_height >> seed >> gradientManipulation;
 	while(!ifs_args.eof())
 	{
-		double m00, m01, m10, m11;
+		double m00, m01, m02, m10, m11, m12, m20, m21, m22;
 		ifs_args >> m00;
 		if(!ifs_args.eof())
 		{
-			ifs_args >> m01 >> m10 >> m11;
-			Eigen::Matrix2d M;
+			ifs_args >> m01 >> m02 >> m10 >> m11 >> m12 >> m20 >> m21 >> m22;
+			Eigen::Matrix3d M;
 			M(0, 0)=m00;
 			M(0, 1)=m01;
+			M(0, 2)=m02;
 			M(1, 0)=m10;
 			M(1, 1)=m11;
-			pProcessor.addTransformationToPool(M);
+			M(1, 2)=m12;
+			M(2, 0)=m20;
+			M(2, 1)=m21;
+			M(2, 2)=m22;
+			texturePool.addTransformationMatrix(M);
 		}
 	}
+	texturePool.addTexture(im_tile, true);
+	texturePool.setTexturesAreGradient(gradientManipulation);
 
 	for(unsigned int i=4; i<argc - (argc%2==0 ? 0 : 2); i+=2)
 	{
 		ImageType im_texture;
 		IO::loadu8_in_01(im_texture, argv[i]);
 		unsigned periodicity = atoi(argv[i+1]);
-		pProcessor.addTextureToPool(im_texture, bool(periodicity));
+		texturePool.addTexture(im_texture, periodicity);
 	}
 	if(argc%2!=0)
 	{
 		ImageType im_texture;
 		IO::loadu8_in_01(im_texture, argv[argc-1]);
-		pProcessor.addTextureToPool(im_texture, false);
+		texturePool.addTexture(im_texture, false);
 	}
+	texturePool.generate();
 
-	pProcessor.setSeed(seed == 0 ? time(0) : seed);
+	pProcessor.setSeed(seed == 0 ? time(nullptr) : seed);
 
 	pProcessor.setFilteringMode(ISOTROPIC);
 	pProcessor.setNbContentsPerPatch(nb_contents);
@@ -75,7 +89,8 @@ int main(int argc, char **argv)
 	pProcessor.patches_initRandom(nb_patches);
 	pProcessor.patches_dilate(false);
 	pProcessor.contents_initDefault();
-	pProcessor.contents_explorePools(gradientManipulation);
+	pProcessor.setTexturePool(texturePool);
+	pProcessor.contents_explorePools();
 
 //	for(unsigned p=0; p<pProcessor.nbPatches(); ++p)
 //		for(unsigned c=0; c<pProcessor.nbContents(); ++c)
@@ -86,7 +101,7 @@ int main(int argc, char **argv)
 //	pProcessor.saveRenderingPack(renderingDirectory);
 
 	ImageType output = pProcessor.generate().texture();
-	IO::save01_in_u8(output, out_dir + "/output_ctexch_" + name_noext + std::to_string(time(0)) + ".png");
+	IO::save01_in_u8(output, out_dir + "/output_ctexch_" + name_noext + "_" + std::to_string(time(nullptr)) + ".png");
 
 	return 0;
 }
