@@ -48,16 +48,23 @@ public:
         }
 
         for (int channel =0;channel < IMG::NB_CHANNELS; channel++) {
-            img.for_all_pixels([&](const typename IMG::PixelType & p){
+            img.parallel_for_all_pixels([&](const typename IMG::PixelType & p){
                 HistoType pix = conversionPixel(p);
-                int index = static_cast<int>(pix(channel) * (nb_bins-1));
-                histo[index](channel) += pix(channel);
+                int index = static_cast<int>(std::floor(pix(channel) * (nb_bins-1)));
+                histo[index](channel)++;
             });
+        }
+
+        int nb_pixels = img.width() * img.height();
+        for (int i=0;i<nb_bins;i++) {
+            for (int channel =0; channel < IMG::NB_CHANNELS; channel++) {
+                histo[i](channel) /= nb_pixels;
+            }
         }
 
     }
 
-    void exportHisto(const std::string &filename){
+    void exportHisto(const std::string &filename,const float ymax){
         std::ofstream fd;
         fd.open(filename + ".txt");
 
@@ -83,6 +90,8 @@ public:
         if(fd2.is_open()){
             fd2 << "set terminal svg size 512,512 enhanced fname \"arial\" butt solid" << std::endl;
             fd2 << "set output '"<< filename << ".svg'" << std::endl;
+            fd2 << "set yrange [0:"<< ymax <<"]" << std::endl;
+            fd2 << "set size ratio 0.5" << std::endl;
 
             if(IMG::NB_CHANNELS == 1){
                 fd2 << "plot \""<< filename << ".txt\" notitle lt rgb \"blue\" with lines"<< std::endl;

@@ -17,12 +17,14 @@ public :
     using Vec2 = Eigen::Matrix<T,2,1>;
 private:
     std::map<int, Color > palette;
+    ImageGrayf lut;
     T step = T(0);
 
     ImageRGB<T> filtered;
     T sigma_max;
     int width, height;
     bool isfiltered = false;
+    bool degauss = false;
 
     Color map(const T &x) const {
         Color ret;
@@ -120,6 +122,25 @@ private:
         });
     }
 
+    Color numeric_integration_col_lut_gauss1D(  const T&a,
+                                                const T&b,
+                                                const int &n,
+                                                const T& mu,
+                                                const T& sigma)
+    {
+        return numeric_integration_1D<Color>(a, b, n, [](){return Color(0,0,0);}, [&](const T &x){
+            int index = int(x * (lut.width()-1));
+            if(index < 0)
+                index =0;
+            if(index >= lut.width())
+                index = lut.width() - 1;
+
+            T x_degauss = lut.pixelAbsolute(index, 0);
+            Color ret = map(x_degauss) * gauss1D(x, mu, sigma);
+            return ret;
+        });
+    }
+
 public:
     Color_map() {}
     void add_color(const int &pos,const Color &col) {
@@ -136,6 +157,12 @@ public:
         width = i.width();
         filtered = i;
         sigma_max = sm;
+        isfiltered = true;
+    }
+
+    void set_degauss(const ImageGrayf & img){
+        lut = img;
+        degauss = true;
     }
 
     Color map(const T &f, const T &sigma) const {
@@ -161,9 +188,15 @@ public:
             Color c;
 
             if(s != 0)
-                c = numeric_integration_col_gauss1D(-3*s+f,3*s+f,nb_bins,f,s);
+                if(degauss)
+                    c = numeric_integration_col_lut_gauss1D(-3*s+f,3*s+f,nb_bins,f,s);
+                else
+                    c = numeric_integration_col_gauss1D(-3*s+f,3*s+f,nb_bins,f,s);
             else
-                c = map(f);
+                if(degauss)
+                    c = map(lut.pixelAbsolute(f*(lut.width()-1),0));
+                else
+                    c = map(f);
 
             p = ImageRGB<T>::itkPixel(c);
 

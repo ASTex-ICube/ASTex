@@ -18,7 +18,12 @@ target_sources(pnf_texture PRIVATE pnf_texture.cpp
 target_link_libraries(pnf_texture ASTex)
 
 add_executable(pnf "")
-target_sources(pnf PRIVATE pnf.cpp pnf.h noise.h color_map.h)
+target_sources(pnf PRIVATE pnf.cpp
+    pnf.h
+    noise.h
+    color_map.h
+    gaussian_transfer.h
+    gaussian_transfer.cpp)
 target_link_libraries(pnf ASTex)
 
 

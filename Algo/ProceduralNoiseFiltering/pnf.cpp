@@ -1,5 +1,6 @@
 #include <ASTex/easy_io.h>
 #include "pnf.h"
+#include "gaussian_transfer.h"
 
 using namespace ASTex;
 
@@ -9,11 +10,11 @@ int main()
     Color_map<T> cm;
 
 //  palette a
-//    cm.add_color(0,Color(1,1,0));
-//    cm.add_color(40,Color(1,0,0));
-//    cm.add_color(59,Color(0,0,0));
-//    cm.add_color(60,Color(1,1,1));
-//    cm.add_color(100,Color(1,1,1));
+    cm.add_color(0,Color(1,1,0));
+    cm.add_color(40,Color(1,0,0));
+    cm.add_color(59,Color(0,0,0));
+    cm.add_color(60,Color(1,1,1));
+    cm.add_color(100,Color(1,1,1));
 
 //  palette b
 //    cm.add_color(0, Color(0,0,0));
@@ -28,18 +29,27 @@ int main()
 //    cm.add_color(1, Color(1., 0., 0.));
 
 //  palette d
-    cm.add_color(0,Color(0,0,1));
-    cm.add_color(1,Color(0,1,0));
-    cm.add_color(2,Color(1,0,0));
+//    cm.add_color(0,Color(0,0,1));
+//    cm.add_color(1,Color(0,1,0));
+//    cm.add_color(2,Color(1,0,0));
 
     cm.export_courbe(TEMPO_PATH + "data.txt");
 //    cm.export_img_palette(512, TEMPO_PATH + "palette.png");
+
+    ImageGrayf lut(256,1);
+    ImageGrayf noise_degauss;
+    IO::loadu16_in_01(noise_degauss, TEMPO_PATH + "noise/scratches_repeat_non_gauss.png");
+
+    Gaussian_transfer::ComputeinvT(noise_degauss, lut);
+    IO::save01_in_u8(lut,TEMPO_PATH + "lut.png");
+
+    cm.set_degauss(lut);
 
 
     //filtrage color map
     auto start_chrono = std::chrono::system_clock::now();
 
-    cm.filter(128,128,200,0.5);
+    cm.filter(512,512,200,0.5);
 
     std::chrono::duration<double> elapsed_seconds = std::chrono::system_clock::now() - start_chrono;
     std::cout << "filtrage de la color map timing: " << elapsed_seconds.count() << " s." << std::endl;
@@ -48,6 +58,8 @@ int main()
 
     ImageRGB<T> c0_ = cm.get_filtered();
     IO::save01_in_u8(c0_,TEMPO_PATH + "color_map_filtered.png");
+
+    return EXIT_SUCCESS;
 
 //    ImageRGB<T> c0_;
 //    IO::loadu8_in_01(c0_,TEMPO_PATH+ "color_map_filtered.png");

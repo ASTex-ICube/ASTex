@@ -95,7 +95,7 @@ float Gaussian_transfer::invCDF(float U, float mu, float sigma)
             float U = (i + 0.5f) / (sortedInputValues.size());
             // Gaussian quantile
             float G = invCDF(U, 0.5f, 0.16666f);
-             G = clamp_scalar(G,0,1);
+            G = clamp_scalar(G,0,1);
             // Store
             T_input.pixelAbsolute(x,y).SetNthComponent(channel,G);
         }

@@ -8,7 +8,7 @@
 
 namespace ASTex {
 
-using T = double;
+using T = float;
 using Vec2 = Eigen::Matrix<T,2,1>;
 using Mat22 = Eigen::Matrix<T,2,2>;
 using Color = Color_map<T>::Color;
@@ -126,8 +126,13 @@ inline ImageGray<T> compute_noise_unfiltered(const Vec2 & w_size,
 {
     Vec2 offset(T(n.width()) * T(0.5), T(n.height()) * T(0.5));
     offset -= w_size * T(0.5);
+
+    Vec2 t_size(n.width(), n.height());
+    Vec2 footprint(w_size(0) / t_size(0), w_size(1) / t_size(1));
+
     return computeIMG<ImageGray<T>>(offset, w_size, im_size, [&](Vec2 &pos) {
-        return n.get(pos);
+        Vec2 corner_start = pos - footprint * T(0.5);
+        return n.get(corner_start);
     });
 }
 
@@ -154,8 +159,13 @@ inline ImageRGB<T> compute_unfiltered_IMG(const Vec2 & w_size,
 {
     Vec2 offset(T(n.width()) * T(0.5), T(n.height()) * T(0.5));
     offset -= w_size * T(0.5);
+
+    Vec2 t_size(n.width(), n.height());
+    Vec2 footprint(w_size(0) / t_size(0), w_size(1) / t_size(1));
+
     return computeIMG<ImageRGB<T>>(offset, w_size, im_size, [&](Vec2 &pos) {
-        return cm.map(n.get(pos), 0);
+        Vec2 corner_start = pos - footprint * T(0.5);
+        return cm.map(n.get(corner_start), 0);
     });
 }
 
