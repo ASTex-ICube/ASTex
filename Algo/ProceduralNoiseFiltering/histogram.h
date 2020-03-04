@@ -8,7 +8,7 @@
 namespace ASTex {
 
 template <typename IMG>
-class Histogram{
+class Histogram2{
 public:
     using HistoType = Eigen::Matrix<typename IMG::DataType,IMG::NB_CHANNELS,1>;
 private :
@@ -32,8 +32,8 @@ private :
     }
 
 public:
-    Histogram() : histo(nullptr),nb_bins(0) {}
-    ~Histogram(){delete [] histo;}
+	Histogram2() : histo(nullptr),nb_bins(0) {}
+	~Histogram2(){delete [] histo;}
 
     void computeHisto(const IMG &img, const int &n)
     {

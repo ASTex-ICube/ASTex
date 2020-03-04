@@ -13,7 +13,6 @@ target_sources(pnf_texture PRIVATE pnf_texture.cpp
     texture_noise.h
     color_map.h
     gaussian_transfer.h
-    gaussian_transfer.cpp
     histogram.h)
 target_link_libraries(pnf_texture ASTex)
 
@@ -22,8 +21,7 @@ target_sources(pnf PRIVATE pnf.cpp
     pnf.h
     noise.h
     color_map.h
-    gaussian_transfer.h
-    gaussian_transfer.cpp)
+    gaussian_transfer.h)
 target_link_libraries(pnf ASTex)
 
 

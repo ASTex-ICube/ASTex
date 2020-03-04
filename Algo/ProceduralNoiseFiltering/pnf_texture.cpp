@@ -62,7 +62,7 @@ int main()
     ImageGray<T> noise;
     IO::loadu16_in_01(noise, TEMPO_PATH + "noise/voronoi_repeat_non_gauss.png");
     ImageGray<T> noise_gauss(noise.width(), noise.height());
-    Gaussian_transfer::ComputeTinput(noise,noise_gauss);
+	Gaussian_transfer<ImageGray<T>>::ComputeTinput(noise,noise_gauss);
 
 //    ImageSpectrald psd;
 //    IO::EXR::load(psd, TEMPO_PATH + "spectra/donut_black.exr");
@@ -159,7 +159,7 @@ int main()
     IO::save01_in_u16(im_noise_cm_good_filter,TEMPO_PATH + "texture_noise_mapped_goood_filtering.png");
 
     //Histogram<ImageGray<T>> gray;
-    Histogram<ImageRGB<T>> rgb;
+	Histogram2<ImageRGB<T>> rgb;
 
     rgb.computeHisto(im_ground_truth,256);
     rgb.exportHisto(TEMPO_PATH + "ground_truth", 1.0);

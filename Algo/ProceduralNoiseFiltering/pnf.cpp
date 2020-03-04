@@ -40,7 +40,7 @@ int main()
     ImageGrayf noise_degauss;
     IO::loadu16_in_01(noise_degauss, TEMPO_PATH + "noise/scratches_repeat_non_gauss.png");
 
-    Gaussian_transfer::ComputeinvT(noise_degauss, lut);
+	Gaussian_transfer<ImageGrayf>::ComputeinvT(noise_degauss, lut);
     IO::save01_in_u8(lut,TEMPO_PATH + "lut.png");
 
     cm.set_degauss(lut);
