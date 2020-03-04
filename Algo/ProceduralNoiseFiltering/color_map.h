@@ -236,9 +236,15 @@ public:
         im.parallel_for_all_pixels([&](typename ImageRGB<T>::PixelType &pix, int , int j){
             T y = T(j) / T(im.height());
             if (!isfiltered)
-                pix = ImageRGB<T>::itkPixel(map(y));
+                if(!degauss)
+                    pix = ImageRGB<T>::itkPixel(map(y));
+                else
+                    pix = ImageRGB<T>::itkPixel(map(lut.pixelAbsolute(int(y*(lut.width()-1)), 0)));
             else
-                pix = ImageRGB<T>::itkPixel(map(y,0));
+                if(!degauss)
+                    pix = ImageRGB<T>::itkPixel(map(y,0));
+                else
+                    pix = ImageRGB<T>::itkPixel(map(lut.pixelAbsolute(int(y*(lut.width()-1)), 0), 0));
         });
         IO::save01_in_u8(im, filename);
 

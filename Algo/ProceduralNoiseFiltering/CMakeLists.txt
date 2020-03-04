@@ -3,7 +3,6 @@ cmake_minimum_required(VERSION 3.0)
 project(ProceduralNoiseFiltering)
 
 find_package(ASTex REQUIRED)
-find_package(Qt5 COMPONENTS Widgets)
 
 add_definitions(-DTEMPO_PATH=std::string\(\"${ASTEX_TEMPO_PATH}/\"\) )
 
@@ -25,6 +24,13 @@ target_sources(pnf PRIVATE pnf.cpp
     gaussian_transfer.h
     gaussian_transfer.cpp)
 target_link_libraries(pnf ASTex)
+
+add_executable(generator "")
+target_sources(generator PRIVATE generator.cpp
+    histogram.h
+    gaussian_transfer.h
+    gaussian_transfer.cpp)
+target_link_libraries(generator ASTex)
 
 
 # nice vs solution
