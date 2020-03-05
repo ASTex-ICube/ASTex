@@ -19,7 +19,7 @@ static void usage(const char *msg = nullptr, ...) {
         fprintf(stderr, "\n");
     }
     fprintf(stderr, R"(usage: generator <command> [options] <filenames...>
-    commands: histo, gaussianize, lut, prefilter, noisePSD
+    commands: histo, gaussianize, lut, prefilter, PSD, noisePSD
 
     histo options:
         -o              name of the output file (default histo).
