@@ -29,7 +29,8 @@ add_executable(generator "")
 target_sources(generator PRIVATE generator.cpp
     histogram.h
     gaussian_transfer.h
-    gaussian_transfer.cpp)
+    gaussian_transfer.cpp
+    color_map.h)
 target_link_libraries(generator ASTex)
 
 

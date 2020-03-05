@@ -175,7 +175,7 @@ public:
         return filtered.pixelEigenAbsolute(x,y);
     }
 
-    void filter(const int &w, const int &h,const int &nb_bins, const T &sm){
+    void filter(const int &w, const int &h,const int &nb, const T &sm){
         width = w;
         height = h;
         sigma_max = sm;
@@ -189,9 +189,9 @@ public:
 
             if(s != 0)
                 if(degauss)
-                    c = numeric_integration_col_lut_gauss1D(-3*s+f,3*s+f,nb_bins,f,s);
+                    c = numeric_integration_col_lut_gauss1D(-3*s+f,3*s+f,nb,f,s);
                 else
-                    c = numeric_integration_col_gauss1D(-3*s+f,3*s+f,nb_bins,f,s);
+                    c = numeric_integration_col_gauss1D(-3*s+f,3*s+f,nb,f,s);
             else
                 if(degauss)
                     c = map(lut.pixelAbsolute(f*(lut.width()-1),0));
