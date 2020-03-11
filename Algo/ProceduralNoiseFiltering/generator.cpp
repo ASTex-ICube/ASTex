@@ -281,6 +281,9 @@ int gaussianize(int argc, char **argv)
 
             IMG imgT(img.width(), img.height());
             Gaussian_transfer<IMG>::ComputeTinput(img,imgT);
+//            Histogram<IMG> h;
+//            h.computeHisto(imgT, 256);
+//            h.exportHisto("giota_f", 0.03);
 
             if(_16bits)
                 IO::save01_in_u16(imgT, filename);
@@ -297,6 +300,10 @@ int gaussianize(int argc, char **argv)
 
             IMG imgT(img.width(), img.height());
             Gaussian_transfer<IMG>::ComputeTinput(img,imgT);
+
+//            Histogram<IMG> h;
+//            h.computeHisto(imgT, 256);
+//            h.exportHisto("giota_d", 0.03);
 
             if(_16bits)
                 IO::save01_in_u16(imgT, filename);
