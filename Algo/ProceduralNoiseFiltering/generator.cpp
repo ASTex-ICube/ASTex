@@ -10,8 +10,6 @@
 #include <ASTex/exr_io.h>
 
 using namespace ASTex;
-using Color = Color_map<double>::Color;
-using Vec2 = Pnf<double>::Vec2;
 
 static void usage(const char *msg = nullptr, ...) {
     if (msg) {
@@ -22,7 +20,7 @@ static void usage(const char *msg = nullptr, ...) {
         fprintf(stderr, "\n");
     }
     fprintf(stderr, R"(usage: generator <command> [options] <filenames...>
-    commands: histo, gaussianize, getDegaussTrans, prefilter, PSD, noisePSD,
+    commands: histo, gaussianize, getDeGaussTrans, prefilter, PSD, noisePSD,
               noiseCm, noiseCmGroundTruth, noiseCmNaiveFiltering, noiseCmHeitzFiltering, noiseCmOurFiltering
 
 
@@ -44,7 +42,7 @@ static void usage(const char *msg = nullptr, ...) {
         --gray              to transform a gray image (default transform RGB image).
         --16                to load and save a 16 bits image (default load and save 8 bits image).
 
-    get_degauss_trans options:
+    getDeGaussTrans options:
         -o                  name of the output file (default lut.png).
         --outfile           name of the output file (default lut.png).
         -s                  size of the lookUpTable (lut) (default 256).
@@ -53,6 +51,9 @@ static void usage(const char *msg = nullptr, ...) {
         --gray              to get the lut (= degaussianize transformation) of a gray image (default transform RGB image).
         --16                to load and save a 16 bits image (default load and save 8 bits image).
 
+    degaussianize options:
+        -TODO               TODO
+
     prefilter options:
         -o                  name of the output file (default color_map_flitered.png).
         --outfile           name of the output file (default color_map_flitered.png).
@@ -60,6 +61,8 @@ static void usage(const char *msg = nullptr, ...) {
         --width             size of the width of the output image (default 256).
         -h                  size of the height of the output image (default 256).
         --height            size of the height of the output image (default 256).
+        -s                  sigma max (default 0.1666667).
+        --sigmaMax          sigma max (default 0.1666667).
         -n                  number of sampling to do the numerical integration (default 200).
         --lut               (optional) name of the lut used to do the prefiltering (default lut.png)
         --16                to load a 16 bits lut (default load 8 bits lut).
@@ -137,6 +140,7 @@ int histo(int argc, char **argv)
 
     bool gray = false;
     bool _16bits = false;
+    bool d = false;
     int nb_bins = 256;
     std::string filename("histo");
     float ymax = 1.0;
@@ -152,10 +156,13 @@ int histo(int argc, char **argv)
     };
 
     int opt;
-    while ((opt = getopt_long(argc, argv, "o:n:y:g",long_options,&option_index)) != -1) {
+    while ((opt = getopt_long(argc, argv, "o:n:y:gd",long_options,&option_index)) != -1) {
         switch (opt) {
             case 16:
                 _16bits = true;
+                break;
+            case 'd':
+                d = true;
                 break;
             case 'g':
                 gray = true;
@@ -177,24 +184,48 @@ int histo(int argc, char **argv)
     }
 
     if(gray){
-        Histogram<ImageGrayd> h;
-        ImageGrayd img;
-        if(_16bits)
-            IO::loadu16_in_01(img, argv[optind]);
-        else
-            IO::loadu8_in_01(img, argv[optind]);
-        h.computeHisto(img, nb_bins);
-        h.exportHisto(filename, ymax);
+        if(d){
+            Histogram<ImageGrayd> h;
+            ImageGrayd img;
+            if(_16bits)
+                IO::loadu16_in_01(img, argv[optind]);
+            else
+                IO::loadu8_in_01(img, argv[optind]);
+            h.computeHisto(img, nb_bins);
+            h.exportHisto(filename, ymax);
+        }
+        else {
+            Histogram<ImageGrayf> h;
+            ImageGrayf img;
+            if(_16bits)
+                IO::loadu16_in_01(img, argv[optind]);
+            else
+                IO::loadu8_in_01(img, argv[optind]);
+            h.computeHisto(img, nb_bins);
+            h.exportHisto(filename, ymax);
+        }
     }
     else {
-        Histogram<ImageRGBd> h;
-        ImageRGBd img;
-        if(_16bits)
-            IO::loadu16_in_01(img, argv[optind]);
-        else
-            IO::loadu8_in_01(img, argv[optind]);
-        h.computeHisto(img, nb_bins);
-        h.exportHisto(filename, ymax);
+        if(d){
+            Histogram<ImageRGBd> h;
+            ImageRGBd img;
+            if(_16bits)
+                IO::loadu16_in_01(img, argv[optind]);
+            else
+                IO::loadu8_in_01(img, argv[optind]);
+            h.computeHisto(img, nb_bins);
+            h.exportHisto(filename, ymax);
+        }
+        else {
+            Histogram<ImageRGBf> h;
+            ImageRGBf img;
+            if(_16bits)
+                IO::loadu16_in_01(img, argv[optind]);
+            else
+                IO::loadu8_in_01(img, argv[optind]);
+            h.computeHisto(img, nb_bins);
+            h.exportHisto(filename, ymax);
+        }
     }
 
     return EXIT_SUCCESS;
@@ -206,7 +237,8 @@ int gaussianize(int argc, char **argv)
 
     bool gray = false;
     bool _16bits = false;
-    std::string filename("out.png");
+    bool d = false;
+    std::string filename("gaussianized.png");
 
     int option_index = 0;
     static struct option long_options[] = {
@@ -217,10 +249,13 @@ int gaussianize(int argc, char **argv)
     };
 
     int opt;
-    while ((opt = getopt_long(argc, argv, "o:g",long_options,&option_index)) != -1) {
+    while ((opt = getopt_long(argc, argv, "o:gd",long_options,&option_index)) != -1) {
         switch (opt) {
             case 16:
                 _16bits = true;
+                break;
+            case 'd':
+                d = true;
                 break;
             case 'g':
                 gray = true;
@@ -236,34 +271,72 @@ int gaussianize(int argc, char **argv)
     }
 
     if(gray){
-        ImageGrayf img;
-        if(_16bits)
-            IO::loadu16_in_01(img, argv[optind]);
-        else
-            IO::loadu8_in_01(img, argv[optind]);
+        if(!d){
+            using IMG = ImageGrayf;
+            IMG img;
+            if(_16bits)
+                IO::loadu16_in_01(img, argv[optind]);
+            else
+                IO::loadu8_in_01(img, argv[optind]);
 
-        ImageGrayf imgT(img.width(), img.height());
-        Gaussian_transfer::ComputeTinput(img,imgT);
+            IMG imgT(img.width(), img.height());
+            Gaussian_transfer<IMG>::ComputeTinput(img,imgT);
 
-        if(_16bits)
-            IO::save01_in_u16(imgT, filename);
-        else
-            IO::save01_in_u8(imgT, filename);
+            if(_16bits)
+                IO::save01_in_u16(imgT, filename);
+            else
+                IO::save01_in_u8(imgT, filename);
+        }
+        else {
+            using IMG = ImageGrayd;
+            IMG img;
+            if(_16bits)
+                IO::loadu16_in_01(img, argv[optind]);
+            else
+                IO::loadu8_in_01(img, argv[optind]);
+
+            IMG imgT(img.width(), img.height());
+            Gaussian_transfer<IMG>::ComputeTinput(img,imgT);
+
+            if(_16bits)
+                IO::save01_in_u16(imgT, filename);
+            else
+                IO::save01_in_u8(imgT, filename);
+        }
     }
     else {
-        ImageRGBf img;
-        if(_16bits)
-            IO::loadu16_in_01(img, argv[optind]);
-        else
-            IO::loadu8_in_01(img, argv[optind]);
+        if(!d){
+            using IMG = ImageRGBf;
+            IMG img;
+            if(_16bits)
+                IO::loadu16_in_01(img, argv[optind]);
+            else
+                IO::loadu8_in_01(img, argv[optind]);
 
-        ImageRGBf imgT(img.width(), img.height());
-        Gaussian_transfer::ComputeTinput(img,imgT);
+            IMG imgT(img.width(), img.height());
+            Gaussian_transfer<IMG>::ComputeTinput(img,imgT);
 
-        if(_16bits)
-            IO::save01_in_u16(imgT, filename);
-        else
-            IO::save01_in_u8(imgT, filename);
+            if(_16bits)
+                IO::save01_in_u16(imgT, filename);
+            else
+                IO::save01_in_u8(imgT, filename);
+        }
+        else {
+            using IMG = ImageRGBd;
+            IMG img;
+            if(_16bits)
+                IO::loadu16_in_01(img, argv[optind]);
+            else
+                IO::loadu8_in_01(img, argv[optind]);
+
+            IMG imgT(img.width(), img.height());
+            Gaussian_transfer<IMG>::ComputeTinput(img,imgT);
+
+            if(_16bits)
+                IO::save01_in_u16(imgT, filename);
+            else
+                IO::save01_in_u8(imgT, filename);
+        }
     }
 
     return EXIT_SUCCESS;
@@ -276,6 +349,7 @@ int getDegaussTrans(int argc, char **argv)
 
     bool gray = false;
     bool _16bits = false;
+    bool d = false;
     std::string filename("lut.png");
     int s = 256;
 
@@ -289,10 +363,13 @@ int getDegaussTrans(int argc, char **argv)
     };
 
     int opt;
-    while ((opt = getopt_long(argc, argv, "o:gs:",long_options,&option_index)) != -1) {
+    while ((opt = getopt_long(argc, argv, "o:gs:d",long_options,&option_index)) != -1) {
         switch (opt) {
             case 16:
                 _16bits = true;
+                break;
+            case 'd':
+                d = true;
                 break;
             case 'g':
                 gray = true;
@@ -311,34 +388,188 @@ int getDegaussTrans(int argc, char **argv)
     }
 
     if(gray){
-        ImageGrayf img;
-        if(_16bits)
-            IO::loadu16_in_01(img, argv[optind]);
-        else
-            IO::loadu8_in_01(img, argv[optind]);
+        if(!d){
+            using IMG = ImageGrayf;
+            IMG img;
+            if(_16bits)
+                IO::loadu16_in_01(img, argv[optind]);
+            else
+                IO::loadu8_in_01(img, argv[optind]);
 
-        ImageGrayf ilut(s, 1);
-        Gaussian_transfer::ComputeinvT(img,ilut);
+            IMG ilut(s, 1);
+            Gaussian_transfer<IMG>::ComputeinvT(img,ilut);
 
-        if(_16bits)
-            IO::save01_in_u16(ilut, filename);
-        else
-            IO::save01_in_u8(ilut, filename);
+            if(_16bits)
+                IO::save01_in_u16(ilut, filename);
+            else
+                IO::save01_in_u8(ilut, filename);
+        }
+        else {
+            using IMG = ImageGrayd;
+            IMG img;
+            if(_16bits)
+                IO::loadu16_in_01(img, argv[optind]);
+            else
+                IO::loadu8_in_01(img, argv[optind]);
+
+            IMG ilut(s, 1);
+            Gaussian_transfer<IMG>::ComputeinvT(img,ilut);
+
+            if(_16bits)
+                IO::save01_in_u16(ilut, filename);
+            else
+                IO::save01_in_u8(ilut, filename);
+        }
     }
     else {
-        ImageRGBf img;
-        if(_16bits)
-            IO::loadu16_in_01(img, argv[optind]);
-        else
-            IO::loadu8_in_01(img, argv[optind]);
+        if(!d){
+            using IMG = ImageRGBf;
+            IMG img;
+            if(_16bits)
+                IO::loadu16_in_01(img, argv[optind]);
+            else
+                IO::loadu8_in_01(img, argv[optind]);
 
-        ImageRGBf ilut(s, 1);
-        Gaussian_transfer::ComputeinvT(img,ilut);
+            IMG ilut(s, 1);
+            Gaussian_transfer<IMG>::ComputeinvT(img,ilut);
 
-        if(_16bits)
-            IO::save01_in_u16(ilut, filename);
-        else
-            IO::save01_in_u8(ilut, filename);
+            if(_16bits)
+                IO::save01_in_u16(ilut, filename);
+            else
+                IO::save01_in_u8(ilut, filename);
+        }
+        else {
+            using IMG = ImageRGBd;
+            IMG img;
+            if(_16bits)
+                IO::loadu16_in_01(img, argv[optind]);
+            else
+                IO::loadu8_in_01(img, argv[optind]);
+
+            IMG ilut(s, 1);
+            Gaussian_transfer<IMG>::ComputeinvT(img,ilut);
+
+            if(_16bits)
+                IO::save01_in_u16(ilut, filename);
+            else
+                IO::save01_in_u8(ilut, filename);
+        }
+    }
+
+    return EXIT_SUCCESS;
+
+}
+
+int degaussianize(int argc, char **argv)
+{
+    if(argc < 3) usage(argv[0]);
+
+    bool gray = false;
+    bool _16bits = false;
+    bool d = false;
+    std::string filename("degaussianized.png");
+
+    int option_index = 0;
+    static struct option long_options[] = {
+        {"outfile",     required_argument,  nullptr,    'o'},
+        {"gray" ,       no_argument,        nullptr,    'g'},
+        {"16",          no_argument,        nullptr,    16 },
+        {0,             0,                  0,          0}
+    };
+
+    int opt;
+    while ((opt = getopt_long(argc, argv, "o:gd",long_options,&option_index)) != -1) {
+        switch (opt) {
+            case 16:
+                _16bits = true;
+                break;
+            case 'd':
+                d = true;
+                break;
+            case 'g':
+                gray = true;
+                break;
+            case 'o':
+                filename = optarg;
+                break;
+            default:
+                usage(argv[0]);
+
+        }
+
+    }
+
+    if(gray){
+        if(!d){
+            using IMG = ImageGrayf;
+            IMG input, lut;
+            IO::loadu8_in_01(lut,argv[optind]);
+
+            if(_16bits)
+                IO::loadu16_in_01(input, argv[optind+1]);
+            else
+                IO::loadu8_in_01(input, argv[optind+1]);
+
+            IMG output = Gaussian_transfer<IMG>::invT(input,lut);
+
+            if(_16bits)
+                IO::save01_in_u16(output, filename);
+            else
+                IO::save01_in_u8(output, filename);
+        }
+        else {
+            using IMG = ImageGrayd;
+            IMG input, lut;
+            IO::loadu8_in_01(lut,argv[optind]);
+
+            if(_16bits)
+                IO::loadu16_in_01(input, argv[optind+1]);
+            else
+                IO::loadu8_in_01(input, argv[optind+1]);
+
+            IMG output = Gaussian_transfer<IMG>::invT(input,lut);
+
+            if(_16bits)
+                IO::save01_in_u16(output, filename);
+            else
+                IO::save01_in_u8(output, filename);
+        }
+    }
+    else {
+        if(!d){
+            using IMG = ImageRGBf;
+            IMG input, lut;
+            IO::loadu8_in_01(lut,argv[optind]);
+
+            if(_16bits)
+                IO::loadu16_in_01(input, argv[optind+1]);
+            else
+                IO::loadu8_in_01(input, argv[optind+1]);
+
+            IMG output = Gaussian_transfer<IMG>::invT(input, lut);
+
+            if(_16bits)
+                IO::save01_in_u16(output, filename);
+            else
+                IO::save01_in_u8(output, filename);
+        }
+        else {
+            using IMG = ImageRGBd;
+            IMG input, lut;
+            IO::loadu8_in_01(lut,argv[optind]);
+
+            if(_16bits)
+                IO::loadu16_in_01(input, argv[optind+1]);
+            else
+                IO::loadu8_in_01(input, argv[optind+1]);
+
+            IMG output = Gaussian_transfer<IMG>::invT(input, lut);
+
+            if(_16bits)
+                IO::save01_in_u16(output, filename);
+            else
+                IO::save01_in_u8(output, filename);
+        }
     }
 
     return EXIT_SUCCESS;
@@ -399,30 +630,31 @@ int prefilter(int argc, char **argv)
 
     }
 
+    using Color = Color_map<double>::Color;
     Color_map<double> cm;
 //  palette a
-//    cm.add_color(0,Color(1,1,0));
-//    cm.add_color(40,Color(1,0,0));
-//    cm.add_color(59,Color(0,0,0));
-//    cm.add_color(60,Color(1,1,1));
-//    cm.add_color(100,Color(1,1,1));
+    cm.add_color(0,Color(1,1,0));
+    cm.add_color(40,Color(1,0,0));
+    cm.add_color(59,Color(0,0,0));
+    cm.add_color(60,Color(1,1,1));
+    cm.add_color(100,Color(1,1,1));
 
 //  palette b
-    cm.add_color(0, Color(0,0,0));
-    cm.add_color(4, Color(0,0,0));
-    cm.add_color(5, Color(1,1,1));
-    cm.add_color(7, Color(1,1,1));
-    cm.add_color(9, Color(199./255., 139./255., 105./255.));
-    cm.add_color(10, Color(199./255., 139./255., 105./255.));
+//    cm.add_color(0, Color(0,0,0));
+//    cm.add_color(4, Color(0,0,0));
+//    cm.add_color(5, Color(1,1,1));
+//    cm.add_color(7, Color(1,1,1));
+//    cm.add_color(9, Color(199./255., 139./255., 105./255.));
+//    cm.add_color(10, Color(199./255., 139./255., 105./255.));
 
 //  palette c
 //    cm.add_color(0, Color(0., 0., 1.));
 //    cm.add_color(1, Color(1., 0., 0.));
 
 //  palette d
-//    cm.add_color(0,Color(0,0,1));
-//    cm.add_color(1,Color(0,1,0));
-//    cm.add_color(2,Color(1,0,0));
+//    cm.add_color(0,Color(0.5,0.5,0.5));
+//    cm.add_color(1,Color(1.,1.,1.));
+//    cm.add_color(2,Color(0.,0.,0.));
 
     if(lut){
         ImageGrayf ilut;
@@ -583,7 +815,7 @@ int noisePSD(int argc, char **argv)
 
 int noiseCm(int argc, char **argv)
 {
-    if(argc < 3) usage(argv[0]);
+    if(argc < 2) usage(argv[0]);
 
     std::string filename("noise_color_mapped.png");
     std::string inputname;
@@ -655,10 +887,10 @@ int noiseCm(int argc, char **argv)
 
     ImageRGBd prefiltered;
     IO::loadu8_in_01(prefiltered, argv[optind]);
-    double sigma_max = std::atof(argv[optind+1]);
 
+    using Vec2 = Pnf<double>::Vec2;
     Color_map<double> color_map;
-    color_map.set_filtered(prefiltered, sigma_max);
+    color_map.set_filtered(prefiltered, 0);
 
     Vec2 im_size(w,h);
     std::chrono::time_point<std::chrono::system_clock> start_chrono;
@@ -810,6 +1042,7 @@ int noiseCmGroundTruth(int argc, char **argv)
     IO::loadu8_in_01(prefiltered, argv[optind]);
     double sigma_max = std::atof(argv[optind+1]);
 
+    using Vec2 = Pnf<double>::Vec2;
     Color_map<double> color_map;
     color_map.set_filtered(prefiltered, sigma_max);
 
@@ -961,6 +1194,8 @@ int noiseCmFiltering(int argc, char **argv, std::string filename, const func_n &
     IO::loadu8_in_01(prefiltered, argv[optind]);
     double sigma_max = std::atof(argv[optind+1]);
 
+    using Vec2 = Pnf<double>::Vec2;
+
     Color_map<double> color_map;
     color_map.set_filtered(prefiltered, sigma_max);
 
@@ -1014,6 +1249,7 @@ int noiseCmFiltering(int argc, char **argv, std::string filename, const func_n &
 
 int noiseCmNaiveFiltering(int argc, char **argv)
 {
+    using Vec2 = Pnf<double>::Vec2;
     return noiseCmFiltering(argc, argv, "naive_filtering.png",
        [](  const Vec2 &w_size,
             const Vec2 &im_size,
@@ -1031,6 +1267,7 @@ int noiseCmNaiveFiltering(int argc, char **argv)
 
 int noiseCmHeitzFiltering(int argc, char **argv)
 {
+    using Vec2 = Pnf<double>::Vec2;
     return noiseCmFiltering(argc, argv, "Heitz_filtering.png",
        [](  const Vec2 &w_size,
             const Vec2 &im_size,
@@ -1055,6 +1292,7 @@ int noiseCmOurFiltering(int argc, char **argv)
     double z(1);
 
     bool _16bits(false);
+    bool gauss(false);
 
     int option_index = 0;
     static struct option long_options[] = {
@@ -1067,7 +1305,7 @@ int noiseCmOurFiltering(int argc, char **argv)
     };
 
     int opt;
-    while ((opt = getopt_long(argc, argv, "o:w:h:z:e:n:",long_options,&option_index)) != -1) {
+    while ((opt = getopt_long(argc, argv, "o:w:h:z:g",long_options,&option_index)) != -1) {
         switch (opt) {
             case 16:
                 _16bits= true;
@@ -1084,6 +1322,9 @@ int noiseCmOurFiltering(int argc, char **argv)
             case 'z':
                 z = std::atof(optarg);
                 break;
+            case 'g':
+                gauss = true;
+                break;
             default:
                 usage(argv[0]);
 
@@ -1091,23 +1332,35 @@ int noiseCmOurFiltering(int argc, char **argv)
 
     }
 
-    ImageRGBd prefiltered;
-    IO::loadu8_in_01(prefiltered, argv[optind]);
-    double sigma_max = std::atof(argv[optind+1]);
+    using T = float;
+    using Vec2 = Pnf<T>::Vec2;
 
-    Color_map<double> color_map;
+    ImageRGB<T> prefiltered;
+    IO::loadu8_in_01(prefiltered, argv[optind]);
+    T sigma_max = T(std::atof(argv[optind+1]));
+
+    Color_map<T> color_map;
     color_map.set_filtered(prefiltered, sigma_max);
 
 
     Vec2 im_size(w,h);
-    ImageGrayd noise_example;
+    ImageGray<T> noise_example;
     if(_16bits)
         IO::loadu16_in_01(noise_example, argv[optind+2]);
     else
         IO::loadu8_in_01(noise_example, argv[optind+2]);
 
-    TextureNoise<double> n;
-    n.setNoise(noise_example);
+    TextureNoise<T> n;
+
+    if(!gauss){
+        ImageGray<T> gauss_noise_example(noise_example.width(), noise_example.height());
+        Gaussian_transfer<ImageGray<T>>::ComputeTinput(noise_example,gauss_noise_example);
+        n.setNoise(gauss_noise_example);
+    }
+    else {
+        n.setNoise(noise_example);
+    }
+
     Vec2 w_size(noise_example.width()*z, noise_example.height()*z);
 
     std::chrono::time_point<std::chrono::system_clock> start_chrono;
@@ -1115,7 +1368,7 @@ int noiseCmOurFiltering(int argc, char **argv)
 
     start_chrono= std::chrono::system_clock::now();
 
-    ImageRGBd img = Pnf<double>::compute_good_filter_IMG(w_size, im_size, n, color_map);
+    ImageRGB<T> img = Pnf<T>::compute_good_filter_IMG(w_size, im_size, n, color_map);
 
     elapsed_seconds = std::chrono::system_clock::now() - start_chrono;
     std::cout << "gen timing : " << elapsed_seconds.count() << " s." << std::endl;
@@ -1137,6 +1390,8 @@ int main(int argc, char **argv){
         return gaussianize(argc-1, argv+1);
     else if (!strcmp(argv[1], "getDeGaussTrans"))
         return getDegaussTrans(argc-1, argv+1);
+    else if (!strcmp(argv[1], "degaussianize"))
+        return degaussianize(argc-1, argv+1);
     else if (!strcmp(argv[1], "prefilter"))
         return prefilter(argc-1, argv+1);
     else if (!strcmp(argv[1], "PSD"))
