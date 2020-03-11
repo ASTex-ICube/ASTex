@@ -175,7 +175,11 @@ public:
         for (unsigned int channel = 0; channel < IMG::NB_CHANNELS; channel++) {
             DataType value = pix[channel] * size;
             DataType value_floor = std::floor(value);
+            DataType t = value - value_floor;
+
             int index = int(value_floor);
+            if(t > DataType(0.5))
+                index++;
 
             PixelType tmp = Tinv.pixelAbsolute(index, 0);
             pix_Tinv = reinterpret_cast<DataType*>(&tmp);
