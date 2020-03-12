@@ -141,7 +141,7 @@ int histo(int argc, char **argv)
     bool gray = false;
     bool _16bits = false;
     bool d = false;
-    int nb_bins = 256;
+    unsigned int nb_bins = 256;
     std::string filename("histo");
     float ymax = 1.0;
 
@@ -168,7 +168,7 @@ int histo(int argc, char **argv)
                 gray = true;
                 break;
             case 'n':
-                nb_bins = std::atoi(optarg);
+                nb_bins = static_cast<unsigned int>(std::atoi(optarg));
                 break;
             case 'o':
                 filename = optarg;
@@ -583,8 +583,75 @@ int degaussianize(int argc, char **argv)
 
 }
 
+int colormap(int argc, char **argv)
+{
+    std::string filename("color_map.png");
+    int w(25), h(256);
+
+    int option_index = 0;
+    static struct option long_options[] = {
+        {"outfile",     required_argument,  nullptr,    'o'},
+        {"width",       required_argument,  nullptr,    'w'},
+        {"height",      required_argument,  nullptr,    'h'},
+        {"lut",         optional_argument,  nullptr,    1  },
+        {0,             0,                  0,          0}
+    };
+
+    int opt;
+    while ((opt = getopt_long(argc, argv, "o:w:h:",long_options,&option_index)) != -1) {
+        switch (opt) {
+            case 'o':
+                filename = optarg;
+                break;
+            case 'w':
+                w = std::atoi(optarg);
+                break;
+            case 'h':
+                h = std::atoi(optarg);
+                break;
+            default:
+                usage(argv[0]);
+
+        }
+
+    }
+
+    using Color = Color_map<double>::Color;
+    Color_map<double> cm;
+//  palette a
+//    cm.add_color(0,Color(1,1,0));
+//    cm.add_color(40,Color(1,0,0));
+//    cm.add_color(59,Color(0,0,0));
+//    cm.add_color(60,Color(1,1,1));
+//    cm.add_color(100,Color(1,1,1));
+
+//  palette b
+//    cm.add_color(0, Color(0,0,0));
+//    cm.add_color(4, Color(0,0,0));
+//    cm.add_color(5, Color(1,1,1));
+//    cm.add_color(7, Color(1,1,1));
+//    cm.add_color(9, Color(199./255., 139./255., 105./255.));
+//    cm.add_color(10, Color(199./255., 139./255., 105./255.));
+
+//  palette c
+//    cm.add_color(0, Color(0., 0., 0.));
+//    cm.add_color(1, Color(1., 1., 1.));
+
+//  palette d
+    cm.add_color(0,Color(0.,0.,1.));
+    cm.add_color(1,Color(0.,1.,0.));
+    cm.add_color(2,Color(1.,0.,0.));
+
+    cm.compute_img_palette(w, h, filename);
+
+    return EXIT_SUCCESS;
+
+}
+
 int prefilter(int argc, char **argv)
 {
+    if(argc < 2) usage(argv[0]);
+
     bool lut = false;
     bool _16bits = false;
     std::string filename("color_map_prefiltered.png");
@@ -637,34 +704,17 @@ int prefilter(int argc, char **argv)
 
     }
 
-    using Color = Color_map<double>::Color;
-    Color_map<double> cm;
-//  palette a
-    cm.add_color(0,Color(1,1,0));
-    cm.add_color(40,Color(1,0,0));
-    cm.add_color(59,Color(0,0,0));
-    cm.add_color(60,Color(1,1,1));
-    cm.add_color(100,Color(1,1,1));
+    using T = double;
+    using Color = Color_map<T>::Color;
 
-//  palette b
-//    cm.add_color(0, Color(0,0,0));
-//    cm.add_color(4, Color(0,0,0));
-//    cm.add_color(5, Color(1,1,1));
-//    cm.add_color(7, Color(1,1,1));
-//    cm.add_color(9, Color(199./255., 139./255., 105./255.));
-//    cm.add_color(10, Color(199./255., 139./255., 105./255.));
+    Color_map<T> cm;
+    ImageRGB<T> img_cm;
+    IO::loadu8_in_01(img_cm, argv[optind]);
 
-//  palette c
-//    cm.add_color(0, Color(0., 0., 1.));
-//    cm.add_color(1, Color(1., 0., 0.));
-
-//  palette d
-//    cm.add_color(0,Color(0.5,0.5,0.5));
-//    cm.add_color(1,Color(1.,1.,1.));
-//    cm.add_color(2,Color(0.,0.,0.));
+    cm.set_colorMap(img_cm);
 
     if(lut){
-        ImageGrayf ilut;
+        ImageGrayd ilut;
         if(_16bits)
             IO::loadu16_in_01(ilut,lutname);
         else
@@ -897,7 +947,7 @@ int noiseCm(int argc, char **argv)
 
     using Vec2 = Pnf<double>::Vec2;
     Color_map<double> color_map;
-    color_map.set_filtered(prefiltered, 0);
+    color_map.set_filtered(prefiltered, 1);
 
     Vec2 im_size(w,h);
     std::chrono::time_point<std::chrono::system_clock> start_chrono;
@@ -1399,6 +1449,8 @@ int main(int argc, char **argv){
         return getDegaussTrans(argc-1, argv+1);
     else if (!strcmp(argv[1], "degaussianize"))
         return degaussianize(argc-1, argv+1);
+    else if (!strcmp(argv[1], "colormap"))
+        return colormap(argc-1, argv+1);
     else if (!strcmp(argv[1], "prefilter"))
         return prefilter(argc-1, argv+1);
     else if (!strcmp(argv[1], "PSD"))

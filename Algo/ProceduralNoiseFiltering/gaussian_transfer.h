@@ -169,17 +169,16 @@ public:
 
     static void invT(PixelType &p, const IMG &Tinv)
     {
+        p = clamp_scalar(p,T(0),T(1));
         int size = Tinv.width() - 1;
         DataType *pix = reinterpret_cast<DataType*>(&p);
         DataType *pix_Tinv;
         for (unsigned int channel = 0; channel < IMG::NB_CHANNELS; channel++) {
             DataType value = pix[channel] * size;
-            DataType value_floor = std::floor(value);
-            DataType t = value - value_floor;
+//            DataType value_floor = std::floor(value);
+//            DataType t = value - value_floor;
 
-            int index = int(value_floor);
-            if(t > DataType(0.5))
-                index++;
+            int index = int(std::round(value));
 
             PixelType tmp = Tinv.pixelAbsolute(index, 0);
             pix_Tinv = reinterpret_cast<DataType*>(&tmp);
