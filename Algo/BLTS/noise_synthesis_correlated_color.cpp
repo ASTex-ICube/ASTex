@@ -32,6 +32,7 @@
 #include <ASTex/mask.h>
 #include <ASTex/distances_maps.h>
 #include <ASTex/pca.h>
+#include <ASTex/rpn_utils.h>
 #include <ctime>
 
 
@@ -141,7 +142,7 @@ void computeTransfer(std::vector<uint8_t>& trans, std::vector<int>& histo, std::
 
 void Synthesis(const std::string& out_path, const std::string& inputfile,/* const std::string& synthese_name,*/
 	/*const ImageRGBd& N_input,*/ const ImageRGBd& S_input,
-	const std::vector<PCA>& pcas,
+	const std::vector<PCA<double>>& pcas,
 	const std::vector<std::vector<ImageSpectrald>>& spectrum,
 	const std::vector<ImageGrayd>& guidance, std::vector<std::vector<ImageGrayd>> coords_per_mask)
 {
@@ -437,7 +438,10 @@ void Synthesis(const std::string& out_path, const std::string& inputfile,/* cons
 			}
 
 		// PROJECTION INVERSE DANS NOISE_SYNTHESIS
-		pcas[i].back_project(noise_synthesis_per_cord_per_mask[0][i], noise_synthesis_per_cord_per_mask[1][i], noise_synthesis_per_cord_per_mask[2][i], noise_synthesis[i]);
+		ImageRGBd noiseRGB;
+		fold3Channels(noiseRGB, noise_synthesis_per_cord_per_mask[0][i], noise_synthesis_per_cord_per_mask[1][i], noise_synthesis_per_cord_per_mask[2][i]);
+		pcas[i].back_project(noiseRGB, noise_synthesis[i]);
+		extract3Channels(noiseRGB, noise_synthesis_per_cord_per_mask[0][i], noise_synthesis_per_cord_per_mask[1][i], noise_synthesis_per_cord_per_mask[2][i]);
 
 
 		IO::save(noise_synthesis[i], out_path + name_file + "_noise_synth" + std::to_string(i) + ".png", 1.0, 0.5, 0.5, 0.5);
@@ -559,9 +563,9 @@ void Synthesis_corel(const std::string& filename_source, const std::string& base
 
 	/********************* PCA ************************/
 
-	std::vector<PCA> pcas;
+	std::vector<PCA<double>> pcas;
 	for (uint32_t k = 0; k < guidance.size(); ++k)
-		pcas.push_back(PCA(N_input)); // Input : sensé être notre noise RGB
+		pcas.push_back(PCA<double>(N_input)); // Input : sensé être notre noise RGB
 
 	std::vector<ImageGrayd> masks_normalized;
 	masks_normalized.resize(guidance.size());
@@ -589,7 +593,10 @@ void Synthesis_corel(const std::string& filename_source, const std::string& base
 		//Calcul de la base
 		pcas[k].computePCA(m);
 
-		pcas[k].project(coords_per_mask[0][k], coords_per_mask[1][k], coords_per_mask[2][k]);
+		ImageRGBd noiseRGB;
+		fold3Channels(noiseRGB, coords_per_mask[0][k], coords_per_mask[1][k], coords_per_mask[2][k]);
+		pcas[k].project(noiseRGB);
+		extract3Channels(noiseRGB, coords_per_mask[0][k], coords_per_mask[1][k], coords_per_mask[2][k]);
 
 		ImageGrayu8 mask_tmp;
 		mask_tmp.initItk(input.width(), input.height(), true);

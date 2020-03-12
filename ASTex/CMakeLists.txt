@@ -90,7 +90,6 @@ target_sources (${PROJECT_NAME} PRIVATE
 	image_collector.cpp
 	bilateral_filters.cpp
 	distances_maps.cpp
-	pca.cpp
 	thread_pool.cpp
 
 	../Algo/PatchExchange/FragmentProcessor.cpp

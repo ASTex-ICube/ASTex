@@ -313,7 +313,7 @@ void colored_RPN(const ImageRGBd& in, ImageRGBd& out, color_space_t colorSpace, 
 
 		if(mode==PCA_SYNTHESIS)
 			fold3Channels(out, redChannel, greenChannel, blueChannel);
-		PCA pca(out);
+		PCA<double> pca(out);
 
 		if(mode==PCA_SYNTHESIS)
 		{
@@ -325,7 +325,8 @@ void colored_RPN(const ImageRGBd& in, ImageRGBd& out, color_space_t colorSpace, 
 			pca.computePCA(mb);
 
 			//channels are projected into principal components
-			pca.project(redChannel, greenChannel, blueChannel);
+			pca.project(out);
+			extract3Channels(out, redChannel, greenChannel, blueChannel);
 		}
 
 		ImageSpectrald redFftInput, greenFftInput, blueFftInput;
@@ -455,7 +456,11 @@ void colored_RPN(const ImageRGBd& in, ImageRGBd& out, color_space_t colorSpace, 
 		}
 
 		if(mode==PCA_SYNTHESIS)
-			pca.back_project(redChannel, greenChannel, blueChannel, out);
+		{
+			ImageRGBd pcaResultFold;
+			fold3Channels(pcaResultFold, redChannel, greenChannel, blueChannel);
+			pca.back_project(pcaResultFold, out);
+		}
 		else
 			fold3Channels(out, redChannel, greenChannel, blueChannel);
 
@@ -542,23 +547,27 @@ void matchImage(ImageRGBd& source, const ImageRGBd& target, std::string external
 	{
 		MaskBool mb_alwaysTrue(source.width(), source.height());
 		mb_alwaysTrue |= [] (int, int) {return true;};
-		ImageGrayd pca1_source, pca2_source, pca3_source, pca1_target, pca2_target, pca3_target;
+		ImageRGBd pcaSourceImage, pcaTargetImage;
+		ImageGrayd pcaSourceChannels[3], pcaTargetChannels[3];
 
 		//First we compute the PCA of the image to decorrelate the channels as much as we can
-		PCA pcaSource(source);
+		PCA<double> pcaSource(source);
 		pcaSource.computePCA(mb_alwaysTrue);
-		pcaSource.project(pca1_source, pca2_source, pca3_source);
+		pcaSource.project(pcaSourceImage);
+		extract3Channels(pcaSourceImage, pcaSourceChannels[0], pcaSourceChannels[1], pcaSourceChannels[2]);
 
 		//we also compute the PCA of the input
-		PCA pcaTarget(target);
+		PCA<double> pcaTarget(target);
 		pcaTarget.computePCA(mb_alwaysTrue);
-		pcaTarget.project(pca1_target, pca2_target, pca3_target);
+		pcaTarget.project(pcaTargetImage);
+		extract3Channels(pcaTargetImage, pcaTargetChannels[0], pcaTargetChannels[1], pcaTargetChannels[2]);
 
-		matchImage(pca1_source, pca1_target);
-		matchImage(pca2_source, pca2_target);
-		matchImage(pca3_source, pca3_target);
+		matchImage(pcaSourceChannels[0], pcaTargetChannels[0]);
+		matchImage(pcaSourceChannels[1], pcaTargetChannels[1]);
+		matchImage(pcaSourceChannels[2], pcaTargetChannels[2]);
+		fold3Channels(pcaSourceImage, pcaSourceChannels[0], pcaSourceChannels[1], pcaSourceChannels[2]);
 
-		pcaSource.back_project(pca1_source, pca2_source, pca3_source, source);
+		pcaSource.back_project(pcaSourceImage, source);
 		//IO::save01_in_u8(source, "/home/nlutz/matchedImage.png");
 	}
 }
