@@ -37,11 +37,11 @@ private:
         }
     };
 
-    static float Erf(float x);
-    static float ErfInv(float x);
+	static float Erf(float x);
+	static float ErfInv(float x);
 
-    static float CDF(float x, float mu, float sigma);
-    static float invCDF(float U, float mu, float sigma);
+	static float CDF(float x, float mu, float sigma);
+	static float invCDF(float U, float mu, float sigma);
 };
 
 template<typename I>
