@@ -102,7 +102,7 @@ public:
             std::vector<PixelSortStruct> sortedInputValues;
             sortedInputValues.resize(input.width() * input.height());
 
-            input.parallel_for_all_pixels([&](const PixelType &p,int x,int y){
+            input.for_all_pixels([&](const PixelType &p,int x,int y){
                 sortedInputValues[y * input.width() + x].x = x;
                 sortedInputValues[y * input.width() + x].y = y;
 
@@ -140,7 +140,7 @@ public:
             std::vector<DataType> sortedInputValues;
             sortedInputValues.resize(input.width() * input.height());
 
-            input.parallel_for_all_pixels([&](const PixelType &p, int x, int y)
+            input.for_all_pixels([&](const PixelType &p, int x, int y)
             {
                 PixelType tmp = p;
                 pix = reinterpret_cast<DataType*>(&tmp);

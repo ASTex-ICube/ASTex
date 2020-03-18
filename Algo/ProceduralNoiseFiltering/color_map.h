@@ -5,6 +5,7 @@
 #include <map>
 #include <ASTex/utils.h>
 #include <ASTex/easy_io.h>
+#include "utils.h"
 
 namespace ASTex {
 
@@ -18,6 +19,7 @@ public :
 private:
     std::map<int, Color > palette;
     ImageRGB<T> color_map;
+    bool vertical = false;
     ImageGray<T> lut;
     T step = T(0);
 
@@ -32,8 +34,15 @@ private:
         Color ret;
         if(img_cm){
             T v = clamp_scalar(x, T(0), T(1));
-            int j = static_cast<int>(std::round(v * (color_map.height() - 1)));
-            ret  = color_map.pixelEigenAbsolute(0, j);
+            int index;
+            if(vertical){
+                index = static_cast<int>(std::round(v * (color_map.height() - 1)));
+                ret  = color_map.pixelEigenAbsolute(0, index);
+            }
+            else {
+                index = static_cast<int>(std::round(v * (color_map.width() - 1)));
+                ret  = color_map.pixelEigenAbsolute(index, 0);
+            }
         }
         else
         {
@@ -166,9 +175,10 @@ public:
         return filtered;
     }
 
-    void set_colorMap(const ImageRGB<T> &cm){
+    void set_colorMap(const ImageRGB<T> &cm,const bool &v){
         color_map = cm;
         img_cm = true;
+        vertical = v;
     }
 
     void set_degauss(const ImageGray<T> & img){
@@ -241,22 +251,28 @@ public:
         return s.str();
     }
 
-    void compute_img_palette(const int &w, const int & h, const std::string &filename) const {
+    void compute_img_palette(const int &w, const int & h, const std::string &filename, const bool & vertical) const {
         ImageRGB<T> im(w, h);
-        im.parallel_for_all_pixels([&](typename ImageRGB<T>::PixelType &pix, int , int j){
-            T y = T(j) / T(im.height()-1);
+        im.parallel_for_all_pixels([&](typename ImageRGB<T>::PixelType &pix, int i, int j){
+            T v;
+            if(vertical)
+                v = T(j) / T(im.height()-1);
+            else
+                v = T(i) / T(im.width()-1);
+
             if (!isfiltered)
                 if(!degauss)
-                    pix = ImageRGB<T>::itkPixel(map(y));
+                    pix = ImageRGB<T>::itkPixel(map(v));
                 else {
-                        T y_degauss = y;
-                        Gaussian_transfer<ImageGray<T>>::invT(y_degauss, lut);
-                        pix = ImageRGB<T>::itkPixel(map(y_degauss));
+                        T v_degauss = v;
+                        Gaussian_transfer<ImageGray<T>>::invT(v_degauss, lut);
+                        pix = ImageRGB<T>::itkPixel(map(v_degauss));
                 }
             else
-               pix = ImageRGB<T>::itkPixel(map(y,0));
+               pix = ImageRGB<T>::itkPixel(map(v,0));
         });
-        IO::save01_in_u8(im, filename);
+        //IO::save01_in_u8(im, filename);
+        saveGamma(im, filename);
 
     }
 

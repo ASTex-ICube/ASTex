@@ -35,7 +35,7 @@ public:
 
         DataType *pix;
         for (unsigned int channel =0;channel < IMG::NB_CHANNELS; channel++) {
-            img.parallel_for_all_pixels([&](const PixelType & p){
+            img.for_all_pixels([&](const PixelType & p){
                 PixelType tmp = p;
                 pix = reinterpret_cast<DataType*>(&tmp);
                 int index = static_cast<int>(std::floor(pix[channel] * (nb_bins-1)));
