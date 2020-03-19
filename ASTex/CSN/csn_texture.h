@@ -29,7 +29,8 @@ public:
 	using LutType				= typename GaussianTransferType::LutType;
 
 	void setTexture(const ImageType &texture);
-	void setCycles(const Eigen::Vector2f &firstCycle, const Eigen::Vector2f &secondCycle);
+	void setCycles(const Eigen::Vector2d &firstCycle, const Eigen::Vector2d &secondCycle);
+	void setUseCycles(bool b);
 
 	ImageType synthesize(unsigned width, unsigned height) const;
 
@@ -39,11 +40,13 @@ private:
 	void TriangleGrid(Eigen::Vector2d uv, float &w1, float &w2, float &w3,
 						Eigen::Vector2i &vertex1, Eigen::Vector2i &vertex2, Eigen::Vector2i &vertex3) const;
 	Eigen::Vector2d hash(const Eigen::Vector2d &p) const;
+	Eigen::Vector2d cyclicHash(const Eigen::Vector2d &p) const;
 	Eigen::Vector2d floor(const Eigen::Vector2d &v) const;
 	Eigen::Vector2d fract(const Eigen::Vector2d &v) const;
 
-	ImageType m_texture;
-	Eigen::Vector2f m_cycles[2];
+	ImageType		m_texture;
+	Eigen::Vector2d m_cycles[2];
+	bool			m_useCycles;
 };
 
 template<typename I>
@@ -53,10 +56,16 @@ void CSN_Texture<I>::setTexture(const ImageType &texture)
 }
 
 template<typename I>
-void CSN_Texture<I>::setCycles(const Eigen::Vector2f &firstCycle, const Eigen::Vector2f &secondCycle)
+void CSN_Texture<I>::setCycles(const Eigen::Vector2d &firstCycle, const Eigen::Vector2d &secondCycle)
 {
 	m_cycles[0] = firstCycle;
 	m_cycles[1] = secondCycle;
+}
+
+template<typename I>
+void CSN_Texture<I>::setUseCycles(bool b)
+{
+	m_useCycles = b;
 }
 
 template<typename I>
@@ -144,9 +153,18 @@ typename CSN_Texture<I>::PcaPixelType CSN_Texture<I>::proceduralTilingAndBlendin
 	Eigen::Vector2i vertex1, vertex2, vertex3;
 	TriangleGrid(uv, w1, w2, w3, vertex1, vertex2, vertex3);
 	// Assign random offset to each triangle vertex
-	Eigen::Vector2d uv1 = fract(uv + hash(vertex1.cast<double>()));
-	Eigen::Vector2d uv2 = fract(uv + hash(vertex2.cast<double>()));
-	Eigen::Vector2d uv3 = fract(uv + hash(vertex3.cast<double>()));
+
+	auto lmbd_hashFunction = [&](const Eigen::Vector2i &vec) -> Eigen::Vector2d
+	{
+		if(m_useCycles)
+			return cyclicHash(vec.cast<double>());
+		else
+			return hash(vec.cast<double>());
+	};
+
+	Eigen::Vector2d uv1 = fract(uv + lmbd_hashFunction(vertex1));
+	Eigen::Vector2d uv2 = fract(uv + lmbd_hashFunction(vertex2));
+	Eigen::Vector2d uv3 = fract(uv + lmbd_hashFunction(vertex3));
 	// Fetch input
 	auto lmbd_Vector2PixelPos = [&] (Eigen::Vector2d v) -> PixelPosType
 	{
@@ -209,6 +227,19 @@ Eigen::Vector2d CSN_Texture<I>::hash(const Eigen::Vector2d &p) const
 	q[0] = sin(q[0]);
 	q[1] = sin(q[1]);
 	return fract ( q * 43758.5453 );
+}
+
+template<typename I>
+Eigen::Vector2d CSN_Texture<I>::cyclicHash(const Eigen::Vector2d &p) const
+{
+	std::srand(unsigned(p[0]*std::numeric_limits<int>::max()));
+	std::srand(unsigned(std::rand()*p[1])); //seems alright enough. Just need to find a GPU implementation now...
+	int randMax = 64; //Idfk?
+	int cycle1 = std::rand()/randMax;
+	int cycle2 = std::rand()/randMax;
+	Eigen::Vector2d ret;
+	ret = double(cycle1)*m_cycles[0] + double(cycle2)*m_cycles[1];
+	return ret;
 }
 
 template<typename I>

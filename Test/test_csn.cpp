@@ -20,6 +20,9 @@ int main(int argc, char **argv)
 
 	CSN::CSN_Texture<ImageRGBd> csn;
 	csn.setTexture(im_in);
+	//csn.setCycles(Eigen::Vector2d(1.0/14.0, 1.0/20.0), Eigen::Vector2d(1.0/7.0, 0))
+	csn.setCycles(Eigen::Vector2d(1.0/4.0, 0), Eigen::Vector2d(0, 1.0/4.0));
+	csn.setUseCycles(true);
 	ImageRGBd output = csn.synthesize(4096, 4096);
 	IO::save01_in_u8(output, out_filename);
 	return 0;
