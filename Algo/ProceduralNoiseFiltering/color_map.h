@@ -1,10 +1,11 @@
 #ifndef COLOR_MAP_H
 #define COLOR_MAP_H
 
-#include <ASTex/image_rgb.h>
+#include "gaussian_transfer.h"
 #include <map>
 #include <ASTex/utils.h>
 #include <ASTex/easy_io.h>
+#include "utils.h"
 
 namespace ASTex {
 
@@ -13,37 +14,55 @@ template <typename T>
 class Color_map
 {
 public :
-    using Color = Eigen::Matrix<T,3,1>;
+    using Color = typename ImageRGB<T>::template EigenVector<T>;
     using Vec2 = Eigen::Matrix<T,2,1>;
 private:
     std::map<int, Color > palette;
-    ImageGrayf lut;
+    ImageRGB<T> color_map;
+    bool vertical = false;
+    ImageGray<T> lut;
     T step = T(0);
 
     ImageRGB<T> filtered;
     T sigma_max;
-    int width, height;
+
     bool isfiltered = false;
     bool degauss = false;
+    bool img_cm = false;
 
     Color map(const T &x) const {
         Color ret;
-        if(x < T(0))
-            ret = palette.begin()->second;
-        else if ( x > T(1))
-            ret = palette.rbegin()->second;
-        else {
-            for(auto it = palette.begin();it!=palette.end();++it){
-                T inf = T(it->first) * step;
-                T sup = T((++it)->first) * step;
-                T t = (x - inf) / (sup -inf);
-                it--;
-                if (x >= inf && x <= sup) {
-                    Color c_inf = it->second;
-                    Color c_sup = (++it)->second;
+        if(img_cm){
+            T v = clamp_scalar(x, T(0), T(1));
+            int index;
+            if(vertical){
+                index = static_cast<int>(std::round(v * (color_map.height() - 1)));
+                ret  = color_map.pixelEigenAbsolute(0, index);
+            }
+            else {
+                index = static_cast<int>(std::round(v * (color_map.width() - 1)));
+                ret  = color_map.pixelEigenAbsolute(index, 0);
+            }
+        }
+        else
+        {
+            if(x < T(0))
+                ret = palette.begin()->second;
+            else if ( x > T(1))
+                ret = palette.rbegin()->second;
+            else {
+                for(auto it = palette.begin();it!=palette.end();++it){
+                    T inf = T(it->first) * step;
+                    T sup = T((++it)->first) * step;
+                    T t = (x - inf) / (sup -inf);
                     it--;
-                    ret = (1 - t) * c_inf + t * c_sup;
-                    break;
+                    if (x >= inf && x <= sup) {
+                        Color c_inf = it->second;
+                        Color c_sup = (++it)->second;
+                        it--;
+                        ret = (1 - t) * c_inf + t * c_sup;
+                        break;
+                    }
                 }
             }
         }
@@ -129,13 +148,8 @@ private:
                                                 const T& sigma)
     {
         return numeric_integration_1D<Color>(a, b, n, [](){return Color(0,0,0);}, [&](const T &x){
-            int index = int(x * (lut.width()-1));
-            if(index < 0)
-                index =0;
-            if(index >= lut.width())
-                index = lut.width() - 1;
-
-            T x_degauss = lut.pixelAbsolute(index, 0);
+            T x_degauss = x;
+            Gaussian_transfer<ImageGray<T>>::invT(x_degauss, lut);
             Color ret = map(x_degauss) * gauss1D(x, mu, sigma);
             return ret;
         });
@@ -143,44 +157,55 @@ private:
 
 public:
     Color_map() {}
+
     void add_color(const int &pos,const Color &col) {
         palette.insert(std::pair<int, Color>(pos,col));
         step = T(1) / T(palette.rbegin()->first);
+    }
+
+    ImageRGB<T> get_colorMap() const {
+        return color_map;
+    }
+
+    ImageGray<T> get_degauss() const {
+        return lut;
     }
 
     ImageRGB<T> get_filtered() const {
         return filtered;
     }
 
+    void set_colorMap(const ImageRGB<T> &cm,const bool &v){
+        color_map = cm;
+        img_cm = true;
+        vertical = v;
+    }
+
+    void set_degauss(const ImageGray<T> & img){
+        lut = img;
+        degauss = true;
+    }
+
     void set_filtered(const ImageRGB<T> &i,const T &sm) {
-        height = i.height();
-        width = i.width();
         filtered = i;
         sigma_max = sm;
         isfiltered = true;
     }
 
-    void set_degauss(const ImageGrayf & img){
-        lut = img;
-        degauss = true;
-    }
-
     Color map(const T &f, const T &sigma) const {
-        int y = f * (height-1);
-        int x = sigma * (width-1) / sigma_max;
+        T y = clamp_scalar(f, T(0), T(1)) * (filtered.height()-1);
+        T x = clamp_scalar(sigma, T(0), sigma_max) * (filtered.width()-1) / sigma_max;
 
-        x = static_cast<int>(clamp_scalar(T(x), T(0), T(width-1)));
-        y = static_cast<int>(clamp_scalar(T(y), T(0), T(height-1)));
+        int i = static_cast<int>(std::round(x));
+        int j = static_cast<int>(std::round(y));
 
-        return filtered.pixelEigenAbsolute(x,y);
+        return filtered.pixelEigenAbsolute(i,j);
     }
 
-    void filter(const int &w, const int &h,const int &nb_bins, const T &sm){
-        width = w;
-        height = h;
+    void filter(const int &w, const int &h,const int &nb, const T &sm){
         sigma_max = sm;
 
-        filtered = ImageRGB<T>(width,height);
+        filtered = ImageRGB<T>(w,h);
         filtered.parallel_for_all_pixels([&](typename ImageRGB<T>::PixelType &p,int i,int j)
         {
             T f = T(j) / T(h);
@@ -189,12 +214,16 @@ public:
 
             if(s != 0)
                 if(degauss)
-                    c = numeric_integration_col_lut_gauss1D(-3*s+f,3*s+f,nb_bins,f,s);
+                    c = numeric_integration_col_lut_gauss1D(-3*s+f,3*s+f,nb,f,s);
                 else
-                    c = numeric_integration_col_gauss1D(-3*s+f,3*s+f,nb_bins,f,s);
+                    c = numeric_integration_col_gauss1D(-3*s+f,3*s+f,nb,f,s);
             else
                 if(degauss)
-                    c = map(lut.pixelAbsolute(f*(lut.width()-1),0));
+                {
+                    T f_degauss = f;
+                    Gaussian_transfer<ImageGray<T>>::invT(f_degauss, lut);
+                    c = map(f_degauss);
+                }
                 else
                     c = map(f);
 
@@ -222,25 +251,28 @@ public:
         return s.str();
     }
 
-    void export_palette(const std::string &filename) const {
-        std::ofstream fd;
-        fd.open(filename);
-        fd << "set palette defined ";
-        fd << to_string();
-
-        fd.close();
-    }
-
-    void export_img_palette(const int & h, const std::string &filename) const {
-        ImageRGB<T> im(25, h);
-        im.parallel_for_all_pixels([&](typename ImageRGB<T>::PixelType &pix, int , int j){
-            T y = T(j) / T(im.height());
-            if (!isfiltered)
-                pix = ImageRGB<T>::itkPixel(map(y));
+    void compute_img_palette(const int &w, const int & h, const std::string &filename, const bool & vertical) const {
+        ImageRGB<T> im(w, h);
+        im.parallel_for_all_pixels([&](typename ImageRGB<T>::PixelType &pix, int i, int j){
+            T v;
+            if(vertical)
+                v = T(j) / T(im.height()-1);
             else
-                pix = ImageRGB<T>::itkPixel(map(y,0));
+                v = T(i) / T(im.width()-1);
+
+            if (!isfiltered)
+                if(!degauss)
+                    pix = ImageRGB<T>::itkPixel(map(v));
+                else {
+                        T v_degauss = v;
+                        Gaussian_transfer<ImageGray<T>>::invT(v_degauss, lut);
+                        pix = ImageRGB<T>::itkPixel(map(v_degauss));
+                }
+            else
+               pix = ImageRGB<T>::itkPixel(map(v,0));
         });
-        IO::save01_in_u8(im, filename);
+        //IO::save01_in_u8(im, filename);
+        saveGamma(im, filename);
 
     }
 

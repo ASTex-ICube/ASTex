@@ -1,64 +1,52 @@
 #ifndef HISTOGRAM_H
 #define HISTOGRAM_H
 
-#include <Eigen/Eigen>
-#include <ASTex/image_gray.h>
-#include <ASTex/image_rgb.h>
+#include<cmath>
+#include<string>
+#include <iostream>
+#include <fstream>
 
 namespace ASTex {
 
 template <typename IMG>
 class Histogram2{
 public:
-    using HistoType = Eigen::Matrix<typename IMG::DataType,IMG::NB_CHANNELS,1>;
+    using DataType = typename IMG::DataType;
+    using PixelType = typename IMG::PixelType;
 private :
-    HistoType *histo;
-    int nb_bins;
-
-    HistoType conversionPixel(const typename ImageGray<typename IMG::DataType>::PixelType & p)
-    {
-        HistoType ret;
-        ret(0) = p;
-        return ret;
-    }
-
-    HistoType conversionPixel(const typename ImageRGB<typename IMG::DataType>::PixelType & p)
-    {
-        HistoType ret;
-        ret(0) = p.GetRed();
-        ret(1) = p.GetGreen();
-        ret(2) = p.GetBlue();
-        return ret;
-    }
+    DataType *histo;
+    unsigned int nb_bins;
 
 public:
 	Histogram2() : histo(nullptr),nb_bins(0) {}
 	~Histogram2(){delete [] histo;}
 
-    void computeHisto(const IMG &img, const int &n)
+    void computeHisto(const IMG &img, const unsigned int &n)
     {
         nb_bins = n;
         delete [] histo;
-        histo = new HistoType[nb_bins];
+        histo = new DataType[nb_bins * IMG::NB_CHANNELS];
 
-        for (int i=0;i<nb_bins;i++) {
-            for (int channel =0; channel < IMG::NB_CHANNELS; channel++) {
-                histo[i](channel) = 0;
+        for (unsigned int i=0;i<nb_bins;i++) {
+            for (unsigned int channel =0; channel < IMG::NB_CHANNELS; channel++) {
+                histo[i * IMG::NB_CHANNELS + channel] = DataType(0);
             }
         }
 
-        for (int channel =0;channel < IMG::NB_CHANNELS; channel++) {
-            img.parallel_for_all_pixels([&](const typename IMG::PixelType & p){
-                HistoType pix = conversionPixel(p);
-                int index = static_cast<int>(std::floor(pix(channel) * (nb_bins-1)));
-                histo[index](channel)++;
+        DataType *pix;
+        for (unsigned int channel =0;channel < IMG::NB_CHANNELS; channel++) {
+            img.for_all_pixels([&](const PixelType & p){
+                PixelType tmp = p;
+                pix = reinterpret_cast<DataType*>(&tmp);
+                int index = static_cast<int>(std::floor(pix[channel] * (nb_bins-1)));
+                histo[index * IMG::NB_CHANNELS + channel]++;
             });
         }
 
-        int nb_pixels = img.width() * img.height();
-        for (int i=0;i<nb_bins;i++) {
-            for (int channel =0; channel < IMG::NB_CHANNELS; channel++) {
-                histo[i](channel) /= nb_pixels;
+        unsigned int nb_pixels = img.width() * img.height();
+        for (unsigned int i=0;i<nb_bins;i++) {
+            for (unsigned int channel =0; channel < IMG::NB_CHANNELS; channel++) {
+                histo[i * IMG::NB_CHANNELS + channel] /= nb_pixels;
             }
         }
 
@@ -69,10 +57,10 @@ public:
         fd.open(filename + ".txt");
 
         if(fd.is_open()){
-            for (int channel =0; channel < IMG::NB_CHANNELS; channel++) {
-                for (int i =0; i < nb_bins; i++) {
+            for (unsigned int channel =0; channel < IMG::NB_CHANNELS; channel++) {
+                for (unsigned int i =0; i < nb_bins; i++) {
                     //if(histo[i](channel) != 0)
-                        fd << float(i)/float(nb_bins-1) << "\t" << histo[i](channel) << std::endl;
+                        fd << DataType(i)/DataType(nb_bins-1) << "\t" << histo[i * IMG::NB_CHANNELS + channel] << std::endl;
                 }
 
                 fd << std::endl << std::endl;

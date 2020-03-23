@@ -7,6 +7,9 @@
 
 namespace ASTex {
 
+//template <typename T>
+//class Noise
+
 template <typename T>
 class Noise{
 private:
@@ -62,7 +65,7 @@ private:
             for(int j=0; j < nb_sample; ++j) {
                 T x = corner(0) + j * step * footprint(0);
 
-                T value_noise = basic2D(Vec2(x,y)) ;
+                T value_noise = get(Vec2(x,y)) ;
                 ret += f(value_noise);
             }
         }
@@ -73,7 +76,7 @@ private:
 
 public:
 
-    T basic2D(const Vec2 &pos) const{
+    T get(const Vec2 &pos) const{
            T sum_cosines(0);
            T ph,fr,o;
            for (int i = 0; i < nb_cosines; ++i) {

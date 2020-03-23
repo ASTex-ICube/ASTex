@@ -26,7 +26,7 @@ public:
 	using PcaPixelType			= typename PcaImageType::PixelType;
 	using PcaType				= PCA<DataType>;
 	using GaussianTransferType	= Gaussian_transfer<PcaImageType>;
-	using LutType				= typename GaussianTransferType::LutType;
+	using LutType				= ImageType;
 
 	void setTexture(const ImageType &texture);
 	void setCycles(const Eigen::Vector2d &firstCycle, const Eigen::Vector2d &secondCycle);
