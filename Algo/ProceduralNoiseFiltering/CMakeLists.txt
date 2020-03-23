@@ -3,8 +3,6 @@ cmake_minimum_required(VERSION 3.0)
 project(ProceduralNoiseFiltering)
 
 find_package(ASTex REQUIRED)
-find_package(Qt5 COMPONENTS Widgets)
-
 add_definitions(-DTEMPO_PATH=std::string\(\"${ASTEX_TEMPO_PATH}/\"\) )
 
 add_executable(pnf_texture "")

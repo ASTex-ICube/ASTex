@@ -31,8 +31,10 @@ public:
 	void setTexture(const ImageType &texture);
 	void setCycles(const Eigen::Vector2d &firstCycle, const Eigen::Vector2d &secondCycle);
 	void setUseCycles(bool b);
+    void setGamma(double gamma); //<represents the exponant in the blending weights
 
 	ImageType synthesize(unsigned width, unsigned height) const;
+	ImageType testCycle();
 
 private:
 
@@ -47,6 +49,7 @@ private:
 	ImageType		m_texture;
 	Eigen::Vector2d m_cycles[2];
 	bool			m_useCycles;
+    double          m_gamma;
 };
 
 template<typename I>
@@ -69,15 +72,24 @@ void CSN_Texture<I>::setUseCycles(bool b)
 }
 
 template<typename I>
+void CSN_Texture<I>::setGamma(double gamma)
+{
+	m_gamma = gamma;
+}
+
+template<typename I>
 typename CSN_Texture<I>::ImageType CSN_Texture<I>::synthesize(unsigned width, unsigned height) const
 {
-
+	assert(m_texture.is_initialized());
+	if(width==0)
+		width=m_texture.width();
+	if(height==0)
+		height=m_texture.height();
 	unsigned pixelSize = sizeof(PixelType)/sizeof(DataType);
 	assert(pixelSize <= 3 && "CSN_Texture::synthesize: Cannot use PCA with images of dimensions higher than 3!");
 	ImageType output;
 	output.initItk(width, height, true);
 	LutType lut;
-	lut.initItk(m_texture.width(), m_texture.height());
 	DataType *dataPix;
 	const DataType *dataPixConst;
 
@@ -145,6 +157,26 @@ typename CSN_Texture<I>::ImageType CSN_Texture<I>::synthesize(unsigned width, un
 }
 
 template<typename I>
+typename CSN_Texture<I>::ImageType CSN_Texture<I>::testCycle()
+{
+	ImageType cycleTest;
+	cycleTest.initItk(	std::max(m_cycles[0][0], m_cycles[1][0])*m_texture.width(),
+						std::max(m_cycles[0][1], m_cycles[1][1])*m_texture.height());
+
+	cycleTest.for_all_pixels([&] (PixelType &pix, int x, int y)
+	{
+		PixelType pixSum = ImageType::zero();
+		PixelPosType pos;
+		pos[0] = x;
+		pos[1] = y;
+		while(false)
+		{
+
+		}
+	});
+}
+
+template<typename I>
 typename CSN_Texture<I>::PcaPixelType CSN_Texture<I>::proceduralTilingAndBlending (const PcaImageType &image,
 																				   Eigen::Vector2d uv) const
 {
@@ -200,22 +232,25 @@ void CSN_Texture<I>::TriangleGrid (	Eigen::Vector2d uv, float &w1, float &w2, fl
 	temp[2] = 1.0 - temp[0] - temp[1] ;
 	if (temp[2] > 0.0)
 	{
-		w1 = float(temp[2]);
-		w2 = float(temp[1]);
-		w3 = float(temp[0]);
+        w1 = std::pow(float(temp[2]), m_gamma);
+        w2 = std::pow(float(temp[1]), m_gamma);
+        w3 = std::pow(float(temp[0]), m_gamma);
 		vertex1 = baseId ;
 		vertex2 = baseId + Eigen::Vector2i(0 , 1);
 		vertex3 = baseId + Eigen::Vector2i(1 , 0);
 	}
 	else
 	{
-		w1 = float(-temp[2]);
-		w2 = float(1.0 - temp[1]);
-		w3 = float(1.0 - temp[0]);
+        w1 = std::pow(float(-temp[2]), m_gamma);
+        w2 = std::pow(float(1.0 - temp[1]), m_gamma);
+        w3 = std::pow(float(1.0 - temp[0]), m_gamma);
 		vertex1 = baseId + Eigen::Vector2i(1, 1);
 		vertex2 = baseId + Eigen::Vector2i(1, 0);
 		vertex3 = baseId + Eigen::Vector2i(0, 1);
 	}
+    w1 = w1/(w1 + w2 + w3);
+    w2 = w2/(w1 + w2 + w3);
+    w3 = w3/(w1 + w2 + w3);
 }
 
 template<typename I>

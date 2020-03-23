@@ -72,7 +72,6 @@ target_sources (${PROJECT_NAME} PRIVATE
 	RegionFinder/exploreTextures.h
 	RegionFinder/comparePixels.h
 	RegionFinder/regionFinder.h
-	Quilting/quilting.h
 	texture_pool.h
 
 	CSN/csn_texture.h
