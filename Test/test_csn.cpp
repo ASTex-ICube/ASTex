@@ -112,16 +112,6 @@ int main(int argc, char **argv)
 
 	ArgumentsType arguments = loadArguments(filename_arguments);
 
-	//checking LUT compatibility
-	ImageType im_invLut;
-	im_invLut.initItk(im_in.width(), im_in.height());
-	im_invLut.copy_pixels(im_in);
-	ImageType lut;
-	Gaussian_transfer<ImageType>::ComputeTinput(im_invLut, lut);
-	IO::save01_in_u8(lut, "/home/nlutz/lut.png");
-	Gaussian_transfer<ImageType>::ComputeinvT(im_invLut, lut);
-	IO::save01_in_u8(lut, "/home/nlutz/invLut.png");
-
 	CyclePair cyclePair;
 	if(arguments.useCycles)
 	{

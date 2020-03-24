@@ -90,6 +90,7 @@ typename CSN_Texture<I>::ImageType CSN_Texture<I>::synthesize(unsigned width, un
 	ImageType output;
 	output.initItk(width, height, true);
 	LutType lut;
+	lut.initItk(256, 1);
 	DataType *dataPix;
 	const DataType *dataPixConst;
 
@@ -135,12 +136,15 @@ typename CSN_Texture<I>::ImageType CSN_Texture<I>::synthesize(unsigned width, un
 	};
 
 	PcaImageType pcaTexture = toPcaImageType(m_texture);
+	PcaImageType pcaGaussianTexture;
+	pcaGaussianTexture.initItk(pcaTexture.width(), pcaTexture.height());
 	PcaType pca(pcaTexture);
 	MaskBool mb_alwaysTrue(pcaTexture.width(), pcaTexture.height());
 	mb_alwaysTrue |= [] (int, int) {return true;};
 	pca.computePCA(mb_alwaysTrue);
 	pca.project(pcaTexture);
-	GaussianTransferType::ComputeTinput(pcaTexture, lut);
+	GaussianTransferType::ComputeTinput(pcaTexture, pcaGaussianTexture);
+	GaussianTransferType::ComputeinvT(pcaTexture, lut);
 	PcaImageType pcaOutput;
 	pcaOutput.initItk(output.width(), output.height());
 	pcaOutput.for_all_pixels([&] (PcaPixelType &pix, int x, int y)
@@ -148,9 +152,9 @@ typename CSN_Texture<I>::ImageType CSN_Texture<I>::synthesize(unsigned width, un
 		Eigen::Vector2d uv;
 		uv[0] = double(x)/m_texture.width();
 		uv[1] = double(y)/m_texture.height();
-		pix = proceduralTilingAndBlending(pcaTexture, uv);
+		pix = proceduralTilingAndBlending(pcaGaussianTexture, uv);
 	});
-	GaussianTransferType::ComputeinvT(pcaOutput, lut); //replace with pcaOutput
+	pcaOutput = GaussianTransferType::invT(pcaOutput, lut);
 	pca.back_project(pcaOutput, pcaTexture);
 	output = fromPcaImageType(pcaTexture);
 	return output;
@@ -269,7 +273,7 @@ Eigen::Vector2d CSN_Texture<I>::cyclicHash(const Eigen::Vector2d &p) const
 {
 	std::srand(unsigned(p[0]*std::numeric_limits<int>::max()));
 	std::srand(unsigned(std::rand()*p[1])); //seems alright enough. Just need to find a GPU implementation now...
-	int randMax = 64; //Idfk?
+	int randMax = 32;
 	int cycle1 = std::rand()/randMax;
 	int cycle2 = std::rand()/randMax;
 	Eigen::Vector2d ret;
