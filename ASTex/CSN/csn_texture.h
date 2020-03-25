@@ -33,7 +33,7 @@ public:
 	void setUseCycles(bool b);
     void setGamma(double gamma); //<represents the exponant in the blending weights
 
-	ImageType synthesize(unsigned width, unsigned height) const;
+	ImageType synthesize(unsigned width, unsigned height);
 	ImageType testCycle();
 
 private:
@@ -49,7 +49,8 @@ private:
 	ImageType		m_texture;
 	Eigen::Vector2d m_cycles[2];
 	bool			m_useCycles;
-    double          m_gamma;
+	double          m_gamma;
+	unsigned		m_largestCycleProduct;
 };
 
 template<typename I>
@@ -78,7 +79,7 @@ void CSN_Texture<I>::setGamma(double gamma)
 }
 
 template<typename I>
-typename CSN_Texture<I>::ImageType CSN_Texture<I>::synthesize(unsigned width, unsigned height) const
+typename CSN_Texture<I>::ImageType CSN_Texture<I>::synthesize(unsigned width, unsigned height)
 {
 	assert(m_texture.is_initialized());
 	if(width==0)
@@ -87,6 +88,21 @@ typename CSN_Texture<I>::ImageType CSN_Texture<I>::synthesize(unsigned width, un
 		height=m_texture.height();
 	unsigned pixelSize = sizeof(PixelType)/sizeof(DataType);
 	assert(pixelSize <= 3 && "CSN_Texture::synthesize: Cannot use PCA with images of dimensions higher than 3!");
+
+	//find the largest product of the cycles. This is to ensure the patterns are evenly distributed throughout the domain.
+	//I'm not sure this works as intended yet. It's either that or each cycle gets its own divisor. Or something else.
+	if(m_useCycles)
+	{
+		double cycleProduct = std::ceil(1.0/std::max(m_cycles[0][0], m_cycles[1][0])) * std::ceil(1.0/std::max(m_cycles[0][1], m_cycles[1][1]));
+		if(std::isnan(cycleProduct) || std::isinf(cycleProduct))
+		{
+			cycleProduct = std::max(std::max(m_cycles[0][0], m_cycles[1][0]), std::max(m_cycles[0][1], m_cycles[1][1]));
+			assert(cycleProduct != 0 && "Cycle product is always 0! (Cycles not set?)");
+			cycleProduct = 1.0/cycleProduct;
+		}
+		m_largestCycleProduct = unsigned(cycleProduct);
+	}
+
 	ImageType output;
 	output.initItk(width, height, true);
 	LutType lut;
@@ -252,9 +268,10 @@ void CSN_Texture<I>::TriangleGrid (	Eigen::Vector2d uv, float &w1, float &w2, fl
 		vertex2 = baseId + Eigen::Vector2i(1, 0);
 		vertex3 = baseId + Eigen::Vector2i(0, 1);
 	}
-    w1 = w1/(w1 + w2 + w3);
-    w2 = w2/(w1 + w2 + w3);
-    w3 = w3/(w1 + w2 + w3);
+	double sumW = w1 + w2 + w3;
+	w1 = w1/sumW;
+	w2 = w2/sumW;
+	w3 = w3/sumW;
 }
 
 template<typename I>
@@ -273,9 +290,9 @@ Eigen::Vector2d CSN_Texture<I>::cyclicHash(const Eigen::Vector2d &p) const
 {
 	std::srand(unsigned(p[0]*std::numeric_limits<int>::max()));
 	std::srand(unsigned(std::rand()*p[1])); //seems alright enough. Just need to find a GPU implementation now...
-	int randMax = 32;
-	int cycle1 = std::rand()/randMax;
-	int cycle2 = std::rand()/randMax;
+	int randMax = m_largestCycleProduct;
+	int cycle1 = std::rand()%randMax;
+	int cycle2 = std::rand()%randMax;
 	Eigen::Vector2d ret;
 	ret = double(cycle1)*m_cycles[0] + double(cycle2)*m_cycles[1];
 	return ret;
