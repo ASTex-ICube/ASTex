@@ -47,19 +47,36 @@ target_sources (${PROJECT_NAME} PRIVATE
 	saliency/contrast_based_saliency.h
         saliency/permutohedral_lattice.h
 
+        Sparse/dictionary.h
+	Sparse/dictionaryProcessor.h
+
         mipmap.h
         histogram.h
         rpn_utils.h
         texton_io.h
         imageviewer.h
+
+	../Algo/PatchExchange/FragmentProcessor.h
+	../Algo/PatchExchange/PatchProcessor.h
+	../Algo/PatchExchange/PoissonDiskSampler.h
+
         ContentExchange/atlas.h
         ContentExchange/content.h
         ContentExchange/patch.h
         ContentExchange/patchProcessor.h
+	ContentExchange/multiTextureProcessor.h
         Stamping/sampler.h
         Stamping/stamp.h
         Stamping/stamper.h
         PCTS/pcts.h
+	#filters.h
+	colorMatching.h
+	RegionFinder/exploreTextures.h
+	RegionFinder/comparePixels.h
+	RegionFinder/regionFinder.h
+	texture_pool.h
+
+	CSN/csn_texture.h
 )
 
 target_sources (${PROJECT_NAME} PRIVATE
@@ -74,8 +91,11 @@ target_sources (${PROJECT_NAME} PRIVATE
 	image_collector.cpp
 	bilateral_filters.cpp
 	distances_maps.cpp
-	pca.cpp
 	thread_pool.cpp
+
+	../Algo/PatchExchange/FragmentProcessor.cpp
+	../Algo/PatchExchange/PatchProcessor.cpp
+	../Algo/PatchExchange/PoissonDiskSampler.cpp
 
         texton_io.cpp
         Stamping/sampler.cpp
@@ -119,7 +139,6 @@ else()
       target_compile_options(${PROJECT_NAME} PUBLIC -std=c++11 )
   endif()
 endif()
-
 
 target_compile_definitions(${PROJECT_NAME} PUBLIC "${PNG_DEFINITION}")
 target_link_directories(${PROJECT_NAME} BEFORE PUBLIC "C:/vcpkg/installed/x64-windows/" "C:/vcpkg/installed/x64-windows/debug/lib/")

@@ -17,8 +17,8 @@ bool import_texton(ASTex::ImageRGBd& texton, std::string file_path, ImageRGBd::P
 bool import_texton(ASTex::ImageRGBd& texton, std::string file_path);
 
 bool export_texton(ASTex::ImageRGBd& texton, std::string file_path,
-                  int order,
-                  ImageRGBd::PixelType &mean);
+				  int order,
+				  ImageRGBd::PixelType &mean);
 
 }
 #endif // TEXTONIO_H

@@ -37,4 +37,4 @@
 *.kdevprj
 *.kdevelop
 
-
+build*
