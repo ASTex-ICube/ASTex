@@ -22,9 +22,9 @@ You need some classic development tools (minimal supported version)
 
 ## Linux
 Just install packages:
-- libinsighttoolkit4-dev (4.10 min)
 - libpng-dev
 - libopenexr-dev 
+And get github version of InsightToolkit, compile & install
 
 ## Mac OS/X
 The most simple way to install dependencies is to use [homebrew](https://brew.sh/) package system.
