@@ -49,11 +49,11 @@ Then you can install the dependencies:
 - .\vcpkg.exe install itk:x64-windows openexr:x64-windows
 - patch buggy itk compilation: 
 	- in ITKModuleAPI.cmake line 75
-	  ``macro(itk_module_load mod)
-	  \+ set(_IMPORT_PREFIX ${ITK_INSTALL_PREFIX}) ``
+	- ``macro(itk_module_load mod)`
+	- `\+ set(_IMPORT_PREFIX ${ITK_INSTALL_PREFIX}) `
 	- in ITKTargets.cmake: 283
-	  ``INTERFACE_INCLUDE_DIRECTORIES "${_IMPORT_PREFIX}/include/ITK-5.0"
-	  \+ "INTERFACE_LINK_DIRECTORIES "${_IMPORT_PREFIX}/lib" ``
+	- `INTERFACE_INCLUDE_DIRECTORIES "${_IMPORT_PREFIX}/include/ITK-5.0"`
+	- `\+ "INTERFACE_LINK_DIRECTORIES "${_IMPORT_PREFIX}/lib" `
 
 ### Compile ASTex
 - launch CMake, chose src dir and binary dir
