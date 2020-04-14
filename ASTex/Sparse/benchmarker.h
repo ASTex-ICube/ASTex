@@ -2,7 +2,7 @@
 #define __BENCHMARKER__H__
 
 #include "dictionaryProcessor.h"
-#include "utils.h"
+//#include "utils.h"
 
 /////////////////////
 

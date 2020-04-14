@@ -42,18 +42,18 @@ Then you can install the dependencies:
 - CMake (3.0 min)
 
 ### install VCPKG For ASTex
-- ouvrir un power shell
-- git clone https://github.com/Microsoft/vcpkg.git c:/vcpkg_ast (ou utiliser le zip)
+- open a power-shell
+- git clone https://github.com/Microsoft/vcpkg.git c:/vcpkg_ast (or use zip)
 - git checkout 2019.12
 - cd c:/vcpkg_ast
 - .\vcpkg.exe install itk:x64-windows openexr:x64-windows
 - patch buggy itk compilation: 
 	- in ITKModuleAPI.cmake line 75
 	  ``macro(itk_module_load mod)
-	  + set(_IMPORT_PREFIX ${ITK_INSTALL_PREFIX}) ``
+	  \+ set(_IMPORT_PREFIX ${ITK_INSTALL_PREFIX}) ``
 	- in ITKTargets.cmake: 283
 	  ``INTERFACE_INCLUDE_DIRECTORIES "${_IMPORT_PREFIX}/include/ITK-5.0"
-	  + "INTERFACE_LINK_DIRECTORIES "${_IMPORT_PREFIX}/lib" ``
+	  \+ "INTERFACE_LINK_DIRECTORIES "${_IMPORT_PREFIX}/lib" ``
 
 ### Compile ASTex
 - launch CMake, chose src dir and binary dir
