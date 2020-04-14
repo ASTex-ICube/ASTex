@@ -28,7 +28,6 @@
 #include "itkImageRegionIterator.h"
 #include "itkImageRegionConstIterator.h"
 #include "itkImageRegionConstIteratorWithOnlyIndex.h"
-#include "itkSimpleFastMutexLock.h"
 
 #include <itkMetaDataDictionary.h>
 #include <itkMetaDataObject.h>
@@ -166,6 +165,8 @@ private:
 class MyMTImageFilter: public itk::ImageToImageFilter< ImageRGBu8::ItkImg, ImageGrayu8::ItkImg >
 {
 public:
+	ITK_DISALLOW_COPY_AND_ASSIGN(MyMTImageFilter);
+
 	// Filter is not template so define input & output types for more simple writing
 	using TInputImage  = ImageRGBu8::ItkImg;
 	using TOutputImage = ImageGrayu8::ItkImg;
@@ -173,10 +174,10 @@ public:
 	using TOutputPixel = TOutputImage::PixelType;
 
 	// Standard class typedefs & macros for ikt
-	typedef MyMTImageFilter                                        Self;
-	typedef itk::ImageToImageFilter< TInputImage, TOutputImage >   Superclass;
-	typedef itk::SmartPointer< Self >                              Pointer;
-	typedef itk::SmartPointer< const Self >                        ConstPointer;
+	using Self = MyMTImageFilter;
+	using Superclass = itk::ImageToImageFilter< TInputImage, TOutputImage >;
+	using Pointer = itk::SmartPointer< Self >;
+	using ConstPointer = itk::SmartPointer< const Self >;
 	itkNewMacro(Self);
 	itkTypeMacro(MyImageFilter, ImageToImageFilter);
 
@@ -203,15 +204,15 @@ protected:
 	itk::Offset<2> center_;
 	long radius_;
 
-	/// just for nice cout
-	itk::SimpleFastMutexLock mutex;
 
 
 	/// protected constructor (forbid usage of new and variable declaration)
 	MyMTImageFilter():
 		center_({{0,0}}),
 		radius_(1)
-	{}
+	{
+		this->DynamicMultiThreadingOff();
+	}
 
 	virtual ~MyMTImageFilter() {}
 
@@ -224,11 +225,7 @@ protected:
 	//
 	void ThreadedGenerateData(const Region& region, itk::ThreadIdType threadId) ITK_OVERRIDE
 	{
-		mutex.Lock();
-		std::cout << "Thread " << threadId << " given region: " << region << std::endl;
-		mutex.Unlock();
-
-		// get in & out images ptr
+			// get in & out images ptr
 		TInputImage::ConstPointer input  = this->GetInput();
 		TOutputImage::Pointer output     = this->GetOutput();
 

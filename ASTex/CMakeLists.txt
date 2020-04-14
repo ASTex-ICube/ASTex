@@ -2,9 +2,11 @@ cmake_minimum_required(VERSION 3.0)
 
 project(ASTex LANGUAGES CXX)
 
-find_package(OpenEXR REQUIRED)
+find_package(double-conversion REQUIRED)
+## set(ITKDoubleConversion_LIBRARIES double-conversion::double-conversion)
+find_package(openexr REQUIRED)
 find_package(PNG REQUIRED)
-find_package(ITK REQUIRED)
+find_package(ITK CONFIG  REQUIRED)
 include(${ITK_USE_FILE})
 find_package(OpenMP QUIET)
 
@@ -84,14 +86,16 @@ target_include_directories(${PROJECT_NAME} PUBLIC ${ITK_INCLUDE_DIRS} ${PNG_INCL
 target_include_directories(${PROJECT_NAME} PUBLIC $<INSTALL_INTERFACE:include> $<BUILD_INTERFACE:${ASTEX_SOURCE_DIR}>)
 
 
+
+
 set ( ASTEX_LIBRARIES ${ITK_LIBRARIES} ${FFTW_LIBRARIES} ${PNG_LIBRARIES} ${OPENEXR_LIBRARIES} )
 if (NOT(MSVC OR APPLE))
-	set ( ASTEX_LIBRARIES ${ASTEX_LIBRARIES} -pthread )
+	set ( ASTEX_LIBRARIES ${ITK_LIBRARIES} -pthread )
 endif()
 
 
 if(MSVC)
-  target_compile_definitions(${PROJECT_NAME} PUBLIC -D_USE_MATH_DEFINES -D_SCL_SECURE_NO_WARNINGS -D_CRT_SECURE_NO_WARNINGS -D_SECURE_SCL=0 -D_SECURE_SCL_THROWS=0)
+   target_compile_definitions(${PROJECT_NAME} PUBLIC -D_USE_MATH_DEFINES -D_SCL_SECURE_NO_WARNINGS -D_CRT_SECURE_NO_WARNINGS -D_SECURE_SCL=0 -D_SECURE_SCL_THROWS=0)
   if(${BUILD_SHARED_LIBS})
     target_compile_definitions(${PROJECT_NAME} PRIVATE "-DASTEX_DLL_EXPORT")
   else()
@@ -118,7 +122,9 @@ endif()
 
 
 target_compile_definitions(${PROJECT_NAME} PUBLIC "${PNG_DEFINITION}")
-
+target_link_directories(${PROJECT_NAME} BEFORE PUBLIC "C:/vcpkg/installed/x64-windows/" "C:/vcpkg/installed/x64-windows/debug/lib/")
+#target_link_libraries(${PROJECT_NAME} PUBLIC ITKVTK ITKznz itkvcl itksys)
+target_link_libraries(${PROJECT_NAME} PUBLIC )
 target_link_libraries(${PROJECT_NAME} PUBLIC ${ASTEX_LIBRARIES})
 
 file(GLOB HEADERS "." "*.h" "*.hpp")

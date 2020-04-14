@@ -25,6 +25,7 @@
 
 #include <iostream>
 #include <ASTex/image_gray.h>
+#include <ASTex/histogram.h>
 
 using namespace ASTex;
 
@@ -49,6 +50,14 @@ int main()
 			image.pixelAbsolute(i,j) = 128;
 		}
 	}
+
+	HistogramGrayu8 h(image);
+
+	double mean = h.mean();
+	double sigma = h.variance();
+
+	std::cout << "Mean "<< mean << std::endl;
+	std::cout << "Variance " << sigma << std::endl;
 
 	image.save(TEMPO_PATH+"simpleG2.png");
 

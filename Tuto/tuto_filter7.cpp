@@ -25,7 +25,6 @@
 
 #include <iostream>
 #include "itkInPlaceImageFilter.h"
-#include "itkSimpleFastMutexLock.h"
 
 
 #include <ASTex/image_gray.h>
@@ -108,13 +107,14 @@ public:
 
 protected:
 
-	itk::SimpleFastMutexLock mutex;
-
 	int sz_C_;
 	int sz_D_;
 
 	MyFilter()
 	{
+		// ITK oll school MT
+		this->DynamicMultiThreadingOff();
+
 		this->SetNumberOfRequiredInputs(2);
 		this->SetNumberOfRequiredOutputs(2);
 		this->SetNthOutput(0,(ImageRGBd::ItkImg::New()).GetPointer());
