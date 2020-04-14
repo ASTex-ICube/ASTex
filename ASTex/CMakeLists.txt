@@ -2,13 +2,12 @@ cmake_minimum_required(VERSION 3.0)
 
 project(ASTex LANGUAGES CXX)
 
-find_package(double-conversion REQUIRED)
-## set(ITKDoubleConversion_LIBRARIES double-conversion::double-conversion)
-find_package(openexr REQUIRED)
+find_package(OpenEXR REQUIRED)
 find_package(PNG REQUIRED)
 find_package(ITK CONFIG  REQUIRED)
 include(${ITK_USE_FILE})
 find_package(OpenMP QUIET)
+find_package(Eigen3 REQUIRED)
 
 
 add_library( ${PROJECT_NAME} "")
@@ -108,9 +107,9 @@ target_include_directories(${PROJECT_NAME} PUBLIC $<INSTALL_INTERFACE:include> $
 
 
 
-set ( ASTEX_LIBRARIES ${ITK_LIBRARIES} ${FFTW_LIBRARIES} ${PNG_LIBRARIES} ${OPENEXR_LIBRARIES} )
+set ( ASTEX_LIBRARIES ${ITK_LIBRARIES} ${FFTW_LIBRARIES} ${PNG_LIBRARIES} ${OPENEXR_LIBRARIES} Eigen3::Eigen)
 if (NOT(MSVC OR APPLE))
-	set ( ASTEX_LIBRARIES ${ITK_LIBRARIES} -pthread )
+	set ( ASTEX_LIBRARIES ${ASTEX_LIBRARIES} -pthread )
 endif()
 
 
@@ -141,8 +140,6 @@ else()
 endif()
 
 target_compile_definitions(${PROJECT_NAME} PUBLIC "${PNG_DEFINITION}")
-target_link_directories(${PROJECT_NAME} BEFORE PUBLIC "C:/vcpkg/installed/x64-windows/" "C:/vcpkg/installed/x64-windows/debug/lib/")
-#target_link_libraries(${PROJECT_NAME} PUBLIC ITKVTK ITKznz itkvcl itksys)
 target_link_libraries(${PROJECT_NAME} PUBLIC )
 target_link_libraries(${PROJECT_NAME} PUBLIC ${ASTEX_LIBRARIES})
 
