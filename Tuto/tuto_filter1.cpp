@@ -270,11 +270,6 @@ protected:
 			++itOut;
 		}
 	}
-
-private:
-	// to avoid filter object copy
-	MyMTImageFilter(const Self &);
-	void operator=(const Self &);
 };
 
 

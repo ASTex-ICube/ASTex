@@ -8,7 +8,7 @@ The purpose of this library is to support collaborative coding and to allow for 
 
 ## Dependencies:
 To compile and use ASTex, you need some libraries:
-- ITK 4.10 min (4.13 recom)
+- ITK 5. min 
 - zlib
 - openexr for saving/loading images in floating point format.
 
@@ -16,9 +16,9 @@ You need some classic development tools (minimal supported version)
 - git
 - cmake 3.0 min
 - a _recent_ C++ compiler 
-	- g++ 4.9 5 6 7.3
+	- g++ 6 
 	- clang 3.3
-	- Visual Studio C++ 2015 /2017
+	- Visual Studio C++ 2017 /2019
 
 ## Linux
 Just install packages:
@@ -37,15 +37,32 @@ Then you can install the dependencies:
 
 ### Softwares:
 
-- VisualStudio C++ (2015 min)
+- VisualStudio C++ (2017 min)
+- Git
 - CMake (3.0 min)
-- jom (already installed if you have QtCreator) for multi-threaded compilation of dependencies 
-- ninja (accessible by PATH)
 
-###  Automatic install of deps
-- use cmake with Install_windows dir
-- see local README
-- **WARNING** due to a limitation in Visual-Studio, source and build (of itk) directory path should not be too long (50 char) !
+### install VCPKG For ASTex
+- ouvrir un power shell
+- git clone https://github.com/Microsoft/vcpkg.git c:/vcpkg_ast (ou utiliser le zip)
+- git checkout 2019.12
+- cd c:/vcpkg_ast
+- .\vcpkg.exe install itk:x64-windows openexr:x64-windows
+- patch buggy itk compilation: 
+	- in ITKModuleAPI.cmake line 75
+	  ``macro(itk_module_load mod)
+	  + set(_IMPORT_PREFIX ${ITK_INSTALL_PREFIX}) ``
+	- in ITKTargets.cmake: 283
+	  ``INTERFACE_INCLUDE_DIRECTORIES "${_IMPORT_PREFIX}/include/ITK-5.0"
+	  + "INTERFACE_LINK_DIRECTORIES "${_IMPORT_PREFIX}/lib" ``
+
+### Compile ASTex
+- launch CMake, chose src dir and binary dir
+- Configure: VS 2019 / optional plateform : x64/ Specify toolchain file for cross-compiling
+- Specify tool chain file:  `c:/vcpkg_ast/scripts/buildsystems/vcpkg.cmake`
+- Configure again
+- Generate
+- Launch Solution 
+- Enjoy
 
 ## Data
 Some tests, tutorials and algorithms use read example images and write some results.
