@@ -39,7 +39,9 @@ public:
 	//types
 
     using real = double;
-    using PixelType = typename I::PixelType;
+	using ImageType = I;
+	using PixelType = typename ImageType::PixelType;
+	using DataType = typename ImageType::DataType;
 	using MapStruct = std::map<PixelType, int, Compare>;
 
 	//iterators
@@ -116,7 +118,7 @@ public:
     /**
      * \brief returns a mean of the pixel type instead of always being a scalar double or array double. Convenient for polymorphism.
      */
-    virtual PixelType meanPixelType() const {return PixelType();}
+	virtual PixelType meanPixelType() const;
 
     //out
 
@@ -389,6 +391,32 @@ void Histogram<I, Compare>::clear()
 	m_size=0;
 
 	return;
+}
+
+template <class I, class Compare>
+typename Histogram<I, Compare>::PixelType Histogram<I, Compare>::meanPixelType() const
+{
+	PixelType mean{};
+	unsigned pixelSize = sizeof(PixelType)/sizeof(DataType);
+	double *meanDouble = new double[pixelSize]{};
+	DataType *meanData = new DataType[pixelSize];
+	m_input.for_all_pixels([&] (const PixelType &pix)
+	{
+		const DataType *dataPix = reinterpret_cast<const DataType *>(&pix);
+		for(unsigned i=0; i<pixelSize; ++i)
+		{
+			meanDouble[i] += double(dataPix[i]);
+		}
+	});
+	for(unsigned i=0; i<pixelSize; ++i)
+	{
+		meanDouble[i] /= (m_input.width() * m_input.height());
+		meanData[i] = DataType(meanDouble[i]);
+	}
+	std::memcpy(&mean, meanData, sizeof(PixelType));
+	delete[] meanDouble;
+	delete[] meanData;
+	return mean;
 }
 
 template <class I, class Compare>

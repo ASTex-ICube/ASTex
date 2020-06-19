@@ -262,11 +262,13 @@ int gaussianize(int argc, char **argv)
     if(gray){
         if(!d){
             using IMG = ImageGrayf;
+			Gaussian_transfer<IMG> gt;
             IMG img;
             loadGamma(img, argv[optind], _16bits);
 
             IMG imgT(img.width(), img.height());
-            Gaussian_transfer<IMG>::ComputeTinput(img,imgT);
+
+			gt.ComputeTinput(img,imgT);
 //            Histogram<IMG> h;
 //            h.computeHisto(imgT, 256);
 //            h.exportHisto("giota_f", 0.03);
@@ -275,11 +277,12 @@ int gaussianize(int argc, char **argv)
         }
         else {
             using IMG = ImageGrayd;
+			Gaussian_transfer<IMG> gt;
             IMG img;
             loadGamma(img, argv[optind], _16bits);
 
             IMG imgT(img.width(), img.height());
-            Gaussian_transfer<IMG>::ComputeTinput(img,imgT);
+			gt.ComputeTinput(img,imgT);
 
 //            Histogram<IMG> h;
 //            h.computeHisto(imgT, 256);
@@ -291,21 +294,23 @@ int gaussianize(int argc, char **argv)
     else {
         if(!d){
             using IMG = ImageRGBf;
+			Gaussian_transfer<IMG> gt;
             IMG img;
             loadGamma(img, argv[optind], _16bits);
 
             IMG imgT(img.width(), img.height());
-            Gaussian_transfer<IMG>::ComputeTinput(img,imgT);
+			gt.ComputeTinput(img,imgT);
 
             saveGamma(imgT, filename, _16bits);
         }
         else {
             using IMG = ImageRGBd;
+			Gaussian_transfer<IMG> gt;
             IMG img;
             loadGamma(img, argv[optind], _16bits);
 
             IMG imgT(img.width(), img.height());
-            Gaussian_transfer<IMG>::ComputeTinput(img,imgT);
+			gt.ComputeTinput(img,imgT);
 
             saveGamma(imgT, filename, _16bits);
         }
@@ -362,21 +367,23 @@ int getDegaussTrans(int argc, char **argv)
     if(gray){
         if(!d){
             using IMG = ImageGrayf;
+			Gaussian_transfer<IMG> gt;
             IMG img;
             loadGamma(img, argv[optind], _16bits);
 
             IMG ilut(s, 1);
-            Gaussian_transfer<IMG>::ComputeinvT(img,ilut);
+			gt.ComputeinvT(img,ilut);
 
             saveGamma(ilut, filename, _16bits);
         }
         else {
             using IMG = ImageGrayd;
+			Gaussian_transfer<IMG> gt;
             IMG img;
             loadGamma(img, argv[optind], _16bits);
 
             IMG ilut(s, 1);
-            Gaussian_transfer<IMG>::ComputeinvT(img,ilut);
+			gt.ComputeinvT(img,ilut);
 
             saveGamma(ilut, filename, _16bits);
         }
@@ -384,21 +391,23 @@ int getDegaussTrans(int argc, char **argv)
     else {
         if(!d){
             using IMG = ImageRGBf;
+			Gaussian_transfer<IMG> gt;
             IMG img;
             loadGamma(img, argv[optind], _16bits);
 
             IMG ilut(s, 1);
-            Gaussian_transfer<IMG>::ComputeinvT(img,ilut);
+			gt.ComputeinvT(img,ilut);
 
             saveGamma(ilut, filename, _16bits);
         }
         else {
             using IMG = ImageRGBd;
+			Gaussian_transfer<IMG> gt;
             IMG img;
             loadGamma(img, argv[optind], _16bits);
 
             IMG ilut(s, 1);
-            Gaussian_transfer<IMG>::ComputeinvT(img,ilut);
+			gt.ComputeinvT(img,ilut);
 
             saveGamma(ilut, filename, _16bits);
         }
@@ -1287,6 +1296,7 @@ int noiseCmOurFiltering(int argc, char **argv)
 
     using T = float;
     using Vec2 = Pnf<T>::Vec2;
+	Gaussian_transfer<ImageGray<T>> gt;
 
     ImageRGB<T> prefiltered;
     loadGamma(prefiltered, argv[optind]);
@@ -1304,7 +1314,7 @@ int noiseCmOurFiltering(int argc, char **argv)
 
     if(!gauss){
         ImageGray<T> gauss_noise_example(noise_example.width(), noise_example.height());
-        Gaussian_transfer<ImageGray<T>>::ComputeTinput(noise_example,gauss_noise_example);
+		gt.ComputeTinput(noise_example,gauss_noise_example);
         n.setNoise(gauss_noise_example);
     }
     else {

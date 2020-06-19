@@ -30,6 +30,9 @@ private:
 		}
 	};
 
+	DataType m_mean;
+	DataType m_variance;
+
 	static T Erf(T x)
 	{
 		// Save the sign of x
@@ -92,9 +95,22 @@ private:
 	}
 
 public:
-	Gaussian_transfer();
+	Gaussian_transfer() :
+		m_mean(0.5),
+		m_variance(1.0/6.0)
+	{}
 
-	static void ComputeTinput(const IMG &input, IMG &T_input)
+	void setMean(DataType mean)
+	{
+		m_mean = mean;
+	}
+
+	void setVariance(DataType variance)
+	{
+		m_variance = variance;
+	}
+
+	void ComputeTinput(const IMG &input, IMG &T_input)
 	{
 		DataType * pix;
 		for (unsigned int channel = 0; channel < IMG::NB_CHANNELS ; channel++) {
@@ -120,9 +136,9 @@ public:
 				int x = sortedInputValues[i].x;
 				int y = sortedInputValues[i].y;
 				// Input quantile (given by its order in the sorting)
-				T U = (i + T(0.5)) / (sortedInputValues.size());
+				T U = (i + 0.5) / (sortedInputValues.size());
 				// Gaussian quantile
-				T G = invCDF(U, T(0.5), T(1)/T(6));
+				T G = invCDF(U, m_mean, m_variance);
 				G = clamp_scalar(G,T(0),T(1));
 				// Store
 				PixelType &p = T_input.pixelAbsolute(x, y);
@@ -132,7 +148,7 @@ public:
 		}
 	}
 
-	static void ComputeinvT(const IMG& input, IMG & Tinv)
+	void ComputeinvT(const IMG& input, IMG & Tinv)
 	{
 		DataType * pix;
 		for (unsigned int channel = 0; channel < IMG::NB_CHANNELS ; channel++) {
@@ -152,9 +168,9 @@ public:
 			for (int i = 0; i < Tinv.width(); i++)
 			{
 				// Gaussian value in [0, 1]
-				T G = (i + T(0.5)) / (Tinv.width());
+				T G = (i + 0.5) / (Tinv.width());
 				// Quantile value
-				T U = CDF(G, T(0.5), T(1)/T(6));
+				T U = CDF(G, m_mean, m_variance);
 				// Find quantile in sorted pixel values
 				int index = int(std::floor(U * sortedInputValues.size()));
 				// Get input value
