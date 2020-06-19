@@ -360,8 +360,16 @@ I StamperTexton<I>::generate(int imageWidth, int imageHeight) const
 			j = (imageHeight + stampHeight ) * (*it)[1] - stampHeight/2.0;
 		}
 
-		otx=i-stampWidth/2.0; //texton origin in texture space (top left)
-		oty=j-stampHeight/2.0;
+		if(m_periodicity)
+		{
+			otx=i; //texton origin in texture space (top left)
+			oty=j;
+		}
+		else
+		{
+			otx=i-stampWidth/2.0; //texton origin in texture space (top left)
+			oty=j-stampHeight/2.0;
+		}
 
 		Region reg = gen_region(std::floor(otx), std::floor(oty), stampWidth+1, stampHeight+1); //note: regions are weak when shooting between pixels
 
