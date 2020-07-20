@@ -10,11 +10,13 @@
 #include "ASTex/easy_io.h"
 #include "ASTex/histogram.h"
 
-#define ENABLE_PRINT_DEBUG_CSN
-#ifdef ENABLE_PRINT_DEBUG_CSN
+//#define CSN_ENABLE_DEBUG
+#ifdef CSN_ENABLE_DEBUG
 #define print_debug(x) std::cout << x << std::endl
+#define save_debug(x, y) IO::save01_in_u8(x, y)
 #else
 #define print_debug(x)
+#define save_debug(x, y)
 #endif
 
 namespace ASTex
@@ -58,7 +60,7 @@ public:
 	void estimateCycles(const Eigen::Vector2d &guidX, const Eigen::Vector2d &guidY, double searchRadius, bool periodicity, unsigned stochasticGradientSearchEnergy=16);
 
 	ImageType synthesize(unsigned width, unsigned height);
-	PixelType testCycles(const I& texture, const Eigen::Vector2d &tx, const Eigen::Vector2d &ty, bool useCyclicAverage=true) const;
+	PixelType testCycles(const I& texture, const Eigen::Vector2d &tx, const Eigen::Vector2d &ty, bool useCyclicAverage=false) const;
 
 	const Eigen::Vector2d &cycleX() const;
 	const Eigen::Vector2d &cycleY() const;
@@ -346,7 +348,6 @@ typename CSN_Texture<I>::ImageType CSN_Texture<I>::synthesize(unsigned width, un
 			uv[1] = double(y)/m_texture.height();
 			pix = proceduralTilingAndBlending(pcaGaussianTexture, uv);
 		});
-		//IO::save01_in_u8(pcaGaussianTexture, "/home/nlutz/pcaGaussianTexture.png");
 	}
 	else
 	{
@@ -386,7 +387,7 @@ typename CSN_Texture<I>::ImageType CSN_Texture<I>::synthesize(unsigned width, un
 					inCoordinates[1] = int(std::round(inY + (subX*m_cycles[0][1] + subY*m_cycles[1][1])*pcaTexture.height()))%pcaOutputCopy.height();
 					pcaOutput.pixelAbsolute(inCoordinates) = pix;
 				});
-				IO::save01_in_u8(pcaGaussianSubTexture, "/home/nlutz/pcaInput.png");
+				save_debug(pcaGaussianSubTexture, "/home/nlutz/pcaInput.png");
 			});
 		}
 		else
@@ -517,7 +518,7 @@ void CSN_Texture<I>::estimateCycles(const Eigen::Vector2d &guidX, const Eigen::V
 				texture = adjustSizeForEvaluation(centeredTexture, alteredCycle);
 				projection = testCycles(texture, Eigen::Vector2d(1, 0), alteredCycle);
 			}
-			IO::save01_in_u8(texture, "/home/nlutz/interpolatedTexture.png");
+			save_debug(texture, "/home/nlutz/interpolatedTexture.png");
 			projectionValue = projectionPixelTypeToDouble(projection);
 			if(projectionValue < maxProjectionValue)
 			{
@@ -705,9 +706,25 @@ ImageRGBd CSN_Texture<I>::debug_cycleEvaluationMap(int width, int height, Eigen:
 	double minimumProjection = std::numeric_limits<double>::infinity(), maximumProjection = -std::numeric_limits<double>::infinity();
 	ImageGrayd d;
 	d.initItk(width, height, true);
+	int printableCount = 0;
+	int percentageSave = -1;
 	d.for_all_pixels([&] (ImageGrayd::PixelType &pix, int x, int y)
 	{
-		std::cout << pix << std::endl;
+		++printableCount;
+		int percentage = (printableCount*100+1)/(d.width()*d.height());
+		if(percentage != percentageSave)
+		{
+			if(percentageSave != -1)
+			{
+				if(percentageSave <10)
+					std::cout << "\b\b";
+				else
+					std::cout << "\b\b\b";
+			}
+			percentageSave = percentage;
+			std::cout << percentage << "%";
+			std::flush(std::cout);
+		}
 		cycleX[0] = (center[0]-radius) + double(x)/d.width() * radius * 2;
 		cycleY[1] = (center[1]-radius) + double(y)/d.height() * radius * 2;
 		print_debug("cycleX[0]: " << cycleX[0]);
@@ -724,7 +741,6 @@ ImageRGBd CSN_Texture<I>::debug_cycleEvaluationMap(int width, int height, Eigen:
 			print_debug("alteredCycle: " << alteredCycle);
 			print_debug("alteredCycle[0] * alteredWidth: " << alteredCycle[0]*texture.width());
 			PixelType projection = testCycles(texture, Eigen::Vector2d(alteredCycle[0], 0), Eigen::Vector2d(0, alteredCycle[1]));
-			std::cout << projection << std::endl;
 			DataType *dataProjection = reinterpret_cast<DataType *>(&projection);
 			for(unsigned i=0; i<pixelSize; ++i)
 				pix += dataProjection[i];
@@ -759,12 +775,9 @@ ImageRGBd CSN_Texture<I>::debug_cycleEvaluationMap(int width, int height, Eigen:
 	map.initItk(d.width(), d.height());
 	map.for_all_pixels([&] (ImageRGBd::PixelType &pix, int x, int y)
 	{
-		if(x != 0 && y != 0)
-		{
-			ImageGrayd::PixelType projection = d.pixelAbsolute(x, y);
-			pix =	projection < 0.5 ?	node0*(1.0-projection*2) + node1*projection*2 :
-										node1*(1.0-(projection-0.5)*2) + node2*(projection-0.5)*2;
-		}
+		ImageGrayd::PixelType projection = d.pixelAbsolute(x, y);
+		pix =	projection < 0.5 ?	node0*(1.0-projection*2) + node1*projection*2 :
+									node1*(1.0-(projection-0.5)*2) + node2*(projection-0.5)*2;
 	});
 	return map;
 }
@@ -880,6 +893,20 @@ typename CSN_Texture<I>::PixelType CSN_Texture<I>::testCycles(const I& texture, 
 		return result;
 	};
 
+	auto pixelTypeCompare = [pixelSize] (PixelType p1, PixelType p2) -> PixelType //please add a PixelType*PixelType
+	{
+		PixelType result;
+		DataType *dataResult = reinterpret_cast<DataType *>(&result);
+
+		DataType *dataP1 = reinterpret_cast<DataType *>(&p1);
+		DataType *dataP2 = reinterpret_cast<DataType *>(&p2);
+		for(unsigned i=0; i<pixelSize; ++i)
+		{
+			dataResult[i] = (dataP1[i]-dataP2[i]) * (dataP1[i]-dataP2[i]); //make sure there's a square of that somewhere
+		}
+		return result;
+	};
+
 	auto pixelTypeDivision = [pixelSize] (PixelType p1, PixelType p2) -> PixelType //please
 	{
 		PixelType result;
@@ -917,36 +944,39 @@ typename CSN_Texture<I>::PixelType CSN_Texture<I>::testCycles(const I& texture, 
 	//Number of different rectangles is (txInv, tyInv)
 	int txInv = int(std::round(1.0/tx[0]));
 	int tyInv = int(std::round(1.0/ty[1]));
-	unsigned nudge=(txInv+tyInv);
+	unsigned nudge=0;
 	print_debug("txInv (double): " << 1.0/tx[0]);
 	print_debug("tyInv (double): " << 1.0/ty[1]);
 
 	ImageType average;
 	unsigned energy = 0;
 	average.initItk(projectionSize[0], projectionSize[1], true);
-	for(int i=0; i<txInv; ++i)
-		for(int j=0; j<tyInv; ++j)
-		{
-			if(1.0/tx[0] != double(txInv) || 1.0/ty[0] != double(tyInv) || tx[1] != 0 || ty[0] != 0)
-				average.for_all_pixels([&] (PixelType &pix, int x, int y)
-				{
-					PixelType ijPix = bilinear_interpolation(texture,	((nudge+i)*tx[0] + (nudge+j)*ty[0])*texture.width()+x,
-																		((nudge+i)*tx[1] + (nudge+j)*ty[1])*texture.height()+y, true);
-					pix += ijPix;
-				});
-			else //if it doesn't significantly decrease execution time, please remove this conditional expr. and keep only bilinear interpolation result.
-				average.for_all_pixels([&] (PixelType &pix, int x, int y)
-				{
-					PixelType ijPix = texture.pixelAbsolute(	unsigned(((nudge+i)*tx[0] + (nudge+j)*ty[0])*texture.width()+x)%texture.width(),
-																unsigned(((nudge+i)*tx[1] + (nudge+j)*ty[1])*texture.height()+y)%texture.height());
-					pix += ijPix;
-				});
-			++energy;
-		}
-	average.for_all_pixels([&] (PixelType &pix)
+	if(useCyclicAverage)
 	{
-		pix = pix * (1.0/energy);
-	});
+		for(int i=0; i<txInv; ++i)
+			for(int j=0; j<tyInv; ++j)
+			{
+				if(1.0/tx[0] != double(txInv) || 1.0/ty[0] != double(tyInv) || tx[1] != 0 || ty[0] != 0)
+					average.for_all_pixels([&] (PixelType &pix, int x, int y)
+					{
+						PixelType ijPix = bilinear_interpolation(texture,	((nudge+i)*tx[0] + (nudge+j)*ty[0])*texture.width()+x,
+																			((nudge+i)*tx[1] + (nudge+j)*ty[1])*texture.height()+y, true);
+						pix += ijPix;
+					});
+				else //if it doesn't significantly decrease execution time, please remove this conditional expr. and keep only bilinear interpolation result.
+					average.for_all_pixels([&] (PixelType &pix, int x, int y)
+					{
+						PixelType ijPix = texture.pixelAbsolute(	unsigned(((nudge+i)*tx[0] + (nudge+j)*ty[0])*texture.width()+x)%texture.width(),
+																	unsigned(((nudge+i)*tx[1] + (nudge+j)*ty[1])*texture.height()+y)%texture.height());
+						pix += ijPix;
+					});
+				++energy;
+			}
+		average.for_all_pixels([&] (PixelType &pix)
+		{
+			pix = pix * (1.0/energy);
+		});
+	}
 
 	averageProjectionImage.initItk(projectionSize[0], projectionSize[1], true);
 	projectionImage.initItk(projectionSize[0], projectionSize[1], true);
@@ -979,19 +1009,21 @@ typename CSN_Texture<I>::PixelType CSN_Texture<I>::testCycles(const I& texture, 
 							if(useCyclicAverage)
 								parallelogram2.pixelAbsolute(x, y) -= average.pixelAbsolute(x, y);
 							p2Norm += pixelTypeProduct(parallelogram2.pixelAbsolute(x, y), parallelogram2.pixelAbsolute(x, y));
-
-							averageProjectionImage.pixelAbsolute(x, y) += pix;
 						});
+
+						//save_debug(parallelogram1, "/home/nlutz/parallelogram1.png");
 
 						p1Norm = sqrtPixelType(p1Norm);
 						p2Norm = sqrtPixelType(p2Norm);
 
 						projectionImage.for_all_pixels([&] (PixelType &pix, int x, int y)
 						{
-							parallelogram1.pixelAbsolute(x, y) = pixelTypeDivision(parallelogram1.pixelAbsolute(x, y), p1Norm);
-							parallelogram2.pixelAbsolute(x, y) = pixelTypeDivision(parallelogram2.pixelAbsolute(x, y), p2Norm);
+//							parallelogram1.pixelAbsolute(x, y) = pixelTypeDivision(parallelogram1.pixelAbsolute(x, y), p1Norm);
+//							parallelogram2.pixelAbsolute(x, y) = pixelTypeDivision(parallelogram2.pixelAbsolute(x, y), p2Norm);
 
-							pix = pixelTypeProduct(parallelogram1.pixelAbsolute(x, y), parallelogram2.pixelAbsolute(x, y));
+							pix = pixelTypeCompare(parallelogram1.pixelAbsolute(x, y), parallelogram2.pixelAbsolute(x, y));
+
+							averageProjectionImage.pixelAbsolute(x, y) += pix;
 						});
 						++energy;
 					}
@@ -1001,9 +1033,8 @@ typename CSN_Texture<I>::PixelType CSN_Texture<I>::testCycles(const I& texture, 
 	}
 	averageProjectionImage.for_all_pixels([&] (PixelType &pix)
 	{
-		projection += pixelTypeProduct(pix, pix);
+		projection += pix * (1.0/energy);
 	});
-	projection = projection * (1.0/energy);
 	ImageRGBd normalizedAverageProjectionImage;
 	normalizedAverageProjectionImage.initItk(averageProjectionImage.width(), averageProjectionImage.height());
 	normalizedAverageProjectionImage.copy_pixels(averageProjectionImage);
@@ -1033,7 +1064,7 @@ typename CSN_Texture<I>::PixelType CSN_Texture<I>::testCycles(const I& texture, 
 			pix[i] = (pix[i] - minAverageProjection[i]) / (maxAverageProjection[i] - minAverageProjection[i]);
 		}
 	});
-	IO::save01_in_u8(normalizedAverageProjectionImage, "/home/nlutz/averageProjectionImage.png");
+	save_debug(averageProjectionImage, "/home/nlutz/averageProjectionImage.png");
 	projection = projection * (1.0/(projectionSize[0] * projectionSize[1]));
 	return projection;
 }
