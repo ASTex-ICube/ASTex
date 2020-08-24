@@ -476,6 +476,23 @@ typename I::PixelType normalize(I &image, const ImageGray<MASK_TYPE> &mask)
 	});
 }
 
+template<typename I>
+I scale(const I& image, unsigned outputWidth, unsigned outputHeight)
+{
+	using ImageType = I;
+	using PixelType = typename ImageType::PixelType;
+	ImageType scaledImage;
+	scaledImage.initItk(outputWidth, outputHeight, true);
+	scaledImage.for_all_pixels([&] (PixelType &pix, int x, int y)
+	{
+		double xd, yd;
+		xd = double(x)/(scaledImage.width()-1) * (image.width()-1);
+		yd = double(y)/(scaledImage.height()-1) * (image.height()-1);
+		pix = bilinear_interpolation(image, xd, yd, false);
+	});
+	return scaledImage;
+}
+
 }
 
 #endif

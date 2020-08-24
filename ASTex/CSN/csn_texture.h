@@ -40,7 +40,7 @@ public:
 	using GaussianTransferType		= Gaussian_transfer<PcaImageType>;
 	using LutType					= PcaImageType;
 	using ProceduralBlendingType	= std::function<PcaImageType(const PcaImageType &)>;
-	using TransferPtrImageType		= ImageGrayu64;
+	using PtrImageType				= ImageGrayu64;
 
 	CSN_Texture();
 	~CSN_Texture();
@@ -61,6 +61,7 @@ public:
 
 	ImageType synthesize(unsigned width, unsigned height);
 	PixelType testCycles(const I& texture, const Eigen::Vector2d &tx, const Eigen::Vector2d &ty, bool useCyclicAverage=false) const;
+	PixelType testCycles_v2(const I& texture, const Eigen::Vector2d &tx, const Eigen::Vector2d &ty, unsigned nbSamplesX, unsigned nbSamplesY) const;
 
 	const Eigen::Vector2d &cycleX() const;
 	const Eigen::Vector2d &cycleY() const;
@@ -87,7 +88,9 @@ private:
 	bool					m_useGaussianTransfer;
 	bool					m_useYCbCr;
 	bool					m_useCyclicTransfer;
-	TransferPtrImageType	m_transferPtrImage;
+	bool					m_useCyclicPCA;
+	PtrImageType			m_transferPtrImage;
+	PtrImageType			m_pcaPtrImage;
 	double					m_uvScale;
 	double					m_cyclicTransferRadius;
 	unsigned				m_cyclicTransferSamples;
@@ -257,6 +260,16 @@ typename CSN_Texture<I>::ImageType CSN_Texture<I>::synthesize(unsigned width, un
 		return texture;
 	};
 
+//	auto omegaToOmegaMinus = [&] (Eigen::Vector2d dPixelPos) -> Eigen::Vector2d
+//	{
+//		Eigen::Vector2d omegaMinusPos;
+//		omegaMinusPos[0] = (dPixelPos[0]/m_texture.width())/m_cycles[0][0];
+//		omegaMinusPos[0] = omegaMinusPos[0] - std::floor(omegaMinusPos[0]);
+//		omegaMinusPos[1] = (dPixelPos[1]/m_texture.height())/m_cycles[1][1];
+//		omegaMinusPos[0] = omegaMinusPos[1] - std::floor(omegaMinusPos[1]);
+//		return omegaMinusPos;
+//	};
+
 	PcaImageType pcaTexture = toPcaImageType(m_texture);
 	if(m_useYCbCr)
 	{
@@ -272,10 +285,60 @@ typename CSN_Texture<I>::ImageType CSN_Texture<I>::synthesize(unsigned width, un
 	PcaType pca(pcaTexture);
 	if(m_usePca)
 	{
-		MaskBool mb_alwaysTrue(pcaTexture.width(), pcaTexture.height());
-		mb_alwaysTrue |= [] (int, int) {return true;};
-		pca.computePCA(mb_alwaysTrue);
-		pca.project(pcaTexture);
+		if(m_useCycles && m_useCyclicPCA)
+		{
+			int pcaWidth, pcaHeight, GWidth, GHeight;
+			pcaWidth = int(std::floor(1.0/m_cycles[0][0]));
+			pcaHeight = int(std::floor(1.0/m_cycles[1][1]));
+			GWidth = pcaWidth*m_cyclicTransferSamples;
+			GHeight = pcaHeight*m_cyclicTransferSamples;
+			PcaImageType pcaSubTexture, pcaGaussianSubTexture, pcaInputCopy;
+			pcaInputCopy.initItk(pcaTexture.width(), pcaTexture.height());
+			pcaInputCopy.copy_pixels(pcaTexture);
+			pcaSubTexture.initItk(GWidth, GHeight);
+			pcaGaussianSubTexture.initItk(GWidth, GHeight);
+			m_pcaPtrImage.initItk(	std::round((m_cycles[0][0])*(m_texture.width()) +0.5),
+										std::round((m_cycles[1][1])*(m_texture.height()) +0.5) );
+			m_pcaPtrImage.for_all_pixels([&] (PtrImageType::PixelType &ptr, int inX, int inY)
+			{
+				auto getColor = [&] (int subX, int subY, int wx, int wy) -> PcaPixelType
+				{
+					double x, y;
+					x = std::max(std::round(inX + (subX*m_cycles[0][0] + subY*m_cycles[1][0])*pcaInputCopy.width()) + (wx - m_cyclicTransferSamples/2.0 + 0.5)*m_cyclicTransferRadius, 0.0);
+					y = std::max(std::round(inY + (subX*m_cycles[0][1] + subY*m_cycles[1][1])*pcaInputCopy.height()) + (wy - m_cyclicTransferSamples/2.0 + 0.5)*m_cyclicTransferRadius, 0.0);
+					return bilinear_interpolation(pcaInputCopy, x, y, true);
+				};
+				for(int subX=0; subX<pcaWidth; ++subX)
+					for(int subY=0; subY<pcaHeight; ++subY)
+						for(unsigned wx=0; wx<m_cyclicTransferSamples; ++wx)
+							for(unsigned wy=0; wy<m_cyclicTransferSamples; ++wy)
+							{
+								pcaSubTexture.pixelAbsolute(subX*m_cyclicTransferSamples+wx, subY*m_cyclicTransferSamples+wy) = getColor(subX, subY, int(wx), int(wy));
+							}
+				PcaType *subPca = new PcaType(pcaSubTexture);
+				ptr = reinterpret_cast<PtrImageType::PixelType>(subPca);
+				MaskBool mb_alwaysTrue(pcaSubTexture.width(), pcaSubTexture.height());
+				mb_alwaysTrue |= [] (int, int) {return true;};
+				subPca->computePCA(mb_alwaysTrue);
+				subPca->project(pcaSubTexture);
+				for(int subX=0; subX<pcaWidth; ++subX)
+					for(int subY=0; subY<pcaHeight; ++subY)
+					{
+						PixelPosType inCoordinates;
+						inCoordinates[0] = int(std::round(inX + (subX*m_cycles[0][0] + subY*m_cycles[1][0])*pcaInputCopy.width()))%pcaInputCopy.width();
+						inCoordinates[1] = int(std::round(inY + (subX*m_cycles[0][1] + subY*m_cycles[1][1])*pcaInputCopy.height()))%pcaInputCopy.height();
+						pcaTexture.pixelAbsolute(inCoordinates) = pcaSubTexture.pixelAbsolute(	subX*m_cyclicTransferSamples+int(m_cyclicTransferSamples/2.0-0.5),
+																								subY*m_cyclicTransferSamples+int(m_cyclicTransferSamples/2.0-0.5));
+					}
+			});
+		}
+		else
+		{
+			MaskBool mb_alwaysTrue(pcaTexture.width(), pcaTexture.height());
+			mb_alwaysTrue |= [] (int, int) {return true;};
+			pca.computePCA(mb_alwaysTrue);
+			pca.project(pcaTexture);
+		}
 	}
 	pcaGaussianTexture.initItk(pcaTexture.width(), pcaTexture.height());
 	if(m_useGaussianTransfer)
@@ -294,12 +357,12 @@ typename CSN_Texture<I>::ImageType CSN_Texture<I>::synthesize(unsigned width, un
 			pcaGaussianSubTexture.initItk(GWidth, GHeight);
 			m_transferPtrImage.initItk(	std::round((m_cycles[0][0])*(m_texture.width()) +0.5),
 										std::round((m_cycles[1][1])*(m_texture.height()) +0.5) );
-			m_transferPtrImage.for_all_pixels([&] (TransferPtrImageType::PixelType &ptr, int inX, int inY)
+			m_transferPtrImage.for_all_pixels([&] (PtrImageType::PixelType &ptr, int inX, int inY)
 			{
 				LutType *subLut = new LutType;
 				subLut->initItk(128, 1);
-				ptr = TransferPtrImageType::PixelType(subLut);
-				auto getColor = [&] (int subX, int subY, int wx, int wy) -> typename PcaImageType::PixelType
+				ptr = reinterpret_cast<PtrImageType::PixelType>(subLut);
+				auto getColor = [&] (int subX, int subY, int wx, int wy) -> PcaPixelType
 				{
 					double x, y;
 					x = std::max(std::round(inX + (subX*m_cycles[0][0] + subY*m_cycles[1][0])*pcaInputCopy.width()) + (wx - m_cyclicTransferSamples/2.0 + 0.5)*m_cyclicTransferRadius, 0.0);
@@ -308,8 +371,8 @@ typename CSN_Texture<I>::ImageType CSN_Texture<I>::synthesize(unsigned width, un
 				};
 				for(int subX=0; subX<transferWidth; ++subX)
 					for(int subY=0; subY<transferHeight; ++subY)
-						for(int wx=0; wx<m_cyclicTransferSamples; ++wx)
-							for(int wy=0; wy<m_cyclicTransferSamples; ++wy)
+						for(unsigned wx=0; wx<m_cyclicTransferSamples; ++wx)
+							for(unsigned wy=0; wy<m_cyclicTransferSamples; ++wy)
 							{
 								pcaSubTexture.pixelAbsolute(subX*m_cyclicTransferSamples+wx, subY*m_cyclicTransferSamples+wy) = getColor(subX, subY, wx, wy);
 							}
@@ -324,7 +387,6 @@ typename CSN_Texture<I>::ImageType CSN_Texture<I>::synthesize(unsigned width, un
 						pcaGaussianTexture.pixelAbsolute(inCoordinates) = pcaGaussianSubTexture.pixelAbsolute(subX*m_cyclicTransferSamples+int(m_cyclicTransferSamples/2.0-0.5),
 																											  subY*m_cyclicTransferSamples+int(m_cyclicTransferSamples/2.0-0.5));
 					}
-				ptr = reinterpret_cast<uint64_t>(subLut);
 			});
 		}
 		else
@@ -368,7 +430,7 @@ typename CSN_Texture<I>::ImageType CSN_Texture<I>::synthesize(unsigned width, un
 			pcaOutputCopy.initItk(pcaOutput.width(), pcaOutput.height());
 			pcaOutputCopy.copy_pixels(pcaOutput);
 			pcaSubTexture.initItk(GWidth, GHeight);
-			m_transferPtrImage.for_all_pixels([&] (TransferPtrImageType::PixelType &ptr, int inX, int inY)
+			m_transferPtrImage.for_all_pixels([&] (PtrImageType::PixelType &ptr, int inX, int inY)
 			{
 				LutType *subLut = reinterpret_cast<LutType *>(ptr);
 				pcaSubTexture.for_all_pixels([&] (typename PcaImageType::PixelType &pix, int subX, int subY)
@@ -394,7 +456,46 @@ typename CSN_Texture<I>::ImageType CSN_Texture<I>::synthesize(unsigned width, un
 			pcaOutput = GaussianTransferType::invT(pcaOutput, lut);
 	}
 	if(m_usePca)
-		pca.back_project(pcaOutput, pcaTexture);
+	{
+		if(m_useCycles && m_useCyclicPCA)
+		{
+			pcaTexture.initItk(pcaOutput.width(), pcaOutput.height());
+			unsigned transferWidth, transferHeight, GWidth, GHeight;
+			transferWidth = unsigned(std::ceil(double(width)/m_texture.width()) * std::floor(1.0/m_cycles[0][0]));
+			transferHeight = unsigned(std::ceil(double(height)/m_texture.height()) * std::floor(1.0/m_cycles[1][1]));
+			GWidth = transferWidth*m_cyclicTransferSamples;
+			GHeight = transferHeight*m_cyclicTransferSamples;
+			PcaImageType pcaSubTexture, pcaUnfoldedSubTexture, pcaOutputCopy;
+			pcaOutputCopy.initItk(pcaOutput.width(), pcaOutput.height());
+			pcaOutputCopy.copy_pixels(pcaOutput);
+			pcaSubTexture.initItk(GWidth, GHeight);
+			pcaUnfoldedSubTexture.initItk(pcaOutput.width(), pcaOutput.height());
+			m_pcaPtrImage.for_all_pixels([&] (PtrImageType::PixelType &ptr, int inX, int inY)
+			{
+				PcaType *subPca = reinterpret_cast<PcaType *>(ptr);
+				pcaSubTexture.for_all_pixels([&] (typename PcaImageType::PixelType &pix, int subX, int subY)
+				{
+					PixelPosType inCoordinates;
+					if(unsigned(std::ceil(double(width)/m_texture.width()) * std::floor(1.0/m_cycles[0][0])))
+					inCoordinates[0] = int(std::round(inX + (subX*m_cycles[0][0] + subY*m_cycles[1][0])*pcaTexture.width()))%pcaOutputCopy.width();
+					inCoordinates[1] = int(std::round(inY + (subX*m_cycles[0][1] + subY*m_cycles[1][1])*pcaTexture.height()))%pcaOutputCopy.height();
+					pix = pcaOutputCopy.pixelAbsolute(inCoordinates);
+				});
+
+				subPca->back_project(pcaSubTexture, pcaUnfoldedSubTexture);
+
+				pcaUnfoldedSubTexture.for_all_pixels([&] (const typename PcaImageType::PixelType &pix, int subX, int subY)
+				{
+					PixelPosType inCoordinates;
+					inCoordinates[0] = int(std::round(inX + (subX*m_cycles[0][0] + subY*m_cycles[1][0])*pcaTexture.width()))%pcaOutputCopy.width();
+					inCoordinates[1] = int(std::round(inY + (subX*m_cycles[0][1] + subY*m_cycles[1][1])*pcaTexture.height()))%pcaOutputCopy.height();
+					pcaTexture.pixelAbsolute(inCoordinates) = pix;
+				});
+			});
+		}
+		else
+			pca.back_project(pcaOutput, pcaTexture);
+	}
 	else
 		pcaTexture = pcaOutput;
 	if(m_useYCbCr)
@@ -408,10 +509,18 @@ typename CSN_Texture<I>::ImageType CSN_Texture<I>::synthesize(unsigned width, un
 	}
 	if(m_useGaussianTransfer && m_useCycles && m_useCyclicTransfer)
 	{
-		m_transferPtrImage.for_all_pixels([&] (TransferPtrImageType::PixelType &pix)
+		m_transferPtrImage.for_all_pixels([&] (PtrImageType::PixelType &pix)
 		{
 			GaussianTransferType *gtt = reinterpret_cast<GaussianTransferType *>(pix);
 			delete gtt;
+		});
+	}
+	if(m_usePca && m_useCycles && m_useCyclicPCA)
+	{
+		m_pcaPtrImage.for_all_pixels([&] (PtrImageType::PixelType &pix)
+		{
+			PcaType *pca = reinterpret_cast<PcaType *>(pix);
+			delete pca;
 		});
 	}
 	output = fromPcaImageType(pcaTexture);
@@ -640,12 +749,9 @@ ImageRGBd CSN_Texture<I>::debug_cycleEvaluationMap(int width, int height, Eigen:
 	unsigned pixelSize = sizeof(PixelType)/sizeof(DataType);
 	ImageType centeredTexture;
 	centeredTexture.initItk(m_texture.width(), m_texture.height());
-	PixelType mean;
-	Histogram<ImageType> histogram(m_texture);
-	mean = histogram.meanPixelType();
 	centeredTexture.for_all_pixels([&] (PixelType &pix, int x, int y)
 	{
-		pix = m_texture.pixelAbsolute(x, y)/* - mean*/;
+		pix = m_texture.pixelAbsolute(x, y);
 	});
 
 	auto adjustSizeForEvaluation = [&] (const ImageType &texture, Eigen::Vector2d &cycle) -> ImageType //scale to match the cycle, and cut incomplete parallelograms.
@@ -725,22 +831,22 @@ ImageRGBd CSN_Texture<I>::debug_cycleEvaluationMap(int width, int height, Eigen:
 			std::cout << percentage << "%";
 			std::flush(std::cout);
 		}
-		cycleX[0] = (center[0]-radius) + double(x)/d.width() * radius * 2;
-		cycleY[1] = (center[1]-radius) + double(y)/d.height() * radius * 2;
+		cycleX[0] = (center[0]-radius) + double(x)/(d.width()-1) * radius * 2;
+		cycleY[1] = (center[1]-radius) + double(y)/(d.height()-1) * radius * 2;
 		print_debug("cycleX[0]: " << cycleX[0]);
 		print_debug("cycleY[1]: " << cycleY[1]);
 		if(cycleX[0]>epsilonX && cycleY[1]>epsilonY && cycleX[0]<=0.5 && cycleY[1]<=0.5)
 		{
 			Eigen::Vector2d alteredCycle = Eigen::Vector2d(cycleX[0], cycleY[1]);
-			ImageType texture = adjustSizeForEvaluation(centeredTexture, alteredCycle);
+			ImageType texture = centeredTexture; //adjustSizeForEvaluation(centeredTexture, alteredCycle);
 			texture.for_all_pixels([&] (PixelType &pix)
 			{
-				//I don't know why, I don't want to know why, I will probably never know why, but without this line,
+				//I don't know why, I don't want to know why, I shouldn't have to wonder why, but without this line,
 				//the red channel of "texture" fucks up the testCycles function. Something is fucked up with the core.
 			});
 			print_debug("alteredCycle: " << alteredCycle);
 			print_debug("alteredCycle[0] * alteredWidth: " << alteredCycle[0]*texture.width());
-			PixelType projection = testCycles(texture, Eigen::Vector2d(alteredCycle[0], 0), Eigen::Vector2d(0, alteredCycle[1]));
+			PixelType projection = testCycles_v2(texture, Eigen::Vector2d(alteredCycle[0], 0), Eigen::Vector2d(0, alteredCycle[1]), 50, 50);
 			DataType *dataProjection = reinterpret_cast<DataType *>(&projection);
 			for(unsigned i=0; i<pixelSize; ++i)
 				pix += dataProjection[i];
@@ -1068,6 +1174,112 @@ typename CSN_Texture<I>::PixelType CSN_Texture<I>::testCycles(const I& texture, 
 	projection = projection * (1.0/(projectionSize[0] * projectionSize[1]));
 	return projection;
 }
+
+template<typename I>
+typename CSN_Texture<I>::PixelType CSN_Texture<I>::testCycles_v2(const I& texture, const Eigen::Vector2d &tx, const Eigen::Vector2d &ty, unsigned nbSamplesX, unsigned nbSamplesY) const
+{
+	assert(tx[0] >= 0.02 && ty[1] >= 0.02);
+	assert(texture.is_initialized());
+	assert(nbSamplesX>1 && nbSamplesY>1);
+	unsigned pixelSize = sizeof(PixelType)/sizeof(DataType);
+	Eigen::Vector2d txScale;
+	txScale[0] = tx[0]*(texture.width());
+	txScale[1] = tx[1]*(texture.height());
+	Eigen::Vector2d tyScale;
+	tyScale[0] = ty[0]*(texture.width());
+	tyScale[1] = ty[1]*(texture.height());
+
+	auto pixelTypeProduct = [pixelSize] (PixelType p1, PixelType p2) -> PixelType //please add a PixelType*PixelType
+	{
+		PixelType result;
+		DataType *dataResult = reinterpret_cast<DataType *>(&result);
+
+		DataType *dataP1 = reinterpret_cast<DataType *>(&p1);
+		DataType *dataP2 = reinterpret_cast<DataType *>(&p2);
+		for(unsigned i=0; i<pixelSize; ++i)
+		{
+			dataResult[i] = dataP1[i]*dataP2[i];
+		}
+		return result;
+	};
+
+	auto pixelTypeCompare = [pixelSize] (PixelType p1, PixelType p2) -> PixelType //please add a PixelType*PixelType
+	{
+		PixelType result;
+		DataType *dataResult = reinterpret_cast<DataType *>(&result);
+
+		DataType *dataP1 = reinterpret_cast<DataType *>(&p1);
+		DataType *dataP2 = reinterpret_cast<DataType *>(&p2);
+		for(unsigned i=0; i<pixelSize; ++i)
+		{
+			dataResult[i] = (dataP1[i]-dataP2[i]) * (dataP1[i]-dataP2[i]); //make sure there's a square of that somewhere
+		}
+		return result;
+	};
+
+	auto pixelTypeSqrt = [pixelSize] (PixelType p1) -> PixelType //please add a sqrt(PixelType)
+	{
+		PixelType result;
+		DataType *dataResult = reinterpret_cast<DataType *>(&result);
+
+		DataType *dataP1 = reinterpret_cast<DataType *>(&p1);
+		for(unsigned i=0; i<pixelSize; ++i)
+		{
+			dataResult[i] = sqrt(dataP1[i]);
+		}
+		return result;
+	};
+	//requires tx or ty to be aligned with the axis x (resp. y).
+	//To make this function more robust, sample the tx, ty parallelogram and extract the intersection between the lattice described by (tx, ty) and the defined texture space.
+	int txInv = int(std::round(1.0/tx[0]))-1;
+	int tyInv = int(std::round(1.0/ty[1]))-1;
+	PixelType finalValue = ImageType::zero();
+	for(unsigned i=0; i<nbSamplesX; ++i)
+	{
+		double dx = txScale[0]*(double(i)/(nbSamplesX-1));
+		for(unsigned j=0; j<nbSamplesY; ++j)
+		{
+			double dy = tyScale[1]*(double(j)/(nbSamplesY-1));
+			unsigned hitCount = 0;
+			PixelType hitValue = ImageType::zero();
+			for(int k0=0; k0<txInv; ++k0)
+			{
+				for(int l0=0; l0<tyInv; ++l0)
+				{
+					for(int k1=0; k1<txInv; ++k1)
+					{
+						for(int l1=0; l1<tyInv; ++l1)
+						{
+							if(k0 != k1 || l0 != l1)
+							{
+
+								PixelType value = bilinear_interpolation(texture, dx+k0*txScale[0]+l0*tyScale[0], dy+k0*txScale[1]+l0*tyScale[1], true)
+												- bilinear_interpolation(texture, dx+k1*txScale[0]+l1*tyScale[0], dy+k1*txScale[1]+l1*tyScale[1], true);
+								PixelType debugValue = ImageType::zero();
+								if(false)
+								{
+									print_debug("coordinates - x0: " << dx+k0*txScale[0]+l0*tyScale[0] << ", y0: " << dy+k0*txScale[1]+l0*tyScale[1]);
+									print_debug("coordinates - x1: " << dx+k1*txScale[0]+l1*tyScale[0] << ", y1: " << dy+k1*txScale[1]+l1*tyScale[1]);
+									print_debug("dx: " << dx << ", dy: " << dy);
+									print_debug("k0: " << k0 << ", l0: " << l0);
+									print_debug("k1: " << k1 << ", l1: " << l1);
+									print_debug("value: " << value << std::endl);
+								}
+								hitValue += pixelTypeSqrt(pixelTypeProduct(value, value));
+								++hitCount;
+							}
+						}
+					}
+				}
+			}
+			hitValue = hitValue * (1.0/hitCount);
+			finalValue += hitValue;
+		}
+	}
+	finalValue = finalValue * (1.0/(nbSamplesX*nbSamplesY));
+	return finalValue;
+}
+
 
 template<typename I>
 const Eigen::Vector2d &CSN_Texture<I>::cycleX() const

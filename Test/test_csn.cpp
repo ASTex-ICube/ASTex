@@ -255,10 +255,10 @@ int main(int argc, char **argv)
 
 	CSN::CSN_Texture<ImageType> csn;
 	csn.setTexture(im_in);
-	ImageRGBd cycleEvaluationMap = csn.debug_cycleEvaluationMap(33, 33, Eigen::Vector2d(cyclePair.vectors[0][0], cyclePair.vectors[1][1]), 0.02);
+	ImageRGBd cycleEvaluationMap = csn.debug_cycleEvaluationMap(65, 65, Eigen::Vector2d(cyclePair.vectors[0][0], cyclePair.vectors[1][1]), 0.05);
 	IO::save01_in_u8(cycleEvaluationMap, std::string("/home/nlutz/cycleEvaluationMap65_") + textureName + ".png");
 	csn.setCycles(cyclePair.vectors[0], cyclePair.vectors[1]);
-	//csn.testCycles(im_in, cyclePair.vectors[0], cyclePair.vectors[1]);
+	std::cout << csn.testCycles_v2(im_in, cyclePair.vectors[0], cyclePair.vectors[1], 40, 40) << std::endl;
 	csn.setUseCycles(arguments.useCycles);
 	csn.setGamma(arguments.gamma);
 	csn.setUsePca(arguments.usePca);
@@ -272,10 +272,10 @@ int main(int argc, char **argv)
 	{
 		csn.setProceduralBlendingSubstitute(textonProcedure);
 	}
-	if(arguments.useCycles)
-	{
-		csn.estimateCycles(cyclePair.vectors[0], cyclePair.vectors[1], 0.01, false, 32);
-	}
+//	if(arguments.useCycles)
+//	{
+//		csn.estimateCycles(cyclePair.vectors[0], cyclePair.vectors[1], 0.01, false, 32);
+//	}
 	std::cout << textureName << std::endl;
 	std::cout << "Proposed cycle x: " << std::endl << cyclePair.vectors[0] << std::endl;
 	std::cout << "Proposed cycle y: " << std::endl << cyclePair.vectors[1] << std::endl;
