@@ -120,7 +120,6 @@ std::vector<Eigen::Vector2f> SamplerCycles::generate()
 		Eigen::Vector2f tmp_point(	fract((k_i*m_cycles[0])[0] + (l_i*m_cycles[1])[0]),
 									fract((k_i*m_cycles[0])[1] + (l_i*m_cycles[1])[1]));
 		SamplePoints.push_back(tmp_point);
-		std::cout << tmp_point << std::endl;
 	}
 	return SamplePoints;
 }

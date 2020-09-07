@@ -110,7 +110,7 @@ public:
 		m_variance = variance;
 	}
 
-	void ComputeTinput(const IMG &input, IMG &T_input)
+	void ComputeTinput(const IMG &input, IMG &T_input, bool clamp=true)
 	{
 		DataType * pix;
 		for (unsigned int channel = 0; channel < IMG::NB_CHANNELS ; channel++) {
@@ -139,7 +139,8 @@ public:
 				T U = (i + 0.5) / (sortedInputValues.size());
 				// Gaussian quantile
 				T G = invCDF(U, m_mean, m_variance);
-				G = clamp_scalar(G,T(0),T(1));
+				if(clamp)
+					G = clamp_scalar(G,T(0),T(1));
 				// Store
 				PixelType &p = T_input.pixelAbsolute(x, y);
 				pix = reinterpret_cast<DataType*>(&p);

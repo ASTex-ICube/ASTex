@@ -147,7 +147,7 @@ int main(int argc, char **argv)
 		return EXIT_FAILURE;
 	}
 
-	using ImageType = ImageRGBd;
+	using ImageType = ImageRGBf;
 	using PcaImageType = CSN::CSN_Texture<ImageType>::PcaImageType;
 
 	ImageType im_in;
@@ -255,10 +255,10 @@ int main(int argc, char **argv)
 
 	CSN::CSN_Texture<ImageType> csn;
 	csn.setTexture(im_in);
-	ImageRGBd cycleEvaluationMap = csn.debug_cycleEvaluationMap(65, 65, Eigen::Vector2d(cyclePair.vectors[0][0], cyclePair.vectors[1][1]), 0.05);
-	IO::save01_in_u8(cycleEvaluationMap, std::string("/home/nlutz/cycleEvaluationMap65_") + textureName + ".png");
+	//ImageRGBd cycleEvaluationMap = csn.debug_cycleEvaluationMap(129, 129, Eigen::Vector2d(cyclePair.vectors[0][0], cyclePair.vectors[1][1]), 0.1);
+	//IO::save01_in_u8(cycleEvaluationMap, std::string("/home/nlutz/cycleEvaluationMap129_") + textureName + ".png");
 	csn.setCycles(cyclePair.vectors[0], cyclePair.vectors[1]);
-	std::cout << csn.testCycles_v2(im_in, cyclePair.vectors[0], cyclePair.vectors[1], 40, 40) << std::endl;
+//	std::cout << csn.testCycles_v2(im_in, cyclePair.vectors[0], cyclePair.vectors[1], 40, 40) << std::endl;
 	csn.setUseCycles(arguments.useCycles);
 	csn.setGamma(arguments.gamma);
 	csn.setUsePca(arguments.usePca);
