@@ -110,7 +110,7 @@ public:
 		m_variance = variance;
 	}
 
-	void ComputeTinput(const IMG &input, IMG &T_input, bool clamp=true)
+	void ComputeTinput(const IMG &input, IMG &T_input, bool clamp=false)
 	{
 		DataType * pix;
 		for (unsigned int channel = 0; channel < IMG::NB_CHANNELS ; channel++) {
@@ -184,9 +184,16 @@ public:
 		}
 	}
 
-	static void invT(PixelType &p, const IMG &Tinv)
+	static void invT(PixelType &p, const IMG &Tinv, bool clamp=true)
 	{
-		p = clamp_scalar(p,T(0),T(1));
+		if(clamp)
+		{
+			DataType *data_p = reinterpret_cast<DataType *>(&p);
+			for(unsigned i=0; i<IMG::NB_CHANNELS; ++i)
+			{
+				data_p[i] = clamp_scalar(data_p[i], DataType(0.), DataType(1.));
+			}
+		}
 		int size = Tinv.width() - 1;
 		DataType *pix = reinterpret_cast<DataType*>(&p);
 		DataType *pix_Tinv;

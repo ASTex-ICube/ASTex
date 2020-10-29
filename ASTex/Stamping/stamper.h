@@ -229,6 +229,9 @@ public:
 	 * but there exists a workaround with "margins" if it shouldn't be periodic.
 	 */
 	void setPeriodicity(bool periodicity) {m_periodicity = periodicity;}
+
+	void setSpot(bool isSpot) {m_isSpot = isSpot;}
+
 	/**
 	 * @param use defines whether margins should be used or not.
 	 * Margins are made to extend the spot noise domain,
@@ -241,6 +244,7 @@ public:
 private:
 
 	bool m_periodicity; //< if the stamping process is periodic or not.
+	bool m_isSpot;		//< if the texton has to be considered as a spot
 
 	bool m_useMargins; //< if true, extends the domain to preserve energy.
 };
@@ -315,6 +319,7 @@ template<typename I>
 StamperTexton<I>::StamperTexton(SamplerBase *sampler, const StampBase<I> *stamp) :
 	StamperBase<I>(sampler, stamp),
 	m_periodicity(false),
+	m_isSpot(false),
 	m_useMargins(true)
 {
 	this->m_stampIndexGenerator = new typename StamperBase<I>::Func_stampIndexGeneratorZero;
@@ -350,8 +355,8 @@ I StamperTexton<I>::generate(int imageWidth, int imageHeight) const
 
 		if(m_periodicity || (!m_periodicity && !m_useMargins))
 		{
-			i = imageWidth * (*it)[0];
-			j = imageHeight * (*it)[1];
+			i = (imageWidth) * (*it)[0];
+			j = (imageHeight) * (*it)[1];
 		}
 		else
 		{
@@ -371,17 +376,22 @@ I StamperTexton<I>::generate(int imageWidth, int imageHeight) const
 			oty=j-stampHeight/2.0;
 		}
 
-		Region reg = gen_region(std::floor(otx), std::floor(oty), stampWidth+1, stampHeight+1); //note: regions are weak when shooting between pixels
+		Region reg = gen_region(std::floor(otx), std::floor(oty), stampWidth, stampHeight); //note: regions are weak when shooting between pixels
 
 		nbHit += stampWidth*stampHeight; //with periodicity, the entire energy of the texton hits the texture all the time.
 		//Without, we pretend it did and normalize including the size of the margins.
 		if(m_periodicity)
 		{
+			if(m_isSpot)
+			{
+				i += (double(std::rand())/RAND_MAX)-0.5;
+				j += (double(std::rand())/RAND_MAX)-0.5;
+			}
 			im_out.for_region_pixels(reg, [&] (typename I::PixelType& pix, int x, int y) //with periodicity
 			{
 				(void)pix; /// pix is unused: remove parameter if there can be a (int, int) lambda
-				tx=x-otx; //texton coordinate in texton space
-				ty=y-oty; //texton coordinate
+				tx=(x-i)+stampWidth; //texton coordinate in texton space
+				ty=(y-j)+stampHeight; //texton coordinate
 
 				im_out.pixelAbsolute((x+im_out.width())%imageWidth, (y+im_out.height())%imageHeight) += stamp->pixel(tx, ty);
 			});

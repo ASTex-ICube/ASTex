@@ -5,7 +5,7 @@
 
 void psdToModulus(ImageSpectrald::PixelType &pix)
 {
-	pix = std::sqrt(pix);
+	pix = pix;//std::sqrt(pix);
 }
 
 int trpn_mapmod(int argc, char **argv)
@@ -65,7 +65,7 @@ int trpn_mapmod(int argc, char **argv)
 
 	output.for_all_pixels([] (ImageGrayd::PixelType &pix)
 	{
-		pix = std::min(std::max(0.0, 0.5 + 0.5), 1.0);
+		pix = std::min(std::max(0.0, pix + 0.5), 1.0);
 	});
 
 	IO::save01_in_u8(output, str_output);
@@ -129,6 +129,7 @@ int trpn_tpsd(int argc, char **argv)
 		exit(EXIT_FAILURE);
 	}
 
+	ImageGrayd inputI, inputI2, inputI3, inputI4;
 	ImageSpectrald input, input2, input3, input4;
 	ImageGrayd output, output2, output3, output4;
 
@@ -138,26 +139,44 @@ int trpn_tpsd(int argc, char **argv)
 	std::string str_input4 = argv[4];
 	std::string str_output = argv[5];
 
-	IO::loadu8_in_01(input, str_input);
-	IO::loadu8_in_01(input2, str_input2);
-	IO::loadu8_in_01(input3, str_input3);
-	IO::loadu8_in_01(input4, str_input4);
+	//If Inputs are spectra
+//	IO::loadu8_in_01(input, str_input);
+//	IO::loadu8_in_01(input2, str_input2);
+//	IO::loadu8_in_01(input3, str_input3);
+//	IO::loadu8_in_01(input4, str_input4);
 
-	input = scale(input, 800, 800);
-	input2 = scale(input2, 800, 800);
-	input3 = scale(input3, 800, 800);
-	input4 = scale(input4, 800, 800);
+	//If Inputs are exemplars
+	IO::loadu8_in_01(inputI, str_input);
+	IO::loadu8_in_01(inputI2, str_input2);
+	IO::loadu8_in_01(inputI3, str_input3);
+	IO::loadu8_in_01(inputI4, str_input4);
+	input.initItk(inputI.width(), inputI.height());
+	input2.initItk(inputI2.width(), inputI2.height());
+	input3.initItk(inputI3.width(), inputI3.height());
+	input4.initItk(inputI4.width(), inputI4.height());
+	ImageSpectrald somePhase;
+	somePhase.initItk(inputI.width(), inputI.height());
+	Fourier::fftForwardModulusAndPhase(inputI, input, somePhase);
+	Fourier::fftForwardModulusAndPhase(inputI2, input2, somePhase);
+	Fourier::fftForwardModulusAndPhase(inputI3, input3, somePhase);
+	Fourier::fftForwardModulusAndPhase(inputI4, input4, somePhase);
+
+	unsigned size=512;
+	input = scale(input, size, size);
+	input2 = scale(input, size, size);
+	input3 = scale(input, size, size);
+	input4 = scale(input, size, size);
 	input.for_all_pixels(psdToModulus);
 	input2.for_all_pixels(psdToModulus);
 	input3.for_all_pixels(psdToModulus);
 	input4.for_all_pixels(psdToModulus);
 
-	unsigned nbSamplesX=320, nbSamplesY=160;
+	unsigned nbSamplesX=256, nbSamplesY=256;
 
 	CSN::TPSD<ImageSpectrald> tpsd;
 	tpsd.setSize(input.width(), input.height());
 	tpsd.setNbSamples(nbSamplesX, nbSamplesY);
-	tpsd.setParallelogramCheat(true, false);
+	tpsd.setParallelogramCheat(false, false);
 	std::function<std::function<void (ImageSpectrald::PixelType&, int, int)> (double, double)> func;
 	func = [&] (double dx, double dy) -> std::function<void (ImageSpectrald::PixelType&, int, int)>
 	{
@@ -168,7 +187,7 @@ int trpn_tpsd(int argc, char **argv)
 				if(dy < 0.5)
 				{
 					double tdx = 2*dx, tdy = 2*dy;
-					pix = input.pixelAbsolute(+x, y) * (1.0-tdx)*(1.0-tdy)
+					pix = input.pixelAbsolute(x, y) * (1.0-tdx)*(1.0-tdy)
 							+ input2.pixelAbsolute(x, y)*tdx*(1.0-tdy)
 							+ input3.pixelAbsolute(x, y)*(1.0-tdx)*tdy
 							+ input4.pixelAbsolute(x, y)*tdx*tdy;
@@ -225,7 +244,7 @@ int trpn_tpsd(int argc, char **argv)
 		}
 	output.for_all_pixels([] (ImageGrayd::PixelType &pix)
 	{
-		pix = std::min(std::max(0.0, pix + 0.3), 1.0);
+		pix = std::min(std::max(0.0, pix + 0.5), 1.0);
 	});
 
 	IO::save01_in_u8(output, str_output);

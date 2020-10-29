@@ -147,7 +147,7 @@ int main(int argc, char **argv)
 		return EXIT_FAILURE;
 	}
 
-	using ImageType = ImageRGBf;
+	using ImageType = ImageRGBd;
 	using PcaImageType = CSN::CSN_Texture<ImageType>::PcaImageType;
 
 	ImageType im_in;
@@ -199,11 +199,11 @@ int main(int argc, char **argv)
 				{
 					for(unsigned cy=0; cy<maxCyclesY; ++cy)
 					{
-						int xShift= int(x	+ (cx*cyclePair.vectors[cxIndex][0]
-											+ cy*cyclePair.vectors[cyIndex][0])*image.width())%meanImage.width();
-						int yShift= int(y	+ (cx*cyclePair.vectors[cxIndex][1]
-											+ cy*cyclePair.vectors[cyIndex][1])*image.height())%meanImage.height();
-						pix += centeredImage.pixelAbsolute(xShift, yShift);
+						double xShift= x	+ (cx*cyclePair.vectors[cxIndex][0]
+											+ cy*cyclePair.vectors[cyIndex][0])*image.width();
+						double yShift= y	+ (cx*cyclePair.vectors[cxIndex][1]
+											+ cy*cyclePair.vectors[cyIndex][1])*image.height();
+						pix += bilinear_interpolation(image, xShift, yShift, true);
 					}
 				}
 				pix = pix * (1.0/(maxCyclesX*maxCyclesY));
@@ -211,6 +211,8 @@ int main(int argc, char **argv)
 			else
 				pix = mean;
 		});
+
+		//Histogram<ImageRGBd>::loadImageFromCsv(meanImage, "/home/nlutz/mean.csv");
 		centeredImage.for_all_pixels([&] (PcaImageType::PixelType &pix, int x, int y)
 		{
 			pix[0] -= meanImage.pixelAbsolute(x, y)[0];
@@ -218,26 +220,94 @@ int main(int argc, char **argv)
 			pix[2] -= meanImage.pixelAbsolute(x, y)[2];
 			pix = pix * (1.0/std::sqrt(centeredImage.width()*centeredImage.height()));
 		});
+		double alpha = 0.02;
+		//normalization
+		std::cout << "applying smooth transition function" << std::endl;
+		PcaImageType::PixelType norm = PcaImageType::zero(), normPhi = PcaImageType::zero();
+		centeredImage.for_all_pixels([&] (PcaImageType::PixelType &pix, int x, int y)
+		{
+			for(unsigned i=0; i<3; ++i)
+			{
+				norm[i] += pix[i] * pix[i];
+			}
+		});
+		for(unsigned i=0; i<3; ++i)
+		{
+			norm[i] = sqrt(norm[i]);
+		}
+//		ImageGrayd d;
+//		d.initItk(centeredImage.width(), centeredImage.height());
+//		d.for_all_pixels([&] (ImageGrayd::PixelType &pix, int x, int y)
+//		{
+//			double distanceToBorder;
+//			double distanceX = double(std::min(x, centeredImage.width()-1-x));
+//			double distanceY = double(std::min(y, centeredImage.height()-1-y));
+//			distanceToBorder = std::min(distanceX/centeredImage.width(), distanceY/centeredImage.height());
+//			if(distanceToBorder<alpha)
+//			{
+//				for(unsigned i=0; i<3; ++i)
+//				{
+//					pix = sqrt(distanceToBorder/alpha);
+//				}
+//			}
+//			else
+//				pix = 1.0;
+////			std::cout << pix << std::endl;
+//		});
+		//IO::save01_in_u8(d, "/home/nlutz/d.png");
+		centeredImage.for_all_pixels([&] (PcaImageType::PixelType &pix, int x, int y)
+		{
+			double distanceToBorder;
+			double distanceX = double(std::min(x, centeredImage.width()-1-x));
+			double distanceY = double(std::min(y, centeredImage.height()-1-y));
+			distanceToBorder = std::min(distanceX/centeredImage.width(), distanceY/centeredImage.height());
+			for(unsigned i=0; i<3; ++i)
+			{
+				pix[i] = pix[i]/norm[i];
+				if(distanceToBorder<alpha)
+				{
+					pix[i] = pix[i] * sqrt(distanceToBorder/alpha);
+				}
+				normPhi[i] += pix[i]*pix[i];
+			}
+		});
+		for(unsigned i=0; i<3; ++i)
+		{
+			normPhi[i] = sqrt(normPhi[i]);
+		}
+		centeredImage.for_all_pixels([&] (PcaImageType::PixelType &pix, int x, int y)
+		{
+			for(unsigned i=0; i<3; ++i)
+			{
+				pix[i] /= normPhi[i];
+				pix[i] *= norm[i];
+			}
+		});
+
 		Stamping::StampDiscrete<PcaImageType> stamp(centeredImage);
-		stamp.setInterpolationRule(Stamping::StampDiscrete<PcaImageType>::BILINEAR);
+		stamp.setInterpolationRule(Stamping::StampDiscrete<PcaImageType>::BILINEAR_PERIODIC);
 		if(arguments.useCycles)
 		{
+			srand(0);
 			Stamping::SamplerCycles sampler;
-			sampler.setNbPoints(60);
-			sampler.setCycles(cyclePair.vectors[0].cast<float>(), cyclePair.vectors[1].cast<float>());
+			sampler.setNbPoints(420);
+			sampler.setCycles(cyclePair.vectors[0].cast<float>()/2.0, cyclePair.vectors[1].cast<float>()/2.0);
 			Stamping::StamperTexton<PcaImageType> stamper(&sampler, &stamp);
 			stamper.setPeriodicity(true);
-			centeredImage = stamper.generate(	arguments.outputWidth == 0 ? im_in.width() : arguments.outputWidth,
-												arguments.outputHeight == 0 ? im_in.height() : arguments.outputHeight);
+			stamper.setUseMargins(false);
+			stamper.setSpot(false);
+			centeredImage = stamper.generate(	arguments.outputWidth == 0 ? im_in.width()*2 : arguments.outputWidth,
+												arguments.outputHeight == 0 ? im_in.height()*2 : arguments.outputHeight);
 		}
 		else
 		{
 			Stamping::SamplerUniform sampler;
-			sampler.setNbPoints(60);
+			sampler.setNbPoints(1000);
 			Stamping::StamperTexton<PcaImageType> stamper(&sampler, &stamp);
 			stamper.setPeriodicity(true);
-			centeredImage = stamper.generate(	arguments.outputWidth == 0 ? im_in.width() : arguments.outputWidth,
-												arguments.outputHeight == 0 ? im_in.height() : arguments.outputHeight);
+			stamper.setSpot(false);
+			centeredImage = stamper.generate(	arguments.outputWidth == 0 ? im_in.width()*1: arguments.outputWidth,
+												arguments.outputHeight == 0 ? im_in.height()*1 : arguments.outputHeight);
 		}
 		centeredImage.for_all_pixels([&] (PcaImageType::PixelType &pix, int x, int y)
 		{
@@ -274,7 +344,7 @@ int main(int argc, char **argv)
 	}
 //	if(arguments.useCycles)
 //	{
-//		csn.estimateCycles(cyclePair.vectors[0], cyclePair.vectors[1], 0.01, false, 32);
+//		csn.estimateCycles(cyclePair.vectors[0], cyclePair.vectors[1], 0.02, true, 32);
 //	}
 	std::cout << textureName << std::endl;
 	std::cout << "Proposed cycle x: " << std::endl << cyclePair.vectors[0] << std::endl;
@@ -282,15 +352,15 @@ int main(int argc, char **argv)
 	std::cout << "Estimated cycle x: " << std::endl << csn.cycleX() << std::endl;
 	std::cout << "Estimated cycle y: " << std::endl << csn.cycleY() << std::endl;
 	ImageType output = csn.synthesize(arguments.outputWidth, arguments.outputHeight);
-	output.for_all_pixels([] (ImageType::PixelType &pix)
+	output.for_all_pixels([&] (ImageType::PixelType &pix)
 	{
-//		std::cout << pix << std::endl;
 		for(int i=0; i<3; ++i)
 		{
 			pix[i] = pix[i] > 1.0 ? 1.0 : (pix[i] < 0.0 ? 0.0 : pix[i]);
 		}
 	});
 
+	IO::save01_in_u8(im_in, "/home/nlutz/input.png");
 	IO::save01_in_u8(output, out_filename);
 	return 0;
 }
