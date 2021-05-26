@@ -99,7 +99,6 @@ bool ASTEX_API loadu8_in_01(ImageGrayd& img, const std::string& filename)
 }
 
 
-
 bool ASTEX_API loadu8_in_01(ImageGrayf& img, const std::string& filename)
 {
 	ImageGrayu8 in;
@@ -176,6 +175,148 @@ bool ASTEX_API loadu8_in_01(ImageRGBAf& img, const std::string& filename)
 	return true;
 }
 
+
+
+void ASTEX_API save01_in_u16(const ImageGrayd& img, const std::string& filename)
+{
+    auto filter = ColorSpace::FilterGray01To65535< ImageGrayd::ItkImg,ImageGrayu16::ItkImg>::New();
+    filter->SetInput(img.itk());
+    ImageGrayu16 out(filter->GetOutput());
+    out.save(filename);
+}
+
+void ASTEX_API save01_in_u16(const ImageGrayf& img, const std::string& filename)
+{
+    auto filter = ColorSpace::FilterGray01To65535< ImageGrayf::ItkImg,ImageGrayu16::ItkImg>::New();
+    filter->SetInput(img.itk());
+    ImageGrayu16 out(filter->GetOutput());
+    out.save(filename);
+}
+
+
+void ASTEX_API save01_in_u16(const ImageRGBd& img, const std::string& filename)
+{
+    auto filter = ColorSpace::FilterRGB01To65535< ImageRGBd::ItkImg,ImageRGBu16::ItkImg>::New();
+    filter->SetInput(img.itk());
+    ImageRGBu16 out(filter->GetOutput());
+    out.save(filename);
+}
+
+void ASTEX_API save01_in_u16(const ImageRGBf& img, const std::string& filename)
+{
+    auto filter = ColorSpace::FilterRGB01To65535< ImageRGBf::ItkImg,ImageRGBu16::ItkImg>::New();
+    filter->SetInput(img.itk());
+    ImageRGBu16 out(filter->GetOutput());
+    out.save(filename);
+}
+
+void ASTEX_API save01_in_u16(const ImageRGBAd& img, const std::string& filename)
+{
+    auto filter = ColorSpace::FilterRGB01To65535< ImageRGBAd::ItkImg,ImageRGBAu16::ItkImg>::New();
+    filter->SetInput(img.itk());
+    ImageRGBAu16 out(filter->GetOutput());
+    out.save(filename);
+}
+
+void ASTEX_API save01_in_u16(const ImageRGBAf& img, const std::string& filename)
+{
+    auto filter = ColorSpace::FilterRGB01To65535< ImageRGBAf::ItkImg,ImageRGBAu16::ItkImg>::New();
+    filter->SetInput(img.itk());
+    ImageRGBAu16 out(filter->GetOutput());
+    out.save(filename);
+}
+
+bool ASTEX_API loadu16_in_01(ImageGrayd& img, const std::string& filename)
+{
+    ImageGrayu16 in;
+    bool ok = in.load(filename);
+    if (!ok)
+        return false;
+
+    auto filter = ColorSpace::FilterGray65535To01<ImageGrayu16::ItkImg,ImageGrayd::ItkImg>::New();
+    filter->SetInput(in.itk());
+    filter->Update();
+    img = ImageGrayd(filter->GetOutput());
+    return true;
+}
+
+
+
+bool ASTEX_API loadu16_in_01(ImageGrayf& img, const std::string& filename)
+{
+    ImageGrayu16 in;
+    bool ok = in.load(filename);
+    if (!ok)
+        return false;
+
+    auto filter = ColorSpace::FilterGray65535To01<ImageGrayu16::ItkImg,ImageGrayf::ItkImg>::New();
+    filter->SetInput(in.itk());
+    filter->Update();
+    img = ImageGrayf(filter->GetOutput());
+    return true;
+}
+
+
+bool ASTEX_API loadu16_in_01(ImageRGBd& img, const std::string& filename)
+{
+    ImageRGBu16 in;
+    bool ok = in.load(filename);
+    if (!ok)
+        return false;
+
+    auto filter = ColorSpace::FilterRGB65535To01<ImageRGBu16::ItkImg,ImageRGBd::ItkImg>::New();
+    filter->SetInput(in.itk());
+    filter->Update();
+    img = ImageRGBd(filter->GetOutput());
+    return true;
+}
+
+
+
+bool ASTEX_API loadu16_in_01(ImageRGBf& img, const std::string& filename)
+{
+    ImageRGBu16 in;
+    bool ok = in.load(filename);
+    if (!ok)
+        return false;
+
+    auto filter = ColorSpace::FilterRGB65535To01<ImageRGBu16::ItkImg,ImageRGBf::ItkImg>::New();
+    filter->SetInput(in.itk());
+    filter->Update();
+    img = ImageRGBf(filter->GetOutput());
+    return true;
+}
+
+
+bool ASTEX_API loadu16_in_01(ImageRGBAd& img, const std::string& filename)
+{
+    ImageRGBAu16 in;
+    bool ok = in.load(filename);
+    if (!ok)
+        return false;
+
+    auto filter = ColorSpace::FilterRGB65535To01<ImageRGBAu16::ItkImg,ImageRGBAd::ItkImg>::New();
+    filter->SetInput(in.itk());
+    filter->Update();
+    img = ImageRGBAd(filter->GetOutput());
+    return true;
+}
+
+
+
+bool ASTEX_API loadu16_in_01(ImageRGBAf& img, const std::string& filename)
+{
+    ImageRGBAu16 in;
+    bool ok = in.load(filename);
+    if (!ok)
+        return false;
+
+    auto filter = ColorSpace::FilterRGB65535To01<ImageRGBAu16::ItkImg,ImageRGBAf::ItkImg>::New();
+    filter->SetInput(in.itk());
+    filter->Update();
+    img = ImageRGBAf(filter->GetOutput());
+    return true;
+}
 
 
 
