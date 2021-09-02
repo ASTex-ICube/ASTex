@@ -19,10 +19,8 @@ using CycleMapType = std::map<std::string, CyclePair>;
  * @brief loadCycles load a cycles file.
  * Format of the file (don't copy the = symbols):
  * [<texture name>					//texture name with no extension or directory
- * <denominator> <denominator>		//two denomionators of the first cycle
+ * <denominator> <denominator>		//two denomionators of the first cycle (cycle is [1/denominator]^2)
  * <denominator> <denominator>]*	//two denomionators of the second cycle
- * if denominator is an integer, then it is interpreted as 1/denominator (useful for periodic textures).
- * if denominator is a floating point between 0 and 1, then it is interpreted as is.
  * =======
  * Exemple:
  * =======
@@ -48,7 +46,7 @@ CycleMapType loadCycles(std::string filename)
 		if(!ifs.eof())
 		{
 			double readNumber1, readNumber2;
-            ifs >> readNumber1 >> readNumber2;
+			ifs >> readNumber1 >> readNumber2;
 			if((readNumber1>0 && readNumber1<1) || (readNumber2>0 && readNumber2<1))
 				cycles.vectors[0] = Eigen::Vector2d(readNumber1, readNumber2);
 			else
@@ -83,33 +81,20 @@ typedef struct
 
 /**
  * @brief loadArguments load an argument file.
- * Format of the file (don't copy the = symbols):
+ * Default file (comments don't work):
  * =======
- * <use cycles?>
- * <gamma>							//weight's exponant (for HPN)
- * <output width> <output height>
- * <procedural blending mode>		//determines the blending mode (0: HPN, 1: spot noise)
- * <use PCA>
- * <use Gaussian transfer>
- * <use YCbCr>
- * <use cyclic transfer (needs gaussian transfer and cycles)>
- * <uvScale>
- * <transfer radius>
- * <transfer number of samples>
- * =======
- * Example:
- * =======
- * 1
- * 2.0
- * 4096 4096
- * 0
- * 0
- * 1
- * 1
- * 1
- * 0.8
- * 1.5
- * 9
+ * useCycles=1						//
+ * gamma=1.0
+ * outputWidth=4096
+ * outputHeight=4096
+ * mode(0:HPN/1:Spot noise)=0
+ * usePca=1
+ * useGaussianTransfer=1
+ * useYCbCr=0
+ * useCyclicTransfer=1
+ * uvScale=1.0
+ * cyclicTransferRadius=0.0
+ * cyclicTransferSamples=1
  * =======
  */
 ArgumentsType loadArguments(std::string filename)
@@ -117,23 +102,81 @@ ArgumentsType loadArguments(std::string filename)
 	ArgumentsType arguments;
 	std::ifstream ifs(filename);
 	assert(ifs);
-	unsigned uValue;
-	ifs >> uValue;
-	arguments.useCycles = uValue;
-	ifs >> arguments.gamma;
-	ifs >> arguments.outputWidth >> arguments.outputHeight;
-	ifs >> arguments.proceduralBlendingMode;
-	ifs >> uValue;
-	arguments.usePca = uValue;
-	ifs >> uValue;
-	arguments.useGaussianTransfer = uValue;
-	ifs >> uValue;
-	arguments.useYCbCr = uValue;
-	ifs >> uValue;
-	arguments.useCyclicTransfer = uValue;
-	ifs >> arguments.uvScale;
-	ifs >> arguments.cyclicTransferRadius;
-	ifs >> arguments.cyclicTransferSamples;
+
+	std::string line;
+	while( std::getline(ifs, line) )
+	{
+		std::stringstream ss;
+		std::istringstream is_line(line);
+		std::string key;
+		if( std::getline(is_line, key, '=') )
+		{
+			std::string value;
+			if( std::getline(is_line, value) )
+			{
+				if(key == "useCycles")
+				{
+					ss << value;
+					ss >> arguments.useCycles;
+				}
+				else if(key == "gamma")
+				{
+					ss << value;
+					ss >> arguments.gamma;
+				}
+				else if(key == "outputWidth")
+				{
+					ss << value;
+					ss >> arguments.outputWidth;
+				}
+				else if(key == "outputHeight")
+				{
+					ss << value;
+					ss >> arguments.outputHeight;
+				}
+				else if(key == "mode(0:HPN/1:Spot noise)")
+				{
+					ss << value;
+					ss >> arguments.proceduralBlendingMode;
+				}
+				else if(key == "usePca")
+				{
+					ss << value;
+					ss >> arguments.usePca;
+				}
+				else if(key == "useGaussianTransfer")
+				{
+					ss << value;
+					ss >> arguments.useGaussianTransfer;
+				}
+				else if(key == "useYCbCr")
+				{
+					ss << value;
+					ss >> arguments.useYCbCr;
+				}
+				else if(key == "useCyclicTransfer")
+				{
+					ss << value;
+					ss >> arguments.useCyclicTransfer;
+				}
+				else if(key == "uvScale")
+				{
+					ss << value;
+					ss >> arguments.uvScale;
+				}
+				else if(key == "cyclicTransferRadius")
+				{
+					ss << value;
+					ss >> arguments.cyclicTransferRadius;
+				}
+				else if(key == "cyclicTransferSamples")
+				{
+					ss << value;
+					ss >> arguments.cyclicTransferSamples;
+				}
+			}
+		}
+	}
 	return arguments;
 }
 
@@ -177,8 +220,9 @@ int main(int argc, char **argv)
 		cyclePair = (*cit).second;
 	}
 
-	auto textonProcedure = [&] (const PcaImageType &image) -> PcaImageType
+	auto spotNoiseProcedure = [&] (const PcaImageType &image) -> PcaImageType
 	{
+		float spotNoiseOutputScale = 4.0;
 		PcaImageType centeredImage;
 		centeredImage.initItk(image.width(), image.height());
 		centeredImage.copy_pixels(image);
@@ -212,7 +256,6 @@ int main(int argc, char **argv)
 				pix = mean;
 		});
 
-		//Histogram<ImageRGBd>::loadImageFromCsv(meanImage, "/home/nlutz/mean.csv");
 		centeredImage.for_all_pixels([&] (PcaImageType::PixelType &pix, int x, int y)
 		{
 			pix[0] -= meanImage.pixelAbsolute(x, y)[0];
@@ -220,7 +263,7 @@ int main(int argc, char **argv)
 			pix[2] -= meanImage.pixelAbsolute(x, y)[2];
 			pix = pix * (1.0/std::sqrt(centeredImage.width()*centeredImage.height()));
 		});
-		double alpha = 0.02;
+		double alpha = 0.005;
 		//normalization
 		std::cout << "applying smooth transition function" << std::endl;
 		PcaImageType::PixelType norm = PcaImageType::zero(), normPhi = PcaImageType::zero();
@@ -235,26 +278,7 @@ int main(int argc, char **argv)
 		{
 			norm[i] = sqrt(norm[i]);
 		}
-//		ImageGrayd d;
-//		d.initItk(centeredImage.width(), centeredImage.height());
-//		d.for_all_pixels([&] (ImageGrayd::PixelType &pix, int x, int y)
-//		{
-//			double distanceToBorder;
-//			double distanceX = double(std::min(x, centeredImage.width()-1-x));
-//			double distanceY = double(std::min(y, centeredImage.height()-1-y));
-//			distanceToBorder = std::min(distanceX/centeredImage.width(), distanceY/centeredImage.height());
-//			if(distanceToBorder<alpha)
-//			{
-//				for(unsigned i=0; i<3; ++i)
-//				{
-//					pix = sqrt(distanceToBorder/alpha);
-//				}
-//			}
-//			else
-//				pix = 1.0;
-////			std::cout << pix << std::endl;
-//		});
-		//IO::save01_in_u8(d, "/home/nlutz/d.png");
+
 		centeredImage.for_all_pixels([&] (PcaImageType::PixelType &pix, int x, int y)
 		{
 			double distanceToBorder;
@@ -290,14 +314,14 @@ int main(int argc, char **argv)
 		{
 			srand(0);
 			Stamping::SamplerCycles sampler;
-			sampler.setNbPoints(420);
-			sampler.setCycles(cyclePair.vectors[0].cast<float>()/2.0, cyclePair.vectors[1].cast<float>()/2.0);
+			sampler.setNbPoints(8600);
+			sampler.setCycles(cyclePair.vectors[0].cast<float>()/spotNoiseOutputScale, cyclePair.vectors[1].cast<float>()/spotNoiseOutputScale);
 			Stamping::StamperTexton<PcaImageType> stamper(&sampler, &stamp);
 			stamper.setPeriodicity(true);
 			stamper.setUseMargins(false);
 			stamper.setSpot(false);
-			centeredImage = stamper.generate(	arguments.outputWidth == 0 ? im_in.width()*2 : arguments.outputWidth,
-												arguments.outputHeight == 0 ? im_in.height()*2 : arguments.outputHeight);
+			centeredImage = stamper.generate(	arguments.outputWidth == 0 ? im_in.width()*spotNoiseOutputScale : arguments.outputWidth,
+												arguments.outputHeight == 0 ? im_in.height()*spotNoiseOutputScale : arguments.outputHeight);
 		}
 		else
 		{
@@ -306,8 +330,8 @@ int main(int argc, char **argv)
 			Stamping::StamperTexton<PcaImageType> stamper(&sampler, &stamp);
 			stamper.setPeriodicity(true);
 			stamper.setSpot(false);
-			centeredImage = stamper.generate(	arguments.outputWidth == 0 ? im_in.width()*1: arguments.outputWidth,
-												arguments.outputHeight == 0 ? im_in.height()*1 : arguments.outputHeight);
+			centeredImage = stamper.generate(	arguments.outputWidth == 0 ? im_in.width()*spotNoiseOutputScale: arguments.outputWidth,
+												arguments.outputHeight == 0 ? im_in.height()*spotNoiseOutputScale : arguments.outputHeight);
 		}
 		centeredImage.for_all_pixels([&] (PcaImageType::PixelType &pix, int x, int y)
 		{
@@ -319,16 +343,18 @@ int main(int argc, char **argv)
 				pix[i] += meanImage.pixelAbsolute(index)[i];
 			}
 		});
-		IO::save01_in_u8(meanImage, "/home/nlutz/average.png");
+//		IO::save01_in_u8(meanImage, "/home/nlutz/average.png");
 		return centeredImage;
 	};
 
 	CSN::CSN_Texture<ImageType> csn;
 	csn.setTexture(im_in);
-	//ImageRGBd cycleEvaluationMap = csn.debug_cycleEvaluationMap(129, 129, Eigen::Vector2d(cyclePair.vectors[0][0], cyclePair.vectors[1][1]), 0.1);
-	//IO::save01_in_u8(cycleEvaluationMap, std::string("/home/nlutz/cycleEvaluationMap129_") + textureName + ".png");
+
+//	//The following is how I produced the figure showing the distance map
+//	ImageRGBd cycleEvaluationMap = csn.debug_cycleEvaluationMap(129, 129, Eigen::Vector2d(cyclePair.vectors[0][0], cyclePair.vectors[1][1]), 0.1);
+//	IO::save01_in_u8(cycleEvaluationMap, std::string("/home/nlutz/cycleEvaluationMap129_") + textureName + ".png");
+
 	csn.setCycles(cyclePair.vectors[0], cyclePair.vectors[1]);
-//	std::cout << csn.testCycles_v2(im_in, cyclePair.vectors[0], cyclePair.vectors[1], 40, 40) << std::endl;
 	csn.setUseCycles(arguments.useCycles);
 	csn.setGamma(arguments.gamma);
 	csn.setUsePca(arguments.usePca);
@@ -340,8 +366,9 @@ int main(int argc, char **argv)
 		csn.setCyclicTransferPolicy(arguments.cyclicTransferRadius, arguments.cyclicTransferSamples);
 	if(arguments.proceduralBlendingMode == 1)
 	{
-		csn.setProceduralBlendingSubstitute(textonProcedure);
+		csn.setProceduralBlendingSubstitute(spotNoiseProcedure);
 	}
+	//If you do not know the cycles. Warning: stability issues.
 //	if(arguments.useCycles)
 //	{
 //		csn.estimateCycles(cyclePair.vectors[0], cyclePair.vectors[1], 0.02, true, 32);
@@ -360,7 +387,6 @@ int main(int argc, char **argv)
 		}
 	});
 
-	IO::save01_in_u8(im_in, "/home/nlutz/input.png");
 	IO::save01_in_u8(output, out_filename);
 	return 0;
 }

@@ -1,5 +1,3 @@
-
-
 #include <stdlib.h>
 #include "ASTex/easy_io.h"
 #include "ASTex/CSN/csn_texture.h"
@@ -177,8 +175,9 @@ int main(int argc, char **argv)
 		cyclePair = (*cit).second;
 	}
 
-	auto textonProcedure = [&] (const PcaImageType &image) -> PcaImageType
+	auto spotNoiseProcedure = [&] (const PcaImageType &image) -> PcaImageType
 	{
+		float spotNoiseOutputScale = 4.0;
 		PcaImageType centeredImage;
 		centeredImage.initItk(image.width(), image.height());
 		centeredImage.copy_pixels(image);
@@ -212,7 +211,6 @@ int main(int argc, char **argv)
 				pix = mean;
 		});
 
-		//Histogram<ImageRGBd>::loadImageFromCsv(meanImage, "/home/nlutz/mean.csv");
 		centeredImage.for_all_pixels([&] (PcaImageType::PixelType &pix, int x, int y)
 		{
 			pix[0] -= meanImage.pixelAbsolute(x, y)[0];
@@ -220,7 +218,7 @@ int main(int argc, char **argv)
 			pix[2] -= meanImage.pixelAbsolute(x, y)[2];
 			pix = pix * (1.0/std::sqrt(centeredImage.width()*centeredImage.height()));
 		});
-		double alpha = 0.02;
+		double alpha = 0.005;
 		//normalization
 		std::cout << "applying smooth transition function" << std::endl;
 		PcaImageType::PixelType norm = PcaImageType::zero(), normPhi = PcaImageType::zero();
@@ -235,26 +233,7 @@ int main(int argc, char **argv)
 		{
 			norm[i] = sqrt(norm[i]);
 		}
-//		ImageGrayd d;
-//		d.initItk(centeredImage.width(), centeredImage.height());
-//		d.for_all_pixels([&] (ImageGrayd::PixelType &pix, int x, int y)
-//		{
-//			double distanceToBorder;
-//			double distanceX = double(std::min(x, centeredImage.width()-1-x));
-//			double distanceY = double(std::min(y, centeredImage.height()-1-y));
-//			distanceToBorder = std::min(distanceX/centeredImage.width(), distanceY/centeredImage.height());
-//			if(distanceToBorder<alpha)
-//			{
-//				for(unsigned i=0; i<3; ++i)
-//				{
-//					pix = sqrt(distanceToBorder/alpha);
-//				}
-//			}
-//			else
-//				pix = 1.0;
-////			std::cout << pix << std::endl;
-//		});
-		//IO::save01_in_u8(d, "/home/nlutz/d.png");
+
 		centeredImage.for_all_pixels([&] (PcaImageType::PixelType &pix, int x, int y)
 		{
 			double distanceToBorder;
@@ -290,14 +269,14 @@ int main(int argc, char **argv)
 		{
 			srand(0);
 			Stamping::SamplerCycles sampler;
-			sampler.setNbPoints(420);
-			sampler.setCycles(cyclePair.vectors[0].cast<float>()/2.0, cyclePair.vectors[1].cast<float>()/2.0);
+			sampler.setNbPoints(8600);
+			sampler.setCycles(cyclePair.vectors[0].cast<float>()/spotNoiseOutputScale, cyclePair.vectors[1].cast<float>()/spotNoiseOutputScale);
 			Stamping::StamperTexton<PcaImageType> stamper(&sampler, &stamp);
 			stamper.setPeriodicity(true);
 			stamper.setUseMargins(false);
 			stamper.setSpot(false);
-			centeredImage = stamper.generate(	arguments.outputWidth == 0 ? im_in.width()*2 : arguments.outputWidth,
-												arguments.outputHeight == 0 ? im_in.height()*2 : arguments.outputHeight);
+			centeredImage = stamper.generate(	arguments.outputWidth == 0 ? im_in.width()*spotNoiseOutputScale : arguments.outputWidth,
+												arguments.outputHeight == 0 ? im_in.height()*spotNoiseOutputScale : arguments.outputHeight);
 		}
 		else
 		{
@@ -306,8 +285,8 @@ int main(int argc, char **argv)
 			Stamping::StamperTexton<PcaImageType> stamper(&sampler, &stamp);
 			stamper.setPeriodicity(true);
 			stamper.setSpot(false);
-			centeredImage = stamper.generate(	arguments.outputWidth == 0 ? im_in.width()*1: arguments.outputWidth,
-												arguments.outputHeight == 0 ? im_in.height()*1 : arguments.outputHeight);
+			centeredImage = stamper.generate(	arguments.outputWidth == 0 ? im_in.width()*spotNoiseOutputScale: arguments.outputWidth,
+												arguments.outputHeight == 0 ? im_in.height()*spotNoiseOutputScale : arguments.outputHeight);
 		}
 		centeredImage.for_all_pixels([&] (PcaImageType::PixelType &pix, int x, int y)
 		{
@@ -319,16 +298,18 @@ int main(int argc, char **argv)
 				pix[i] += meanImage.pixelAbsolute(index)[i];
 			}
 		});
-		IO::save01_in_u8(meanImage, "/home/nlutz/average.png");
+//		IO::save01_in_u8(meanImage, "/home/nlutz/average.png");
 		return centeredImage;
 	};
 
 	CSN::CSN_Texture<ImageType> csn;
 	csn.setTexture(im_in);
-	//ImageRGBd cycleEvaluationMap = csn.debug_cycleEvaluationMap(129, 129, Eigen::Vector2d(cyclePair.vectors[0][0], cyclePair.vectors[1][1]), 0.1);
-	//IO::save01_in_u8(cycleEvaluationMap, std::string("/home/nlutz/cycleEvaluationMap129_") + textureName + ".png");
+
+//	//The following is how I produced the figure showing the distance map
+//	ImageRGBd cycleEvaluationMap = csn.debug_cycleEvaluationMap(129, 129, Eigen::Vector2d(cyclePair.vectors[0][0], cyclePair.vectors[1][1]), 0.1);
+//	IO::save01_in_u8(cycleEvaluationMap, std::string("/home/nlutz/cycleEvaluationMap129_") + textureName + ".png");
+
 	csn.setCycles(cyclePair.vectors[0], cyclePair.vectors[1]);
-//	std::cout << csn.testCycles_v2(im_in, cyclePair.vectors[0], cyclePair.vectors[1], 40, 40) << std::endl;
 	csn.setUseCycles(arguments.useCycles);
 	csn.setGamma(arguments.gamma);
 	csn.setUsePca(arguments.usePca);
@@ -340,8 +321,9 @@ int main(int argc, char **argv)
 		csn.setCyclicTransferPolicy(arguments.cyclicTransferRadius, arguments.cyclicTransferSamples);
 	if(arguments.proceduralBlendingMode == 1)
 	{
-		csn.setProceduralBlendingSubstitute(textonProcedure);
+		csn.setProceduralBlendingSubstitute(spotNoiseProcedure);
 	}
+	//If you do not know the cycles. Warning: stability issues.
 //	if(arguments.useCycles)
 //	{
 //		csn.estimateCycles(cyclePair.vectors[0], cyclePair.vectors[1], 0.02, true, 32);

@@ -199,9 +199,9 @@ typename CSN_Texture<I>::ImageType CSN_Texture<I>::synthesize(unsigned width, un
 {
 	assert(m_exemplar.is_initialized());
 	if(width==0)
-		width=m_exemplar.width()*2;
+		width=m_exemplar.width()*1;
 	if(height==0)
-		height=m_exemplar.height()*2;
+		height=m_exemplar.height()*1;
 	unsigned pixelSize = sizeof(PixelType)/sizeof(DataType);
 	assert(pixelSize <= 3 && "CSN_Texture::synthesize: Cannot use PCA with images of dimensions higher than 3!");
 
