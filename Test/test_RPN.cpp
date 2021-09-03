@@ -16,7 +16,7 @@ int main(int argc, char **argv)
 
 	std::string out_dir = argv[1];
 
-	for(unsigned i=2; i<argc; ++i)
+	for(int i=2; i<argc; ++i)
 	{
 		std::string input_path = argv[i];
 		std::string name_file = IO::remove_path(argv[i]);
@@ -32,9 +32,9 @@ int main(int argc, char **argv)
 
 		output.for_all_pixels([&] (ImageRGBd::PixelType &pix)
 		{
-			for(unsigned i=0; i<3; ++i)
+			for(unsigned j=0; j<3; ++j)
 			{
-				pix[i] = std::max(std::min(1.0, pix[i]), 0.0);
+				pix[j] = std::max(std::min(1.0, pix[j]), 0.0);
 			}
 		});
 		IO::save01_in_u8(output, out_dir + "/" + name_noext + "_RPN_" + std::to_string(seed) + ".png");

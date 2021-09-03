@@ -2,7 +2,6 @@
 #include "gaussian_transfer.h"
 #include "color_map.h"
 #include "pnf.h"
-#include <unistd.h>
 #include <cstdio>
 #include <getopt.h>
 #include <ASTex/easy_io.h>
@@ -637,7 +636,7 @@ int prefilter(int argc, char **argv)
     }
 
     using T = double;
-    using Color = Color_map<T>::Color;
+	using Color = Color_map<T>::Color;
 
     Color_map<T> cm;
     ImageRGB<T> img_cm;

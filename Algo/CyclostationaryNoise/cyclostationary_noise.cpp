@@ -182,7 +182,7 @@ ArgumentsType loadArguments(std::string filename)
 
 int main(int argc, char **argv)
 {
-	std::setlocale(LC_NUMERIC, "fr_FR");
+	setlocale(LC_NUMERIC, "fr_FR");
 	if(argc < 3)
 	{
 		std::cerr << "Usage: " << std::endl;

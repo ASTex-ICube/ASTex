@@ -245,8 +245,8 @@ void fold3Channels(ImageCommon<ImageRGBBase<REAL>, false>& channeledImage,
 	int height = channel1.height();
 	assert(channel2.width() == width && channel3.width() == width);
 	assert(channel2.height() == height && channel3.height() == height);
-    if(!channeledImage.is_initialized() || channeledImage.width()!=channel1.width() || channeledImage.height()!=channel1.height())
-        channeledImage.initItk(channel1.width(), channel1.height());
+	if(!channeledImage.is_initialized() || channeledImage.width()!=channel1.width() || channeledImage.height()!=channel1.height())
+		channeledImage.initItk(channel1.width(), channel1.height());
 
 	channeledImage.for_all_pixels([&channel1, &channel2, &channel3] (typename ImageCommon<ImageRGBBase<REAL>, false>::PixelType& pix, int x, int y)
     {
