@@ -134,6 +134,7 @@ static void usage(const char *msg = nullptr, ...) {
     exit(EXIT_FAILURE);
 }
 
+#ifndef WIN32
 int histo(int argc, char **argv)
 {
     if(argc < 2) usage(argv[0]);
@@ -218,6 +219,7 @@ int histo(int argc, char **argv)
 
     return EXIT_SUCCESS;
 }
+#endif
 
 int gaussianize(int argc, char **argv)
 {
@@ -1341,9 +1343,11 @@ int noiseCmOurFiltering(int argc, char **argv)
 int main(int argc, char **argv){
     if(argc < 2) usage();
 
+#ifndef WIN32
     if(!strcmp(argv[1], "histo"))
         return histo(argc-1,argv+1);
-    else if (!strcmp(argv[1], "gaussianize"))
+#endif
+	if (!strcmp(argv[1], "gaussianize"))
         return gaussianize(argc-1, argv+1);
     else if (!strcmp(argv[1], "getDeGaussTrans"))
         return getDegaussTrans(argc-1, argv+1);
