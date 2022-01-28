@@ -101,6 +101,29 @@ std::vector<Eigen::Vector2f> SamplerPoissonGrid::generate()
 	return SamplePoints;
 }
 
+std::vector<Eigen::Vector2f> SamplerCycles::generate()
+{
+	std::vector<Eigen::Vector2f> SamplePoints;
+	SamplePoints.reserve(m_nbPoints);
+	auto fract = [] (float x) -> float
+	{
+		return x - std::floor(x);
+	};
+	double maxKi = std::ceil(1.0/std::max(m_cycles[0][0], m_cycles[1][0]));
+	assert(!std::isnan(maxKi) && !std::isinf(maxKi));
+	double maxLi = std::ceil(1.0/std::max(m_cycles[0][1], m_cycles[1][1]));
+	assert(!std::isnan(maxLi) && !std::isinf(maxLi));
+	for (unsigned i = 0; i < m_nbPoints; ++i)
+	{
+		unsigned k_i = std::rand()%int(maxKi);
+		unsigned l_i = std::rand()%int(maxLi);
+		Eigen::Vector2f tmp_point(	fract((k_i*m_cycles[0])[0] + (l_i*m_cycles[1])[0]),
+									fract((k_i*m_cycles[0])[1] + (l_i*m_cycles[1])[1]));
+		SamplePoints.push_back(tmp_point);
+	}
+	return SamplePoints;
+}
+
 } //namsepace Stamping
 
 } //namespace ASTex

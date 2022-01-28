@@ -76,6 +76,7 @@ target_sources (${PROJECT_NAME} PRIVATE
 	texture_pool.h
 
 	CSN/csn_texture.h
+	CSN/tpsd.h
 )
 
 target_sources (${PROJECT_NAME} PRIVATE

@@ -66,7 +66,7 @@ int main(int argc, char **argv)
 	texturePool.addTexture(im_tile, true);
 	texturePool.setTexturesAreGradient(gradientManipulation);
 
-	for(unsigned int i=4; i<argc - (argc%2==0 ? 0 : 2); i+=2)
+	for(int i=4; i<argc - (argc%2==0 ? 0 : 2); i+=2)
 	{
 		ImageType im_texture;
 		IO::loadu8_in_01(im_texture, argv[i]);
