@@ -4,7 +4,7 @@
 #include "pnf.h"
 //#include <unistd.h>
 #include <cstdio>
-//#include <getopt.h>
+#include <getopt.h>
 #include <ASTex/easy_io.h>
 #include <ASTex/rpn_utils.h>
 #include <ASTex/exr_io.h>
