@@ -12,5 +12,5 @@ target_sources(test_quilting PRIVATE test_quilting.cpp quilting.cpp quilting.h e
 target_link_libraries(test_quilting PRIVATE ASTex)
 
 # nice vs solution
-set_target_properties(test_quilting PROPERTIES FOLDER tests)
+set_target_properties(test_quilting PROPERTIES FOLDER Algo)
 

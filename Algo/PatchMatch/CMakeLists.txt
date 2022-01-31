@@ -9,4 +9,4 @@ target_sources(test_patchmatch PRIVATE pm_minimal.cpp)
 target_link_libraries(test_patchmatch PRIVATE ASTex)
 
 # nice vs solution
-set_target_properties(test_patchmatch PROPERTIES FOLDER tests)
+set_target_properties(test_patchmatch PROPERTIES FOLDER Algo)

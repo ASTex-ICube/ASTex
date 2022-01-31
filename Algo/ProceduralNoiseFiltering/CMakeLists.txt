@@ -24,7 +24,7 @@ add_definitions(-DTEMPO_PATH=std::string\(\"${ASTEX_TEMPO_PATH}/\"\) )
 #    gaussian_transfer.cpp)
 #target_link_libraries(pnf ASTex)
 
-IF(!WIN32)
+
 add_executable(generator "")
 target_sources(generator PRIVATE generator.cpp
 	histogram.h
@@ -35,5 +35,4 @@ target_sources(generator PRIVATE generator.cpp
 	noise.h
 	utils.h)
 target_link_libraries(generator ASTex)
-set_target_properties(generator PROPERTIES FOLDER ProceduralNoiseFiltering)
-ENDIF()
+set_target_properties(generator PROPERTIES FOLDER Algo/ProceduralNoiseFiltering)

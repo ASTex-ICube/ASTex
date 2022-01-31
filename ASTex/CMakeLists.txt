@@ -9,8 +9,8 @@ include(${ITK_USE_FILE})
 find_package(OpenMP QUIET)
 find_package(Eigen3 REQUIRED)
 
-
 add_library( ${PROJECT_NAME} "")
+
 
 target_sources (${PROJECT_NAME} PRIVATE 
 	internal.h
@@ -106,16 +106,13 @@ target_include_directories(${PROJECT_NAME} PUBLIC ${ITK_INCLUDE_DIRS} ${PNG_INCL
 target_include_directories(${PROJECT_NAME} PUBLIC $<INSTALL_INTERFACE:include> $<BUILD_INTERFACE:${ASTEX_SOURCE_DIR}>)
 
 
-
-
 set ( ASTEX_LIBRARIES ${ITK_LIBRARIES} ${FFTW_LIBRARIES} ${PNG_LIBRARIES} ${OPENEXR_LIBRARIES} Eigen3::Eigen)
 if (NOT(MSVC OR APPLE))
 	set ( ASTEX_LIBRARIES ${ASTEX_LIBRARIES} -pthread )
 endif()
 
-
 if(MSVC)
-   target_compile_definitions(${PROJECT_NAME} PUBLIC -D_USE_MATH_DEFINES -D_SCL_SECURE_NO_WARNINGS -D_CRT_SECURE_NO_WARNINGS -D_SECURE_SCL=0 -D_SECURE_SCL_THROWS=0)
+  target_compile_definitions(${PROJECT_NAME} PUBLIC -D_USE_MATH_DEFINES -D_SCL_SECURE_NO_WARNINGS -D_CRT_SECURE_NO_WARNINGS -D_SECURE_SCL=0 -D_SECURE_SCL_THROWS=0)
   if(${BUILD_SHARED_LIBS})
     target_compile_definitions(${PROJECT_NAME} PRIVATE "-DASTEX_DLL_EXPORT")
   else()

@@ -11,4 +11,4 @@ target_sources(cyclostationary_noise PRIVATE cyclostationary_noise.cpp)
 target_link_libraries(cyclostationary_noise PRIVATE ASTex)
 
 # nice vs solution
-set_target_properties(cyclostationary_noise PROPERTIES FOLDER tests)
+set_target_properties(cyclostationary_noise PROPERTIES FOLDER Algo)

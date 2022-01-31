@@ -3,9 +3,14 @@
 #include "color_map.h"
 #include "pnf.h"
 #include <cstdio>
-#ifndef WIN32
-#include <getopt.h>
+
+#ifdef WIN32
+#include "win_opt.h"
+#else
+#include <unistd.h>
+#include <get_opt.h">
 #endif
+
 #include <ASTex/easy_io.h>
 #include <ASTex/rpn_utils.h>
 #include <ASTex/exr_io.h>
