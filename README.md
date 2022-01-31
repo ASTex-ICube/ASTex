@@ -43,22 +43,17 @@ Then you can install the dependencies:
 
 ### install VCPKG For ASTex
 - open a power-shell
-- git clone https://github.com/Microsoft/vcpkg.git c:/vcpkg_ast (or use zip)
-- git checkout 2019.12
-- cd c:/vcpkg_ast
-- .\vcpkg.exe install itk:x64-windows openexr:x64-windows
-- patch buggy itk compilation: 
-	- in ITKModuleAPI.cmake line 75
-	- `macro(itk_module_load mod)`
-	- `+ set(_IMPORT_PREFIX ${ITK_INSTALL_PREFIX}) `
-	- in ITKTargets.cmake line 283
-	- `INTERFACE_INCLUDE_DIRECTORIES "${_IMPORT_PREFIX}/include/ITK-5.0"`
-	- `+ INTERFACE_LINK_DIRECTORIES "${_IMPORT_PREFIX}/lib" `
+- git clone https://github.com/Microsoft/vcpkg.git 
+- var env VCPKG_DEFAULT_TRIPLET=x64-windows
+- cd  vcpkg
+- .\vcpkg\bootstrap-vcpkg.bat
+- .\vcpkg.exe install itk openexr
+
+- Remarque: ATTENTION LA COMPILATION NECESSITE X.X Go D'ESPACE DISQUE ! Vous pouvez enlever les répertoires buildtrees, downloads et packages
 
 ### Compile ASTex
 - launch CMake, chose src dir and binary dir
-- Configure: VS 2019 / optional plateform : x64/ Specify toolchain file for cross-compiling
-- Specify tool chain file:  `c:/vcpkg_ast/scripts/buildsystems/vcpkg.cmake`
+- Specify tool chain file:  `XXXX/vcpkg_ast/scripts/buildsystems/vcpkg.cmake`
 - Configure again
 - Generate
 - Launch Solution 
@@ -79,11 +74,6 @@ Use CMake as usual:
 * go inside build directory and do cmake ../ASTex (or use gui)
 * or let (a recent) Qtcreator do the job !
 
-### on Windows + VisualStudio
-
-* build directory has been createde by install script
-* use CMake-gui to customize the build
-* then launch Visual and load ASTex solution which has been generated in the build directory
 
 ### CMake Options
 There are some original options/values that can be set at the cmake stage:
@@ -92,7 +82,6 @@ There are some original options/values that can be set at the cmake stage:
 * ASTEX\_BUILD\_xxx choose to build bench/tuto/test
 * ASTEX\_PERSO\_xxx for each directory added in ASTex that contain a CMakeLists.txt set this to ON to build. When you add a directory just relaunch cmake.
 * ASTEX\_TEMPO\_PATH path of directory use to store images for test and tuto (copy ASTex/Data into it)
-* ASTEX\_USE\_CPP14 set this to ON if VXL say that you are using a C++ standard version older than the one used ton compile the lib.
 
 # Contributing to ASTex
 

@@ -17,6 +17,6 @@ target_link_libraries(perio_smooth PRIVATE ASTex)
 
 
 # nice vs solution
-set_target_properties(perio_smooth perio_smooth_color PROPERTIES FOLDER Perio_Smooth)
+set_target_properties(perio_smooth perio_smooth_color PROPERTIES FOLDER Algo)
 
 

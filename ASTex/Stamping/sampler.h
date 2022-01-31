@@ -327,6 +327,46 @@ private:
 	float m_minDistance;
 };
 
+/**
+ * @brief The SamplerCycles class is an override of SamplerBase,
+ * supposed to yield an array of points in respect to a uniform random process.
+ */
+class SamplerCycles : public SamplerBase
+{
+public:
+	/**
+	 * @brief SamplerCycles constructor for SamplerUniform.
+	 * @param nbPoints is the default number of points the generate() function yields.
+	 */
+	SamplerCycles(unsigned nbPoints=0) :
+		SamplerBase(),
+		m_nbPoints(nbPoints),
+		m_cycles()
+	{}
+
+	void setCycles(const Eigen::Vector2f &firstCycle, const Eigen::Vector2f &secondCycle)
+	{
+		m_cycles[0] = firstCycle;
+		m_cycles[1] = secondCycle;
+	}
+
+	/**
+	 * @param nbPoints is the total number of points the generate() function will produce.
+	 */
+	void setNbPoints(unsigned nbPoints) {m_nbPoints = nbPoints;}
+
+	/**
+	 * @brief generate yields an array of floating point coordinates
+	 * randomly distributed according to 2 uniform laws between 0 and 1.
+	 * @return the coordinates array.
+	 */
+	std::vector<Eigen::Vector2f> generate();
+
+private:
+	unsigned int		m_nbPoints;
+	Eigen::Vector2f		m_cycles[2];
+};
+
 } //namespace Stamping
 
 } //namespace ASTex

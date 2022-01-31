@@ -206,8 +206,8 @@ void TexturePool<I, MASK_TYPE>::generate()
 								//gradientData[0] = std::min(std::max(rotatedGradientPixel[0], 0.0), 1.0);
 								//gradientData[1] = std::min(std::max(rotatedGradientPixel[1], 0.0), 1.0);
 								*/
-								Eigen::Vector3d rotatedGradientPixel = rotationMatrix3d*(Eigen::Vector3d(pix[0], pix[1], 1));
 								DataType *gradientData = reinterpret_cast<DataType*>(&pix);
+								Eigen::Vector3d rotatedGradientPixel = rotationMatrix3d*(Eigen::Vector3d(gradientData[0], gradientData[1], 1));
 								gradientData[0] = rotatedGradientPixel[0];
 								gradientData[1] = rotatedGradientPixel[1];
 							}
@@ -260,9 +260,10 @@ void TexturePool<I, MASK_TYPE>::generate()
 //								Eigen::Vector3d rotatedGradientPixel = rotationMatrix3d*(Eigen::Vector3d(pix[0], pix[1], 1)
 //																		- Eigen::Vector3d(0.5, 0.5, 0))
 //																		+ Eigen::Vector3d(0.5, 0.5, 0);
-								Eigen::Vector3d rotatedGradientPixel = rotationMatrix3d*(Eigen::Vector3d(pix[0], pix[1], 1));
-								pix[0] = rotatedGradientPixel[0];
-								pix[1] = rotatedGradientPixel[1];
+								DataType *gradientData = reinterpret_cast<DataType*>(&pix);
+								Eigen::Vector3d rotatedGradientPixel = rotationMatrix3d*(Eigen::Vector3d(gradientData[0], gradientData[1], 1));
+								gradientData[0] = rotatedGradientPixel[0];
+								gradientData[1] = rotatedGradientPixel[1];
 							}
 						}
 					});
@@ -278,7 +279,6 @@ void TexturePool<I, MASK_TYPE>::generate()
 				}
 				transformedTexture.texture = shiftedTile;
 				m_pool.push_back(transformedTexture);
-				IO::save01_in_u8(transformedTexture.texture, "/home/nlutz/_gradientImage.png");
 			}
 		}
 	}

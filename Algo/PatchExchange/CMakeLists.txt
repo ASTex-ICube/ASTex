@@ -13,4 +13,4 @@ target_sources(test_patch_exchange PRIVATE test_patch_exchange.cpp
 target_link_libraries(test_patch_exchange PRIVATE ASTex)
 
 # nice vs solution
-set_target_properties(test_patch_exchange PROPERTIES FOLDER tests)
+set_target_properties(test_patch_exchange PROPERTIES FOLDER Algo)

@@ -40,4 +40,4 @@ test_noise_kmean
 test_noise_synthesis_correlated_color
 test_noise_filter
 blt_synthesis 
-PROPERTIES FOLDER LRPN)
+PROPERTIES FOLDER Algo/LRPN)

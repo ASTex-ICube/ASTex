@@ -1,6 +1,8 @@
 cmake_minimum_required(VERSION 3.0)
- 
+
 project(ASTex CXX)
+
+find_package(GTest REQUIRED)
 
 set(ASTEX_VERSION_MAJOR 0)
 set(ASTEX_VERSION_MINOR 9)

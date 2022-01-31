@@ -14,3 +14,6 @@ target_link_libraries(test_graphcut PRIVATE ASTex)
 add_executable(test_graphcut_2 "")
 target_sources(test_graphcut_2 PRIVATE test_graphcut_2.cpp graphcut.h graphcut.cpp maxflow/block.h maxflow/graph.h maxflow/graph.cpp maxflow/maxflow.cpp)
 target_link_libraries(test_graphcut_2 PRIVATE ASTex)
+
+# nice vs solution
+set_target_properties(test_graphcut test_graphcut_2 PROPERTIES FOLDER Algo)

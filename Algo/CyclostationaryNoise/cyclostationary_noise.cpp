@@ -43,10 +43,10 @@ CycleMapType loadCycles(std::string filename)
 	while(!ifs.eof())
 	{
 		ifs >> name;
-		if(!ifs.eof()) //I hate C++ sometimes
+		if(!ifs.eof())
 		{
 			double readNumber1, readNumber2;
-            ifs >> readNumber1 >> readNumber2;
+			ifs >> readNumber1 >> readNumber2;
 			if((readNumber1>0 && readNumber1<1) || (readNumber2>0 && readNumber2<1))
 				cycles.vectors[0] = Eigen::Vector2d(readNumber1, readNumber2);
 			else
@@ -81,33 +81,20 @@ typedef struct
 
 /**
  * @brief loadArguments load an argument file.
- * Format of the file (don't copy the = symbols):
+ * Default file (comments don't work):
  * =======
- * <use cycles?>
- * <gamma>							//weight's exponant (for HPN)
- * <output width> <output height>
- * <procedural blending mode>		//determines the blending mode (0: HPN, 1: spot noise)
- * <use PCA>
- * <use Gaussian transfer>
- * <use YCbCr>
- * <use cyclic transfer (needs gaussian transfer and cycles)>
- * <uvScale>
- * <transfer radius>
- * <transfer number of samples>
- * =======
- * Example:
- * =======
- * 1
- * 2.0
- * 4096 4096
- * 0
- * 0
- * 1
- * 1
- * 1
- * 0.8
- * 1.5
- * 9
+ * useCycles=1						//
+ * gamma=1.0
+ * outputWidth=4096
+ * outputHeight=4096
+ * mode(0:HPN/1:Spot noise)=0
+ * usePca=1
+ * useGaussianTransfer=1
+ * useYCbCr=0
+ * useCyclicTransfer=1
+ * uvScale=1.0
+ * cyclicTransferRadius=0.0
+ * cyclicTransferSamples=1
  * =======
  */
 ArgumentsType loadArguments(std::string filename)
@@ -115,23 +102,81 @@ ArgumentsType loadArguments(std::string filename)
 	ArgumentsType arguments;
 	std::ifstream ifs(filename);
 	assert(ifs);
-	unsigned uValue;
-	ifs >> uValue;
-	arguments.useCycles = uValue;
-	ifs >> arguments.gamma;
-	ifs >> arguments.outputWidth >> arguments.outputHeight;
-	ifs >> arguments.proceduralBlendingMode;
-	ifs >> uValue;
-	arguments.usePca = uValue;
-	ifs >> uValue;
-	arguments.useGaussianTransfer = uValue;
-	ifs >> uValue;
-	arguments.useYCbCr = uValue;
-	ifs >> uValue;
-	arguments.useCyclicTransfer = uValue;
-	ifs >> arguments.uvScale;
-	ifs >> arguments.cyclicTransferRadius;
-	ifs >> arguments.cyclicTransferSamples;
+
+	std::string line;
+	while( std::getline(ifs, line) )
+	{
+		std::stringstream ss;
+		std::istringstream is_line(line);
+		std::string key;
+		if( std::getline(is_line, key, '=') )
+		{
+			std::string value;
+			if( std::getline(is_line, value) )
+			{
+				if(key == "useCycles")
+				{
+					ss << value;
+					ss >> arguments.useCycles;
+				}
+				else if(key == "gamma")
+				{
+					ss << value;
+					ss >> arguments.gamma;
+				}
+				else if(key == "outputWidth")
+				{
+					ss << value;
+					ss >> arguments.outputWidth;
+				}
+				else if(key == "outputHeight")
+				{
+					ss << value;
+					ss >> arguments.outputHeight;
+				}
+				else if(key == "mode(0:HPN/1:Spot noise)")
+				{
+					ss << value;
+					ss >> arguments.proceduralBlendingMode;
+				}
+				else if(key == "usePca")
+				{
+					ss << value;
+					ss >> arguments.usePca;
+				}
+				else if(key == "useGaussianTransfer")
+				{
+					ss << value;
+					ss >> arguments.useGaussianTransfer;
+				}
+				else if(key == "useYCbCr")
+				{
+					ss << value;
+					ss >> arguments.useYCbCr;
+				}
+				else if(key == "useCyclicTransfer")
+				{
+					ss << value;
+					ss >> arguments.useCyclicTransfer;
+				}
+				else if(key == "uvScale")
+				{
+					ss << value;
+					ss >> arguments.uvScale;
+				}
+				else if(key == "cyclicTransferRadius")
+				{
+					ss << value;
+					ss >> arguments.cyclicTransferRadius;
+				}
+				else if(key == "cyclicTransferSamples")
+				{
+					ss << value;
+					ss >> arguments.cyclicTransferSamples;
+				}
+			}
+		}
+	}
 	return arguments;
 }
 
@@ -342,7 +387,6 @@ int main(int argc, char **argv)
 		}
 	});
 
-	IO::save01_in_u8(im_in, "/home/nlutz/input.png");
 	IO::save01_in_u8(output, out_filename);
 	return 0;
 }

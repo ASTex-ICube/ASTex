@@ -123,7 +123,7 @@ public:
 	  * @value NEAREST chooses nearest pixel.
 	  * @value TRUNCATE casts the coordinates to int.
 	  */
-	typedef enum{BILINEAR, NEAREST, TRUNCATE} interpolation_rule_t;
+	typedef enum{BILINEAR, NEAREST, TRUNCATE, BILINEAR_PERIODIC} interpolation_rule_t;
 
 	//get
 
@@ -319,6 +319,10 @@ typename StampDiscrete<I>::PixelType StampDiscrete<I>::pixel(double x, double y)
 		q22 = is_in_range(tx+1, ty+1) ? m_image.pixelAbsolute(tx+1, ty+1) : ms_zero;
 
 		pixel = bilinear_interpolation_(q11, q12, q21, q22, tx, ty, dimX, dimY);
+	}
+	else if(m_rule == BILINEAR_PERIODIC)
+	{
+		pixel = bilinear_interpolation(m_image, dimX, dimY, true);
 	}
 	else if(m_rule == NEAREST) //TODO: that's not actually a real nearest is it
 	{
