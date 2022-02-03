@@ -8,7 +8,7 @@
 #include "win_opt.h"
 #else
 #include <unistd.h>
-#include <get_opt.h">
+#include <getopt.h>
 #endif
 
 #include <ASTex/easy_io.h>
