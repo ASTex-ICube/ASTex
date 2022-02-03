@@ -2,7 +2,9 @@ cmake_minimum_required(VERSION 3.0)
 
 project(ASTex CXX)
 
+if (MSVC)
 find_package(GTest REQUIRED)
+endif()
 
 set(ASTEX_VERSION_MAJOR 0)
 set(ASTEX_VERSION_MINOR 9)
