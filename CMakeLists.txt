@@ -1,6 +1,6 @@
 cmake_minimum_required(VERSION 3.0)
  
-project(ASTex)
+project(ASTex CXX)
 
 set(ASTEX_VERSION_MAJOR 0)
 set(ASTEX_VERSION_MINOR 9)

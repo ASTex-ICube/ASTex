@@ -6,7 +6,7 @@ find_package(ASTex)
 
 add_executable(test_patch_exchange "")
 
-target_sources(test_patch_exchange PRIVATE test_patch_exchange.cpp  
+target_sources(test_patch_exchange PRIVATE test_patch_exchange.cpp
 	FragmentProcessor.cpp PatchProcessor.cpp PoissonDiskSampler.cpp
 	FragmentProcessor.h PatchProcessor.h PoissonDiskSampler.h)
 

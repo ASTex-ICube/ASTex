@@ -8,103 +8,120 @@ namespace Stamping
 
 std::vector<Eigen::Vector2f> SamplerRegular::generate()
 {
-    std::vector<Eigen::Vector2f> SamplePoints;
-    SamplePoints.reserve(m_nbPoints);
-    float step = float(1.0/float(m_nbPoints));
-    for (unsigned i = 0; i < m_nbPoints; ++i)
-    {
-        for (unsigned j = 0; j < m_nbPoints; ++j)
-        {
-            Eigen::Vector2f tmp_point(float(i)*step,float(j)*step);
-            SamplePoints.push_back(tmp_point);
-        }
-    }
+	std::vector<Eigen::Vector2f> SamplePoints;
+	SamplePoints.reserve(m_nbPoints);
+	float step = float(1.0/float(m_nbPoints));
+	for (unsigned i = 0; i < m_nbPoints; ++i)
+	{
+		for (unsigned j = 0; j < m_nbPoints; ++j)
+		{
+			Eigen::Vector2f tmp_point(float(i)*step,float(j)*step);
+			SamplePoints.push_back(tmp_point);
+		}
+	}
 
-    return SamplePoints;
+	return SamplePoints;
 }
 
 std::vector<Eigen::Vector2f> SamplerOrigin::generate()
 {
-    std::vector<Eigen::Vector2f> samplePoints;
-    samplePoints.reserve(m_nbPoints);
-    for(unsigned i=0; i<m_nbPoints; ++i)
-        samplePoints.push_back(Eigen::Vector2f(0, 0));
-    return samplePoints;
+	std::vector<Eigen::Vector2f> samplePoints;
+	samplePoints.reserve(m_nbPoints);
+	for(unsigned i=0; i<m_nbPoints; ++i)
+		samplePoints.push_back(Eigen::Vector2f(0, 0));
+	return samplePoints;
 }
 
 std::vector<Eigen::Vector2f> SamplerUniform::generate()
 {
-    std::vector<Eigen::Vector2f> SamplePoints;
-    SamplePoints.reserve(m_nbPoints);
-    srand(time(NULL));
-    for (unsigned i = 0; i < m_nbPoints; ++i)
-    {
-        Eigen::Vector2f tmp_point(double(rand())/RAND_MAX, double(rand())/RAND_MAX);
-        SamplePoints.push_back(tmp_point);
-    }
-    return SamplePoints;
+	std::vector<Eigen::Vector2f> SamplePoints;
+	SamplePoints.reserve(m_nbPoints);
+	srand(time(NULL));
+	for (unsigned i = 0; i < m_nbPoints; ++i)
+	{
+		Eigen::Vector2f tmp_point(double(rand())/RAND_MAX, double(rand())/RAND_MAX);
+		SamplePoints.push_back(tmp_point);
+	}
+	return SamplePoints;
 }
 
-std::vector<Eigen::Vector2f> SamplerPoisson::generate()
+std::vector<Eigen::Vector2f> SamplerPoissonGrid::generate()
 {
-    double minDistance=m_minDistance;
-    if ( minDistance < 0.0f )
-    {
-        minDistance = sqrt( float(m_nbPoints) ) / float(m_nbPoints);
-    }
+	float minDistance=m_minDistance;
+	if ( minDistance < 0.0f )
+	{
+		minDistance = sqrt( float(m_nbPoints) ) / m_nbPoints;
+	}
 
-    std::vector<Eigen::Vector2f> SamplePoints;
-    std::vector<Eigen::Vector2f> ProcessList;
+	std::vector<Eigen::Vector2f> SamplePoints;
+	std::vector<Eigen::Vector2f> ProcessList;
 
-    // create the grid
-    float CellSize = minDistance / sqrt( 2.0f );
+	// create the grid
+	float CellSize = minDistance / sqrt( 2.0f );
 
-    int GridW = ( int )ceil( 1.0f / CellSize );
-    int GridH = ( int )ceil( 1.0f / CellSize );
+	int GridW = ( int )ceil( 1.0f / CellSize );
+	int GridH = ( int )ceil( 1.0f / CellSize );
 
-    sGrid Grid( GridW, GridH, CellSize );
+	sGrid Grid( GridW, GridH, CellSize );
 
-    Eigen::Vector2f FirstPoint;
-    do {
-        FirstPoint = Eigen::Vector2f( m_generator.RandomFloat(), m_generator.RandomFloat() );
-    } while (!(m_generateInCircle ? IsInCircle(FirstPoint) : IsInRectangle(FirstPoint)));
+	while(SamplePoints.size()<m_nbPoints)
+	{
+		Eigen::Vector2f FirstPoint;
+		do {
+			FirstPoint = Eigen::Vector2f( m_generator.RandomFloat(), m_generator.RandomFloat() );
+		} while (!(m_generateInCircle ? IsInCircle(FirstPoint) : IsInRectangle(FirstPoint)));
 
-    // update containers
-    ProcessList.push_back( FirstPoint );
-    SamplePoints.push_back( FirstPoint );
-    Grid.Insert( FirstPoint );
+		// update containers
+		ProcessList.push_back( FirstPoint );
+		SamplePoints.push_back( FirstPoint );
+		Grid.Insert( FirstPoint );
 
-    // generate new points for each point in the queue
-    while ( !ProcessList.empty() && SamplePoints.size() < m_nbPoints )
-    {
-#if POISSON_PROGRESS_INDICATOR
-        // a progress indicator, kind of
-        if ( SamplePoints.size() % 100 == 0 ) std::cout << ".";
-#endif // POISSON_PROGRESS_INDICATOR
+		// generate new points for each point in the queue
+		while ( !ProcessList.empty() && SamplePoints.size() < m_nbPoints )
+		{
+			Eigen::Vector2f Point = PopRandom( ProcessList, m_generator );
 
-        Eigen::Vector2f Point = PopRandom( ProcessList, m_generator );
+			for ( int i = 0; i < m_newPointsCount; i++ )
+			{
+				Eigen::Vector2f NewPoint = GenerateRandomPointAround( Point, minDistance, m_generator );
 
-        for ( int i = 0; i < m_newPointsCount; i++ )
-        {
-            Eigen::Vector2f NewPoint = GenerateRandomPointAround( Point, minDistance, m_generator );
+				bool Fits = m_generateInCircle ? IsInCircle(NewPoint) : IsInRectangle(NewPoint);
 
-            bool Fits = m_generateInCircle ? IsInCircle(NewPoint) : IsInRectangle(NewPoint);
+				if ( Fits && !Grid.IsInNeighbourhood( NewPoint, minDistance, CellSize ) )
+				{
+					ProcessList.push_back( NewPoint );
+					SamplePoints.push_back( NewPoint );
+					Grid.Insert( NewPoint );
+					continue;
+				}
+			}
+		}
+	}
 
-            if ( Fits && !Grid.IsInNeighbourhood( NewPoint, minDistance, CellSize ) )
-            {
-                ProcessList.push_back( NewPoint );
-                SamplePoints.push_back( NewPoint );
-                Grid.Insert( NewPoint );
-                continue;
-            }
-        }
-    }
+	return SamplePoints;
+}
 
-#if POISSON_PROGRESS_INDICATOR
-    std::cout << std::endl << std::endl;
-#endif // POISSON_PROGRESS_INDICATOR
-
-    return SamplePoints;
+std::vector<Eigen::Vector2f> SamplerCycles::generate()
+{
+	std::vector<Eigen::Vector2f> SamplePoints;
+	SamplePoints.reserve(m_nbPoints);
+	auto fract = [] (float x) -> float
+	{
+		return x - std::floor(x);
+	};
+	double maxKi = std::ceil(1.0/std::max(m_cycles[0][0], m_cycles[1][0]));
+	assert(!std::isnan(maxKi) && !std::isinf(maxKi));
+	double maxLi = std::ceil(1.0/std::max(m_cycles[0][1], m_cycles[1][1]));
+	assert(!std::isnan(maxLi) && !std::isinf(maxLi));
+	for (unsigned i = 0; i < m_nbPoints; ++i)
+	{
+		unsigned k_i = std::rand()%int(maxKi);
+		unsigned l_i = std::rand()%int(maxLi);
+		Eigen::Vector2f tmp_point(	fract((k_i*m_cycles[0])[0] + (l_i*m_cycles[1])[0]),
+									fract((k_i*m_cycles[0])[1] + (l_i*m_cycles[1])[1]));
+		SamplePoints.push_back(tmp_point);
+	}
+	return SamplePoints;
 }
 
 } //namsepace Stamping

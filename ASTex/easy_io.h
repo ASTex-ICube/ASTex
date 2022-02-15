@@ -75,6 +75,34 @@ bool ASTEX_API loadu8_in_01(ImageRGBAd& img, const std::string& filename);
 
 bool ASTEX_API loadu8_in_01(ImageRGBAf& img, const std::string& filename);
 
+
+
+void ASTEX_API save01_in_u16(const ImageGrayd& img, const std::string& filename);
+
+void ASTEX_API save01_in_u16(const ImageGrayf& img, const std::string& filename);
+
+void ASTEX_API save01_in_u16(const ImageRGBd& img, const std::string& filename);
+
+void ASTEX_API save01_in_u16(const ImageRGBf& img, const std::string& filename);
+
+void ASTEX_API save01_in_u16(const ImageRGBAd& img, const std::string& filename);
+
+void ASTEX_API save01_in_u16(const ImageRGBAf& img, const std::string& filename);
+
+
+
+bool ASTEX_API loadu16_in_01(ImageGrayd& img, const std::string& filename);
+
+bool ASTEX_API loadu16_in_01(ImageGrayf& img, const std::string& filename);
+
+bool ASTEX_API loadu16_in_01(ImageRGBd& img, const std::string& filename);
+
+bool ASTEX_API loadu16_in_01(ImageRGBf& img, const std::string& filename);
+
+bool ASTEX_API loadu16_in_01(ImageRGBAd& img, const std::string& filename);
+
+bool ASTEX_API loadu16_in_01(ImageRGBAf& img, const std::string& filename);
+
 }
 }
 
