@@ -76,6 +76,8 @@ target_sources (${PROJECT_NAME} PRIVATE
 
 	CSN/csn_texture.h
 	CSN/tpsd.h
+
+	autoregressive.h
 )
 
 target_sources (${PROJECT_NAME} PRIVATE

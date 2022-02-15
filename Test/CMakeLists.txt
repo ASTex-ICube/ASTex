@@ -9,7 +9,7 @@ add_definitions(-DTEMPO_PATH=std::string\(\"${ASTEX_TEMPO_PATH}/\"\) )
 
 set(exec_list test_exr_io test_super_pixel test_saliency test_contentExchange test_sparse
     test_matchHistogram test_RPN test_terrainAmplification test_gradient test_multiTextureContentExchange
-    test_heightToTexture test_PCTSResynthesis test_texton test_contentExchangeAmplification test_csn test_spectrum test_cyclostationaryPSD)
+    test_heightToTexture test_PCTSResynthesis test_texton test_contentExchangeAmplification test_csn test_spectrum test_cyclostationaryPSD test_autoregressive)
 
 
 #find_path(HeightFieldLib_path REQUIRED)

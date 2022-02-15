@@ -1,4 +1,4 @@
-/*******************************************************************************
+﻿/*******************************************************************************
 * ASTex:                                                                       *
 * Copyright (C) IGG Group, ICube, University of Strasbourg, France             *
 *                                                                              *
@@ -31,6 +31,7 @@
 #include <iostream>
 #include <cassert>
 #include <cstring>
+#include <random>
 
 #ifdef WIN32
 #include<windows.h>
@@ -336,31 +337,54 @@ void printImage(const I &image, std::ostream &out_stream, bool show_position = f
 }
 
 template<typename I>
+double *turnPixelIntoArithmeticArray(const typename I::PixelType &pix)
+{
+	using PixelType = typename I::PixelType;
+	using DataType = typename I::DataType;
+	static const size_t pixelSize = sizeof(PixelType)/sizeof(DataType);
+	DataType pixelArray[pixelSize];
+	double *arithmeticArray = new double[pixelSize];
+	std::memcpy(pixelArray, &pix, pixelSize*sizeof(DataType));
+	for(unsigned i=0; i<pixelSize; ++i)
+	{
+		arithmeticArray[i] = double(pixelArray[i]);
+	}
+	return arithmeticArray;
+}
+
+template<typename I>
+typename I::PixelType turnArithmeticArrayIntoPixel(double *arithmeticArray)
+{
+	using PixelType = typename I::PixelType;
+	using DataType = typename I::DataType;
+	static const size_t pixelSize = sizeof(PixelType)/sizeof(DataType);
+	DataType pixelArray[pixelSize];
+	PixelType pix;
+	for(unsigned i=0; i<pixelSize; ++i)
+	{
+		pixelArray[i] = DataType(arithmeticArray[i]);
+	}
+	std::memcpy(&pix, pixelArray, pixelSize*sizeof(DataType));
+	return pix;
+};
+
+template<typename I>
+void setAllChannels(typename I::PixelType &pix, typename I::DataType value)
+{
+	using PixelType = typename I::PixelType;
+	using DataType = typename I::DataType;
+	static const size_t pixelSize = sizeof(PixelType)/sizeof(DataType);
+	for(unsigned i=0; i<pixelSize; ++i)
+	{
+		pix[i] = value;
+	}
+}
+
+template<typename I>
 typename I::PixelType bilinear_interpolation(const I& image,
 											 double x, double y, bool periodicity) //Peut-être rendre plus lisible ?
 {
 	size_t pixelSize = sizeof(typename I::PixelType)/sizeof(typename I::DataType);
-	typename I::DataType *pixelArray = new typename I::DataType[pixelSize];
-	auto turnPixelIntoArithmeticArray = [&] (const typename I::PixelType &pix) -> double*
-	{
-		double *arithmeticArray = new double[pixelSize];
-		std::memcpy(pixelArray, &pix, pixelSize*sizeof(typename I::DataType));
-		for(unsigned i=0; i<pixelSize; ++i)
-		{
-			arithmeticArray[i] = double(pixelArray[i]);
-		}
-		return arithmeticArray;
-	};
-	auto turnArithmeticArrayIntoPixel = [&] (double *arithmeticArray) -> typename I::PixelType
-	{
-		typename I::PixelType pix;
-		for(unsigned i=0; i<pixelSize; ++i)
-		{
-			pixelArray[i] = typename I::DataType(arithmeticArray[i]);
-		}
-		std::memcpy(&pix, pixelArray, pixelSize*sizeof(typename I::DataType));
-		return pix;
-	};
 	typename I::PixelType outputValue;
 	if(!periodicity)
 	{
@@ -370,15 +394,15 @@ typename I::PixelType bilinear_interpolation(const I& image,
 				outputValue=image.pixelAbsolute(x, y);
 			else
 			{
-				double *q0 = turnPixelIntoArithmeticArray(image.pixelAbsolute(int(x), int(y)));
-				double *q1 = turnPixelIntoArithmeticArray(image.pixelAbsolute(int(x), int(y+1)));
+				double *q0 = turnPixelIntoArithmeticArray<I>(image.pixelAbsolute(int(x), int(y)));
+				double *q1 = turnPixelIntoArithmeticArray<I>(image.pixelAbsolute(int(x), int(y+1)));
 				double *qInterp = new double[pixelSize];
 				double y_y1 = y - int(y);
 				for(unsigned i=0; i<pixelSize; ++i)
 				{
 					qInterp[i] = (1.0-y_y1) * q0[i] + y_y1*q1[i];
 				}
-				outputValue=turnArithmeticArrayIntoPixel(qInterp);
+				outputValue=turnArithmeticArrayIntoPixel<I>(qInterp);
 				delete[] qInterp;
 				delete[] q0;
 				delete[] q1;
@@ -386,25 +410,25 @@ typename I::PixelType bilinear_interpolation(const I& image,
 		}
 		else if(y == image.height()-1)
 		{
-			double *q0 = turnPixelIntoArithmeticArray(image.pixelAbsolute(int(x), int(y)));
-			double *q1 = turnPixelIntoArithmeticArray(image.pixelAbsolute(int(x+1), int(y)));
+			double *q0 = turnPixelIntoArithmeticArray<I>(image.pixelAbsolute(int(x), int(y)));
+			double *q1 = turnPixelIntoArithmeticArray<I>(image.pixelAbsolute(int(x+1), int(y)));
 			double *qInterp = new double[pixelSize];
 			double x_x1 = x - int(x);
 			for(unsigned i=0; i<pixelSize; ++i)
 			{
 				qInterp[i] = (1.0-x_x1) * q0[i] + x_x1*q1[i];
 			}
-			outputValue=turnArithmeticArrayIntoPixel(qInterp);
+			outputValue=turnArithmeticArrayIntoPixel<I>(qInterp);
 			delete[] qInterp;
 			delete[] q0;
 			delete[] q1;
 		}
 		else
 		{
-			double *q00 = turnPixelIntoArithmeticArray(image.pixelAbsolute(int(x), int(y)));
-			double *q10 = turnPixelIntoArithmeticArray(image.pixelAbsolute(int(x+1), int(y)));
-			double *q01 = turnPixelIntoArithmeticArray(image.pixelAbsolute(int(x), int(y+1)));
-			double *q11 = turnPixelIntoArithmeticArray(image.pixelAbsolute(int(x+1), int(y+1)));
+			double *q00 = turnPixelIntoArithmeticArray<I>(image.pixelAbsolute(int(x), int(y)));
+			double *q10 = turnPixelIntoArithmeticArray<I>(image.pixelAbsolute(int(x+1), int(y)));
+			double *q01 = turnPixelIntoArithmeticArray<I>(image.pixelAbsolute(int(x), int(y+1)));
+			double *q11 = turnPixelIntoArithmeticArray<I>(image.pixelAbsolute(int(x+1), int(y+1)));
 			double *qInterp = new double[pixelSize];
 			double x_x1 = x - int(x);
 			double y_y1 = y - int(y);
@@ -415,7 +439,7 @@ typename I::PixelType bilinear_interpolation(const I& image,
 							+(1.0-x_x1) * y_y1		 * q01[i]
 							+x_x1		* y_y1		 * q11[i];
 			}
-			outputValue=turnArithmeticArrayIntoPixel(qInterp);
+			outputValue=turnArithmeticArrayIntoPixel<I>(qInterp);
 			delete[] qInterp;
 			delete[] q00;
 			delete[] q10;
@@ -425,10 +449,10 @@ typename I::PixelType bilinear_interpolation(const I& image,
 	}
 	else
 	{
-		double *q00 = turnPixelIntoArithmeticArray(image.pixelAbsolute(int(x)%image.width(), int(y)%image.height()));
-		double *q10 = turnPixelIntoArithmeticArray(image.pixelAbsolute(int(x+1)%image.width(), int(y)%image.height()));
-		double *q01 = turnPixelIntoArithmeticArray(image.pixelAbsolute(int(x)%image.width(), int(y+1)%image.height()));
-		double *q11 = turnPixelIntoArithmeticArray(image.pixelAbsolute(int(x+1)%image.width(), int(y+1)%image.height()));
+		double *q00 = turnPixelIntoArithmeticArray<I>(image.pixelAbsolute(int(x)%image.width(), int(y)%image.height()));
+		double *q10 = turnPixelIntoArithmeticArray<I>(image.pixelAbsolute(int(x+1)%image.width(), int(y)%image.height()));
+		double *q01 = turnPixelIntoArithmeticArray<I>(image.pixelAbsolute(int(x)%image.width(), int(y+1)%image.height()));
+		double *q11 = turnPixelIntoArithmeticArray<I>(image.pixelAbsolute(int(x+1)%image.width(), int(y+1)%image.height()));
 		double *qInterp = new double[pixelSize];
 		double x_x1 = x - int(x);
 		double y_y1 = y - int(y);
@@ -439,14 +463,13 @@ typename I::PixelType bilinear_interpolation(const I& image,
 						+(1.0-x_x1) * y_y1		 * q01[i]
 						+x_x1		* y_y1		 * q11[i];
 		}
-		outputValue=turnArithmeticArrayIntoPixel(qInterp);
+		outputValue=turnArithmeticArrayIntoPixel<I>(qInterp);
 		delete[] qInterp;
 		delete[] q00;
 		delete[] q10;
 		delete[] q01;
 		delete[] q11;
 	}
-	delete[] pixelArray;
 	return outputValue;
 }
 
@@ -491,6 +514,39 @@ I scale(const I& image, unsigned outputWidth, unsigned outputHeight)
 		pix = bilinear_interpolation(image, xd, yd, false);
 	});
 	return scaledImage;
+}
+
+template<typename I>
+I whiteNoise(unsigned int width, unsigned int height, typename I::PixelType mean, typename I::PixelType variance)
+{
+	using ImageType = I;
+	using PixelType = typename ImageType::PixelType;
+	using DataType = typename ImageType::DataType;
+	static const size_t pixelSize = sizeof(PixelType)/sizeof(DataType);
+	double *meanDouble = turnPixelIntoArithmeticArray<I>(mean);
+	double *varianceDouble = turnPixelIntoArithmeticArray<I>(variance);
+	std::random_device rd{};
+	std::mt19937 gen{rd()};
+	std::normal_distribution<double> d[pixelSize];
+	for(int i = 0; i<pixelSize; ++i)
+	{
+		d[i] = std::normal_distribution<double>(std::normal_distribution<double>::param_type{meanDouble[i], varianceDouble[i]});
+	}
+	ImageType W;
+	W.initItk(width, height);
+	W.for_all_pixels([&] (typename ImageType::PixelType &pix)
+	{
+		double *pixelDouble = turnPixelIntoArithmeticArray<I>(pix);
+		for(int i = 0; i<pixelSize; ++i)
+		{
+			pixelDouble[i] = d[i](gen);
+		}
+		pix = turnArithmeticArrayIntoPixel<I>(pixelDouble);
+		delete[] pixelDouble;
+	});
+	delete[] meanDouble;
+	delete[] varianceDouble;
+	return W;
 }
 
 }
