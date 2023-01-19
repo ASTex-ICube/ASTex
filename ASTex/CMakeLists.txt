@@ -2,7 +2,8 @@ cmake_minimum_required(VERSION 3.0)
 
 project(ASTex LANGUAGES CXX)
 
-find_package(OpenEXR REQUIRED)
+find_package(Imath CONFIG REQUIRED)
+find_package(OpenEXR CONFIG REQUIRED)
 find_package(PNG REQUIRED)
 find_package(ITK CONFIG  REQUIRED)
 include(${ITK_USE_FILE})
@@ -102,11 +103,12 @@ target_sources (${PROJECT_NAME} PRIVATE
         rpn_utils.cpp
 )
 
-target_include_directories(${PROJECT_NAME} PUBLIC ${ITK_INCLUDE_DIRS} ${PNG_INCLUDE_DIRS} ${OPENEXR_INCLUDE_DIRS} ${FFTW_INCLUDES})
+target_include_directories(${PROJECT_NAME} PUBLIC ${ITK_INCLUDE_DIRS} ${PNG_INCLUDE_DIRS}  ${FFTW_INCLUDES} ${OPEN_EXR_INCLUDE_DIRS})
 target_include_directories(${PROJECT_NAME} PUBLIC $<INSTALL_INTERFACE:include> $<BUILD_INTERFACE:${ASTEX_SOURCE_DIR}>)
 
 
-set ( ASTEX_LIBRARIES ${ITK_LIBRARIES} ${FFTW_LIBRARIES} ${PNG_LIBRARIES} ${OPENEXR_LIBRARIES} Eigen3::Eigen)
+set ( ASTEX_LIBRARIES ${ITK_LIBRARIES} ${FFTW_LIBRARIES} ${PNG_LIBRARIES} )
+
 if (NOT(MSVC OR APPLE))
 	set ( ASTEX_LIBRARIES ${ASTEX_LIBRARIES} -pthread )
 endif()
@@ -138,7 +140,7 @@ else()
 endif()
 
 target_compile_definitions(${PROJECT_NAME} PUBLIC "${PNG_DEFINITION}")
-target_link_libraries(${PROJECT_NAME} PUBLIC )
+target_link_libraries(${PROJECT_NAME} PUBLIC OpenEXR::OpenEXR  Imath::Imath Imath::ImathConfig Eigen3::Eigen)
 target_link_libraries(${PROJECT_NAME} PUBLIC ${ASTEX_LIBRARIES})
 
 file(GLOB HEADERS "." "*.h" "*.hpp")
