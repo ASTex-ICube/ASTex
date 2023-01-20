@@ -108,7 +108,7 @@ target_sources (${PROJECT_NAME} PRIVATE
         rpn_utils.cpp
 )
 
-target_include_directories(${PROJECT_NAME} PUBLIC ${ITK_INCLUDE_DIRS} ${PNG_INCLUDE_DIRS}  ${FFTW_INCLUDES} ${OPEN_EXR_INCLUDE_DIRS})
+target_include_directories(${PROJECT_NAME} PUBLIC ${ITK_INCLUDE_DIRS} ${PNG_INCLUDE_DIRS}  ${FFTW_INCLUDES})
 target_include_directories(${PROJECT_NAME} PUBLIC $<INSTALL_INTERFACE:include> $<BUILD_INTERFACE:${ASTEX_SOURCE_DIR}>)
 
 
