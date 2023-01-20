@@ -2,8 +2,13 @@ cmake_minimum_required(VERSION 3.0)
 
 project(ASTex LANGUAGES CXX)
 
-find_package(Imath CONFIG REQUIRED)
-find_package(OpenEXR CONFIG REQUIRED)
+if (WIN32)
+  find_package(Imath CONFIG REQUIRED)
+  find_package(OpenEXR CONFIG REQUIRED)
+else()
+	find_package(OpenEXR REQUIRED)
+endif()
+
 find_package(PNG REQUIRED)
 find_package(ITK CONFIG  REQUIRED)
 include(${ITK_USE_FILE})
@@ -140,7 +145,10 @@ else()
 endif()
 
 target_compile_definitions(${PROJECT_NAME} PUBLIC "${PNG_DEFINITION}")
-target_link_libraries(${PROJECT_NAME} PUBLIC OpenEXR::OpenEXR  Imath::Imath Imath::ImathConfig Eigen3::Eigen)
+target_link_libraries(${PROJECT_NAME} PUBLIC OpenEXR::OpenEXR  Eigen3::Eigen)
+if(MSVC)
+	target_link_libraries(${PROJECT_NAME} PUBLIC Imath::Imath Imath::ImathConfig)
+endif()
 target_link_libraries(${PROJECT_NAME} PUBLIC ${ASTEX_LIBRARIES})
 
 file(GLOB HEADERS "." "*.h" "*.hpp")
