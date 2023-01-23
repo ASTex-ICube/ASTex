@@ -2,7 +2,13 @@ cmake_minimum_required(VERSION 3.0)
 
 project(ASTex LANGUAGES CXX)
 
-find_package(OpenEXR REQUIRED)
+if (WIN32)
+  find_package(Imath CONFIG REQUIRED)
+  find_package(OpenEXR CONFIG REQUIRED)
+else()
+  find_package(OpenEXR REQUIRED)
+endif()
+
 find_package(PNG REQUIRED)
 find_package(ITK CONFIG  REQUIRED)
 include(${ITK_USE_FILE})
@@ -102,11 +108,12 @@ target_sources (${PROJECT_NAME} PRIVATE
         rpn_utils.cpp
 )
 
-target_include_directories(${PROJECT_NAME} PUBLIC ${ITK_INCLUDE_DIRS} ${PNG_INCLUDE_DIRS} ${OPENEXR_INCLUDE_DIRS} ${FFTW_INCLUDES})
+target_include_directories(${PROJECT_NAME} PUBLIC ${ITK_INCLUDE_DIRS} ${PNG_INCLUDE_DIRS}  ${FFTW_INCLUDES})
 target_include_directories(${PROJECT_NAME} PUBLIC $<INSTALL_INTERFACE:include> $<BUILD_INTERFACE:${ASTEX_SOURCE_DIR}>)
 
 
-set ( ASTEX_LIBRARIES ${ITK_LIBRARIES} ${FFTW_LIBRARIES} ${PNG_LIBRARIES} ${OPENEXR_LIBRARIES} Eigen3::Eigen)
+set ( ASTEX_LIBRARIES ${ITK_LIBRARIES} ${FFTW_LIBRARIES} ${PNG_LIBRARIES} )
+
 if (NOT(MSVC OR APPLE))
 	set ( ASTEX_LIBRARIES ${ASTEX_LIBRARIES} -pthread )
 endif()
@@ -130,15 +137,22 @@ else()
 
   target_compile_options(${PROJECT_NAME} PUBLIC -Wall -Wextra -Wno-unknown-pragmas -Wno-missing-braces -fPIC )
   
-  if (${ASTEX_USE_CPP14})
-      target_compile_options(${PROJECT_NAME} PUBLIC -std=c++14 )
-  else()
-      target_compile_options(${PROJECT_NAME} PUBLIC -std=c++11 )
-  endif()
+#  if (${ASTEX_USE_CPP14})
+#      target_compile_options(${PROJECT_NAME} PUBLIC -std=c++14 )
+#  else()
+#      target_compile_options(${PROJECT_NAME} PUBLIC -std=c++11 )
+#  endif()
 endif()
+target_compile_features(${PROJECT_NAME} PUBLIC cxx_std_17)
+# target_compile_options(${PROJECT_NAME} PUBLIC -std=c++11)
 
 target_compile_definitions(${PROJECT_NAME} PUBLIC "${PNG_DEFINITION}")
-target_link_libraries(${PROJECT_NAME} PUBLIC )
+if(MSVC)
+		target_link_libraries(${PROJECT_NAME} PUBLIC Imath::Imath Imath::ImathConfig OpenEXR::OpenEXR  Eigen3::Eigen)
+else()
+	target_link_libraries(${PROJECT_NAME} PUBLIC ${OPENEXR_LIBRARIES} Eigen3::Eigen)
+	target_include_directories(${PROJECT_NAME} PUBLIC ${OPENEXR_INCLUDE_DIRS})
+endif()
 target_link_libraries(${PROJECT_NAME} PUBLIC ${ASTEX_LIBRARIES})
 
 file(GLOB HEADERS "." "*.h" "*.hpp")

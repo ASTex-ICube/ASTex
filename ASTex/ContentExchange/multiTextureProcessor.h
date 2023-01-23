@@ -1,10 +1,15 @@
 #ifndef __CTEXCH_MULTI_TEXTURE_PROCESSOR_H__
 #define __CTEXCH_MULTI_TEXTURE_PROCESSOR_H__
 
+#include <random>
+#include <algorithm>
+
 #include "patchProcessor.h"
 #include "ASTex/Stamping/sampler.h"
 #include "ASTex/RegionFinder/regionFinder.h"
 #include "ASTex/texture_pool.h"
+
+
 
 namespace ASTex
 {
@@ -269,9 +274,14 @@ Mipmap<I> MultiTextureProcessor<I>::generateFromExemplar(const I &exemplar)
 					{
 						return object.first.distance < other.first.distance;
 					});
-					std::random_shuffle(texContentComparatorVector.begin(), texContentComparatorVector.begin()
-										+std::min(texContentComparatorVector.size(), size_t(this->m_nbContentsPerPatch))
-										);
+					//std::random_shuffle(texContentComparatorVector.begin(), texContentComparatorVector.begin()
+					//					+std::min(texContentComparatorVector.size(), size_t(this->m_nbContentsPerPatch))
+					//					);
+					std::mt19937 rd_engine(1234567);
+					std::shuffle(texContentComparatorVector.begin(), texContentComparatorVector.begin()
+						+ std::min(texContentComparatorVector.size(), size_t(this->m_nbContentsPerPatch)),rd_engine);
+
+					
 					const PairDistanceIndexType& tex = texContentComparatorVector[0];
 					using RDOptionsType = typename RegionFinder::ComparePixelsScalarProduct<ImageType, double>::RDOptionScalarProduct;
 					std::shared_ptr<RDOptionsType> rdosp = std::dynamic_pointer_cast<RDOptionsType>(tex.first.rdOptions); //<here
