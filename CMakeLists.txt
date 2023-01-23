@@ -31,7 +31,7 @@ option(ASTEX_BUILD_Bench "compile benchmark" ON )
 option(ASTEX_BUILD_Test "compile tests" ON )
 option(ASTEX_BUILD_Tuto "compile tutorials" ON )
 option(BUILD_SHARED_LIBS "build dynamic lib" OFF )
-option(ASTEX_USE_CPP14 "set this to on if VXL say that you are using a C++ standard version older than ..." OFF )
+#option(ASTEX_USE_CPP14 "set this to on if VXL say that you are using a C++ standard version older than ..." OFF )
 
 set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${PROJECT_BINARY_DIR}/bin)
 set(CMAKE_LIBRARY_OUTPUT_DIRECTORY ${PROJECT_BINARY_DIR}/lib)
