@@ -4,6 +4,7 @@
 #include <ASTex/special_io.h>
 #include <ASTex/easy_io.h>
 #include <random>
+#include<iomanip>
 
 
 using namespace ASTex;
@@ -20,6 +21,21 @@ using namespace ASTex;
 // 	return itk::RGBPixel<double>(d);
 // }
 
+//template <typename VEC, typename FUNC>
+//VEC applyFuncCompo(const VEC& u , const FUNC& f)
+//{ 
+//	VEC v;
+//	for (int i = 0; i < v.size(); ++i)
+//		v[i] = f(u[i]);
+//	return v;
+//}
+//
+//
+//template <typename VEC>
+//VEC vfloor(const VEC& u)
+//{
+//	return applyFuncCompo(u, [](double d) { return std::floor(d); });
+//}
 
 
 template <typename IMGD, int N>
@@ -111,25 +127,20 @@ public:
 				outbuf_->pixelAbsolute(width_ + BR + k, x) = color_map_->pixelAbsolute(x, width_ - 1);
 			}
 		}
-//		IO::save01_in_u8(*inbuf_, "buff_in.png");
 
+		//0 1 4 16 64 256 1024
 		int ip = 0;
-		for (int p = 1; p < N; ++p )
+		for (int j = 1; j < N; ++j )
 		{
-			int nb = 1 << (2 * (p - 1));
+			int nb = 1 << (2 * (j - 1));
 			while (ip < nb)
 			{
 				blur1D();
 				std::swap(inbuf_, outbuf_);
 				++ip;
 			}
-			// std::string fn{ "buff_in_X.png" };
-			// fn[fn.length()-5] = 'xp>=0;
-			// IO::save01_in_u8(*inbuf_, fn);
-
-			//                Region r =gen_region(0,0,1,width_);
 			
-			res_[p][0].for_all_pixels([&](TD& p, int x, int y)
+			res_[j][0].for_all_pixels([&](TD& p, int x, int y)
 				{
 					p = inbuf_->pixelAbsolute(y + BR, x);
 				});
@@ -182,18 +193,18 @@ public:
 
 	}
 
-	double max_nbc() const
+	int table_width() const
 	{
 		return N;
 	}
 
-	void save()
+	void save(const std::string& base)
 	{
 		for (int i = 0; i < N; ++i)
 		{
 			for (int j = 0; j < N; ++j)
 			{
-				std::string fn("cm_blur_X_Y.png");
+				std::string fn = base + std::string("_cm_blur_X_Y.png");
 				fn[fn.length() - 7] = '0' + i;
 				fn[fn.length() - 5] = '0' + j;
 				IO::save01_in_u8(res_[i][j], fn);
@@ -206,7 +217,6 @@ public:
 	{
 		i = std::min(N - 1, i);
 		j = std::min(N - 1, j);
-		const auto& cm = res_[j][i];
 
 		double w = double(width_);
 		Eigen::Vector2d uvd{-0.5 + w * uv[0] , -0.5 + w * uv[1] };
@@ -221,15 +231,10 @@ public:
 			return eigenPixel<double>(res_[j][i].pixelAbsolute(xx, yy));
 		};
 
-		
-
 		TED V1 = (1.0 - a[0]) * acces_repeat(c[0],c[1])	+ a[0] * acces_repeat(c[0]+1,c[1]);
 		TED V2 = (1.0 - a[0]) * acces_repeat(c[0],c[1]+1) + a[0] * acces_repeat(c[0]+1,c[1]+1);
 		TED V = (1.0 - a[1]) * V1 + a[1] * V2;
 
-	//	std::cout <<j<<","<<i<< " ->" << c[0]<<" , "<<c[1]<< " -> "<< V.transpose()<<std::endl;
-		
-		
 		return IMGD::itkPixel(V);
 	}
 
@@ -312,7 +317,7 @@ public:
 		return mipmap[0].width();
 	}
 
-	void save()
+	void save(const std::string& base)
 	{
 		for (int i = 0; i < mipmap.size(); ++i)
 		{
@@ -334,52 +339,39 @@ public:
 					imVB.pixelAbsolute(x, y) = p[3] * 64.0;
 				});
 
-			std::string fn("noiseA_X.png");
+			std::string  fn = base + std::string("noiseA_X.png");
 			fn[fn.length() - 5] = (i<=9) ? '0' + i : 'A' + i - 10;
 			IO::save01_in_u8(imA, fn);
 
-			fn = std::string("noiseB_X.png");
+			fn = base + std::string("noiseB_X.png");
 			fn[fn.length() - 5] = (i<=9) ? '0' + i : 'A' + i - 10;
 			IO::save01_in_u8(imB, fn);
 
-			fn = std::string("varA_X.png");
+			fn = base + std::string("varA_X.png");
 			fn[fn.length() - 5] = (i<=9) ? '0' + i : 'A' + i - 10;
 			IO::save01_in_u8(imVA, fn);
 
-			fn = std::string("varB_X.png");
+			fn = base + std::string("varB_X.png");
 			fn[fn.length() - 5] = (i<=9) ? '0' + i : 'A' + i - 10;
 			IO::save01_in_u8(imVB, fn);
 
 		}
 	}
 
-	Eigen::Vector4d fetch_nearest(const Eigen::Vector2d& uv, double level) const
-	{
-		level = std::max(level, 0.0);
-		level = std::min(level, double(mipmap.size()-1));
-
-		int l = int(std::round(level));
-		double w = double(mipmap[l].width());
-		Eigen::Vector2d uvd{-0.5+w*(uv[0] - floor(uv[0])),-0.5+w*(uv[1] - floor(uv[1])) };
-		int x = std::round(uvd[0]);
-		int y = std::round(uvd[0]);
-
-		return eigenPixel<double>(mipmap[l].pixelAbsolute(x, y));
-	}
 
 	Eigen::Vector4d fetch(const Eigen::Vector2d& uv, double level) const
 	{
-		level = std::max(level, 0.0);
-		level = std::min(level, double(mipmap.size()));
+		level = std::max(0.0,std::min(level, double(mipmap.size())));
 
 		int l = int(std::floor(level));
+		Eigen::Vector2d uvm{uv[0] - floor(uv[0]), uv[1] - floor(uv[1])};
 		double w = double(mipmap[l].width());
-		Eigen::Vector2d uvd{-0.5 + w * (uv[0] - floor(uv[0])), -0.5 + w * (uv[1] - floor(uv[1]))};
+		Eigen::Vector2d uvd = Eigen::Vector2d{ -0.5,-0.5 } + w * uvm;
 		Eigen::Vector2d uvfl {std::floor(uvd[0]), std::floor(uvd[1])};
 		Eigen::Vector2d a = uvd - uvfl;
-		Eigen::Vector2i c{int(uvfl[0]),int(uvfl[1])};
+		Eigen::Vector2i c = uvfl.cast<int>();
 
-		auto acces_repeat = [this] (int lp, int xp, int yp) ->Eigen::Vector4d
+		auto acces_repeat = [&] (int lp, int xp, int yp) ->Eigen::Vector4d
 		{
 			int xx = xp < 0 ? mipmap[lp].width() - 1 : ( xp >= mipmap[lp].width() ? 0 : xp );
 			int yy = yp < 0 ? mipmap[lp].width() - 1 : ( yp >= mipmap[lp].width() ? 0 : yp );
@@ -392,7 +384,6 @@ public:
 		Eigen::Vector4d V = (1.0 - a[1]) * V1 + a[1] * V2;
 
 		int le = int(std::ceil(level));
-
 		if (le == l)
 			return  V;
 
@@ -404,12 +395,11 @@ public:
 		a = uvd - uvfl;
 		c = Eigen::Vector2i{int(uvfl[0]),int(uvfl[1])};
 
-		
+	
 		// bilinear interpolation
 		V1 = (1.0 - a[0]) * acces_repeat(l,c[0],c[1])	+ a[0] * acces_repeat(l,c[0]+1,c[1]);
 		V2 = (1.0 - a[0]) * acces_repeat(l,c[0],c[1]+1)	+ a[0] * acces_repeat(l,c[0]+1,c[1]+1);
 		Eigen::Vector4d VV = (1.0 - a[1]) * V1 + a[1] * V2;
-
 
 		double b = level - std::floor(level);
 
@@ -504,9 +494,8 @@ void repete(const PackedInputNoises& noises, double level, const Eigen::Vector2d
 {
 	Eigen::Vector4d n = noises.fetch(uv, level);
 	mean = Eigen::Vector2d(n[0], n[1]);
-	variance = Eigen::Vector2d(n[3], n[4]);
+	variance = Eigen::Vector2d(n[2], n[3]);
 }
-
 
 
 template <typename IMGD, int N, typename FUNC>
@@ -514,52 +503,64 @@ void patterns(IMGD& pat, int w, const PackedInputNoises& noises, const BlurringC
 {
 	using TD = typename IMGD::PixelType;
 
-	Eigen::Vector2d uv_cm;
-	Eigen::Vector2d sigm2;
+	//std::array < long, N> lx;
+	//std::array < long, N> ly;
+	//for (int i = 0; i < N; ++i)
+	//{
+	//	lx[i] = 0;
+	//	ly[i] = 0;
+	//}
 
 	pat.initItk(w,w);
 	double level = std::log2(scale);
-	pat.for_all_pixels([&](typename IMGD::PixelType& p, int x, int y)
+	pat.parallel_for_all_pixels([&](typename IMGD::PixelType& p, int x, int y)
 		{
+			Eigen::Vector2d uv_cm;
+			Eigen::Vector2d sigm2;
 			Eigen::Vector2d uv{ double(x) / (noises.width()), double(y) / (noises.width()) };
-			Eigen::Vector2d uvs = uv*scale;
+			Eigen::Vector2d uvs = uv * scale;
 			//Tile_n_blend(noises, level, uvs, uv_cm, sigm2);
 			tile(noises, level, uvs, uv_cm, sigm2);
 
-// if constexpr (std::is_same_v<TD, double>)
-// 	p = IMGD::itkPixel(uv_cm[0]);
-// else
-// 	p = IMGD::itkPixel(uv_cm[0],uv_cm[0],uv_cm[0]);
-// return;
 			Eigen::Vector2d sigma{ sqrt(sigm2[0]),sqrt(sigm2[1]) };
-			Eigen::Vector2d var{ sigma[0] * 256.0, sigma[1] * 256.0 };
-			var[0] = std::max(1.0, var[0]);
-			var[1] = std::max(1.0, var[1]);
-			double pnbcm = std::pow(2.0, bcm.max_nbc()) - 0.1;
-			var[0] = std::min(pnbcm, var[0]);
-			var[1] = std::min(pnbcm, var[1]);
+
+			Eigen::Vector2d var = sigma * 256.0 ;
+			//var[0] = std::max(1.0, var[0]);
+			//var[1] = std::max(1.0, var[1]);
+			//double pnbcm = std::pow(2.0, double(bcm.table_width())) - 0.1;
+			//var[0] = std::min(pnbcm, var[0]);
+			//var[1] = std::min(pnbcm, var[1]);
 
 
-			Eigen::Vector2d flod = Eigen::Vector2d(std::log2(var[0]), std::log2(var[1]));
-			// flod[0] = std::max(0.0, flod[0]);
-			// flod[1] = std::max(0.0, flod[1]);
-			// double pnbcm =  bcm.max_nbc() - 1.0;
-			// var[0] = std::min(pnbcm, flod[0]);
-			// var[1] = std::min(pnbcm, flod[1]);
+			Eigen::Vector2d flod = Eigen::Vector2d(std::log2(1.0+var[0]), std::log2(1.0+var[1]));
 
-
+			//flod[0] = std::max(0.0, flod[0]);
+			//flod[1] = std::max(0.0, flod[1]);
+			//double pnbcm =  double(table_width()) - 1.0;
+			//flod[0] = std::min(pnbcm, flod[0]);
+			//flod[1] = std::min(pnbcm, flod[1]);
 
 			//Eigen::Vector2i ilod = ivec2(floor(flod));
 			//Eigen::Vector2d t = fract(flod);
 			//Eigen::Vector2i ilodr = ivec2(round(flod));
 
-			int ilodrx = int(std::round(flod[0]));
-			int ilodry = int(std::round(flod[1]));
+			int ilodrx = std::min(N-1, int(std::round(flod[0])));
+			int ilodry = std::min(N-1, int(std::round(flod[1])));
+
 			p = bcm.fetch(uv_cm, ilodrx, ilodry);
-			//p = IMGD::itkPixel(flod[0]/8.0,flod[1]/8.0,0.0);
+
+			//lx[ilodrx]++;
+			//ly[ilodry]++;	
 		});
 
+	//for (int i = 0; i < lx.size(); ++i)
+	//{
+	//	double xl = 0.001 * int(double(lx[i]) / (0.001 * w * w));
+	//	double yl = 0.001 * int(double(ly[i]) / (0.001 * w * w));
+	//	std::cout << "L[" << i << "] = " << std::setprecision(3) << xl << " / " << yl << std::endl;
+	//}
 }
+
 
 
 
@@ -575,62 +576,103 @@ using T_IMG_D = ImageGrayd;
 
 int main(int argc, char** argv)
 {
-	T_IMG_D cm;
-	IO::loadu8_in_01(cm, std::string(argv[1]));
-	BlurringColorMaps<T_IMG_D, 7> bcm{ &cm,{0.375,0.25,0.0625} };
-	bcm.compute_column0();
-	bcm.compute_rows();
-	std::cout << "Color maps blurred" << std::endl;
-	//bcm.save();
+	std::vector<std::array < std::string, 4>> names = { {"stone", "noise_pierre_1", "noise_pierre_2", "cm11"},
+		{"bark", "noise_ecorce_1", "noise_ecorce_2", "cm10"},
+		{"camouflage", "noise_1024_2", "noise_1024_4", "cm1"},
+		{"green", "noise_1024_4", "noise_1024_2", "cm2"},
+		{"blue", "noise_256_2", "noise_256_4", "cm5"},
+		{"lava", "noise_1024_2", "noise_1024_4", "cm8"},
+		{"water", "n1", "n2", "eau_cm"},
+		{"hexa", "n1", "n2", "hexa_cm"},
+		{"phasor_sand", "noise_sin_3", "noise_cos_3", "colormap_phasor_sand"},
+		{"phasor_sin", "noise_sin_1", "noise_cos_1", "colormap_phasor_sin"},
+		{"phasor_square", "noise_sin_1", "noise_cos_1", "colormap_phasor_square"} };
 
-	ImageGrayd nA;
-	IO::loadu8_in_01(nA, std::string(argv[2]));
-	ImageGrayd nB;
-	IO::loadu8_in_01(nB, std::string(argv[3]));
-
-	PackedInputNoises pin(nA, nB);
-	std::cout << "noise var mipmaped" << std::endl;
-	//pin.save();
-	int SZGEN =4096;
-	double scale = 1.0;
-	T_IMG_D img_patterns;
-	for(int i=0;i<8;i++)
+	if (argc == 1)
 	{
-		patterns(img_patterns, SZGEN, pin, bcm, scale,Tile_n_blend);	
-		std::string fn("patterns0.png");
-		fn[fn.length() - 5] = (i<=9) ? '0' + i : 'A' + i - 10;
-		IO::save01_in_u8(img_patterns, fn);
-		std::cout << fn<<" generated" << std::endl;
-		SZGEN/=2;
-		scale*=2.0;
+		for (int i = 0; i < names.size(); ++i)
+			std::cout << i << ":" << names[i][0] << " / ";
+		std::cout << std::endl;
+		return EXIT_SUCCESS;
 	}
 
-	// patterns(img_patterns, SZGEN, pin, bcm, 1.0,Tile_n_blend);
-	// std::cout << "micro patterns generated" << std::endl;
-	// IO::save01_in_u8(img_patterns, "patterns0.png");
+	bool bs = false;
+	if (argc == 3)
+		bs = std::string{ argv[2] } == std::string{ "save" };
 
-	// patterns(img_patterns, SZGEN, pin, bcm, 2.0,Tile_n_blend);
-	// std::cout << "micro patterns generated" << std::endl;
-	// IO::save01_in_u8(img_patterns, "patterns1.png");
-	// patterns(img_patterns, SZGEN, pin, bcm, 4.0,Tile_n_blend);
-	// std::cout << "micro patterns generated" << std::endl;
-	// IO::save01_in_u8(img_patterns, "patterns2.png");
-	// patterns(img_patterns, SZGEN, pin, bcm, 8.0,Tile_n_blend);
-	// std::cout << "micro patterns generated" << std::endl;
-	// IO::save01_in_u8(img_patterns, "patterns3.png");
-	// patterns(img_patterns, SZGEN, pin, bcm, 16.0,Tile_n_blend);
-	// std::cout << "micro patterns generated" << std::endl;
-	// IO::save01_in_u8(img_patterns, "patterns4.png");
-	// patterns(img_patterns, SZGEN, pin, bcm, 32.0,Tile_n_blend);
-	// std::cout << "micro patterns generated" << std::endl;
-	// IO::save01_in_u8(img_patterns, "patterns5.png");
-	// patterns(img_patterns, SZGEN, pin, bcm, 64.0,Tile_n_blend);
-	// std::cout << "micro patterns generated" << std::endl;
-	// IO::save01_in_u8(img_patterns, "patterns6.png");
+	int conf = std::atoi(argv[1]);
+	std::string dir = "../../data/";
+	T_IMG_D cm;
+	IO::loadu8_in_01(cm, dir+"colormap/"+names[conf][3] + ".png");
+	auto start_chrono = std::chrono::system_clock::now();
+	BlurringColorMaps<T_IMG_D, 8> bcm{ &cm,{0.375,0.25,0.0625} };
+	bcm.compute_column0();
+	bcm.compute_rows();
+	std::chrono::duration<double> elapsed_seconds = std::chrono::system_clock::now() - start_chrono;
+	std::cout << "Color maps blurred in " << elapsed_seconds.count() << " s." << std::endl;
+	if (bs)
+		bcm.save(names[conf][0]);
+
+	ImageGrayd nA;
+	IO::loadu8_in_01(nA, dir+names[conf][1]+".png");
+	ImageGrayd nB;
+	IO::loadu8_in_01(nB, dir+names[conf][2]+".png");
+	start_chrono = std::chrono::system_clock::now();
+	PackedInputNoises pin(nA, nB);
+	elapsed_seconds = std::chrono::system_clock::now() - start_chrono;
+	std::cout << "noise var mipmaped in " << elapsed_seconds.count() << " s." << std::endl;
+	if (bs)
+		pin.save(names[conf][0]);
+	int SZGEN = 1024;
+	T_IMG_D img_patterns;
+	for (int i = 0; i < 1; i++)
+	{
+		double scale =  std::pow(2.0, i);
+		double sz = SZGEN / scale;
+		start_chrono = std::chrono::system_clock::now();
+		patterns(img_patterns, sz, pin, bcm, scale, Tile_n_blend);
+		std::string fn = names[conf][0] + "_.png";
+		fn[fn.length() - 5] = (i <= 9) ? '0' + i : 'A' + i - 10;
+		elapsed_seconds = std::chrono::system_clock::now() - start_chrono;
+		std::cout << fn << " of " << sz<<" x "<< sz << " pixels generated in " << elapsed_seconds.count() << " s." << std::endl;
+		IO::save01_in_u8(img_patterns, fn);
+		std::cout << "file exported "<< std::endl;
+		
+	}
 
 
+	//T_IMG_D cm;
+	//IO::loadu8_in_01(cm, std::string(argv[1]));
+	//BlurringColorMaps<T_IMG_D, 7> bcm{ &cm,{0.375,0.25,0.0625} };
+	//bcm.compute_column0();
+	//bcm.compute_rows();
+	//std::cout << "Color maps blurred" << std::endl;
+	////bcm.save();
+
+	//ImageGrayd nA;
+	//IO::loadu8_in_01(nA, std::string(argv[2]));
+	//ImageGrayd nB;
+	//IO::loadu8_in_01(nB, std::string(argv[3]));
+
+	//PackedInputNoises pin(nA, nB);
+	//std::cout << "noise var mipmaped" << std::endl;
+	////pin.save();
+	//int SZGEN =4096;
+	//T_IMG_D img_patterns;
+	//for(int i=4;i<8;i++)
+	//{
+	//	double scale = std::pow(2.0, i);
+	//	double sz = SZGEN / int(scale);
+	//	patterns(img_patterns, sz, pin, bcm, scale,Tile_n_blend);	
+	//	std::string fn("patterns0.png");
+	//	fn[fn.length() - 5] = (i<=9) ? '0' + i : 'A' + i - 10;
+	//	IO::save01_in_u8(img_patterns, fn);
+	//	std::cout << fn<<" generated" << std::endl;
+	//}
 
 	return EXIT_SUCCESS;
+
+
 }
 
 //["stone", "noise_pierre_1", "noise_pierre_2", "cm11"],
