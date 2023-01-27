@@ -1,8 +1,8 @@
-#include <stdlib.h>
+#include <cstdlib>
+#include "ASTex/rpn_utils.h"
+#include "ASTex/utils.h"
 #include "ASTex/Sparse/dictionaryProcessor.h"
 #include "ASTex/easy_io.h"
-#include "ASTex/utils.h"
-#include "ASTex/rpn_utils.h"
 int main(int argc, char **argv)
 {	
 	if(argc < 2)

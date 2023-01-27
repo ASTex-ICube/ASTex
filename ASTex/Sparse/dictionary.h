@@ -1,12 +1,12 @@
 #ifndef _DICTIONNARY_H_
 #define _DICTIONNARY_H_
 
+#include "ASTex/rpn_utils.h"
+#include "ASTex/histogram.h"
 #include "ASTex/fourier.h"
 #include "ASTex/image_common.h"
 #include "ASTex/easy_io.h" //TODO: remove when fully debugged
 
-#include "ASTex/histogram.h"
-#include "ASTex/rpn_utils.h"
 
 namespace ASTex
 {

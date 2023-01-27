@@ -1,6 +1,7 @@
-#include <stdlib.h>
-#include "ASTex/easy_io.h"
+#include <cstdlib>
+
 #include "ASTex/rpn_utils.h"
+#include "ASTex/easy_io.h"
 
 int main(int argc, char **argv)
 {

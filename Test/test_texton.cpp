@@ -1,12 +1,13 @@
 #include <stdlib.h>
 
-#include "ASTex/Stamping/stamper.h"
-#include "ASTex/histogram.h"
-#include "ASTex/easy_io.h"
-#include "ASTex/utils.h"
-#include "ASTex/Stamping/stamper.h"
-#include "ASTex/histogram.h"
 #include "ASTex/rpn_utils.h"
+#include "ASTex/utils.h"
+#include "ASTex/easy_io.h"
+
+#include "ASTex/Stamping/stamper.h"
+#include "ASTex/histogram.h"
+#include "ASTex/Stamping/stamper.h"
+#include "ASTex/histogram.h"
 #include "ASTex/texton_io.h"
 
 /**

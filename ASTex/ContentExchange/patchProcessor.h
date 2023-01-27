@@ -1,14 +1,17 @@
 #ifndef __CTEXCH_PATCH_PROCESSOR_H__
 #define __CTEXCH_PATCH_PROCESSOR_H__
 
+#include <random>
+#include "content.h"
+#include "patch.h"
+
+#include "ASTex/easy_io.h"
+#include "ASTex/histogram.h"
 #include "Algo/PatchExchange/PatchProcessor.h"
 #include "Algo/PatchExchange/PoissonDiskSampler.h"
-#include "ASTex/histogram.h"
-#include "patch.h"
-#include "content.h"
-#include "ASTex/easy_io.h"
+
 #include "ASTex/Stamping/sampler.h"
-#include <random>
+
 #include "ASTex/PCTS/pcts.h"
 #include "ASTex/Stamping/sampler.h"
 
@@ -321,7 +324,8 @@ PatchProcessor<I>::PatchProcessor(const I& texture):
 template<typename I>
 PatchProcessor<I>::~PatchProcessor()
 {
-	delete m_atlas;
+// DO NOT COMPILE ON MAC ???	
+//	delete m_atlas;
 }
 
 //get

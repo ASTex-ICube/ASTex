@@ -23,8 +23,8 @@
 
 
 
-#include <ASTex/easy_io.h>
 #include <ASTex/slic.h>
+#include <ASTex/easy_io.h>
 
 using namespace ASTex;
 

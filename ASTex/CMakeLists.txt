@@ -2,9 +2,10 @@ cmake_minimum_required(VERSION 3.0)
 
 project(ASTex LANGUAGES CXX)
 
-if (WIN32)
+if (WIN32 OR APPLE )
   find_package(Imath CONFIG REQUIRED)
   find_package(OpenEXR CONFIG REQUIRED)
+
 else()
   find_package(OpenEXR REQUIRED)
 endif()
@@ -130,11 +131,10 @@ else()
     target_compile_options(${PROJECT_NAME} PUBLIC -fpermissive )
     message (INFO " Old ITK version, add -fpermissive compil option")
   endif()
-
   if (${OpenMP_CXX_FLAGS})
       target_compile_options(${PROJECT_NAME} PUBLIC ${OpenMP_CXX_FLAGS})
   endif()
-
+endif()
   target_compile_options(${PROJECT_NAME} PUBLIC -Wall -Wextra -Wno-unknown-pragmas -Wno-missing-braces -fPIC )
   
 #  if (${ASTEX_USE_CPP14})
@@ -142,16 +142,18 @@ else()
 #  else()
 #      target_compile_options(${PROJECT_NAME} PUBLIC -std=c++11 )
 #  endif()
-endif()
+#endif()
 target_compile_features(${PROJECT_NAME} PUBLIC cxx_std_17)
 # target_compile_options(${PROJECT_NAME} PUBLIC -std=c++11)
 
 target_compile_definitions(${PROJECT_NAME} PUBLIC "${PNG_DEFINITION}")
-if(MSVC)
-		target_link_libraries(${PROJECT_NAME} PUBLIC Imath::Imath Imath::ImathConfig OpenEXR::OpenEXR  Eigen3::Eigen)
-else()
-	target_link_libraries(${PROJECT_NAME} PUBLIC ${OPENEXR_LIBRARIES} Eigen3::Eigen)
+
+if(WIN32 OR APPLE)
+	target_link_libraries(${PROJECT_NAME} PUBLIC OpenEXR::OpenEXR Eigen3::Eigen)
 	target_include_directories(${PROJECT_NAME} PUBLIC ${OPENEXR_INCLUDE_DIRS})
+	MESSAGE(WARNING OPENEXR= ${OPENEXR_LIBRARIES} )
+	MESSAGE(WARNING OPENEXR= ${OPENEXR_INCLUDE_DIR} )
+
 endif()
 target_link_libraries(${PROJECT_NAME} PUBLIC ${ASTEX_LIBRARIES})
 
