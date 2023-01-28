@@ -21,24 +21,30 @@ using namespace ASTex;
 // 	return itk::RGBPixel<double>(d);
 // }
 
-//template <typename VEC, typename FUNC>
-//VEC applyFuncCompo(const VEC& u , const FUNC& f)
-//{ 
-//	VEC v;
-//	for (int i = 0; i < v.size(); ++i)
-//		v[i] = f(u[i]);
-//	return v;
-//}
-//
-//
-//template <typename VEC>
-//VEC vfloor(const VEC& u)
-//{
-//	return applyFuncCompo(u, [](double d) { return std::floor(d); });
-//}
+template <typename VEC, typename FUNC>
+VEC applyFuncCompo(const VEC& u , const FUNC& f)
+{ 
+	VEC v;
+	for (int i = 0; i < v.size(); ++i)
+		v[i] = f(u[i]);
+	return v;
+}
 
 
-template <typename IMGD, int N>
+template <typename VEC>
+VEC vecfloor(const VEC& u)
+{
+	return applyFuncCompo(u, [](double d) { return std::floor(d); });
+}
+
+template <typename VEC>
+VEC vecfract(const VEC& u)
+{
+	return applyFuncCompo(u, [](double d) { return d - std::floor(d); });
+}
+
+
+template <typename IMGD>
 class BlurringColorMaps
 {
 	using TD = typename IMGD::PixelType;
@@ -56,34 +62,28 @@ class BlurringColorMaps
 	std::vector<double> convol_;
 	int BR;
 
-	std::array<std::array<IMGD, N>, N> res_;
+//	std::array<std::array<IMGD, N>, N> res_;
+	std::vector<IMGD> blurred_;
+
+	int N;
 
 	int width_;
 
 	void blur1D()
 	{
-		if constexpr (std::is_same_v<TD, double>)
-			outbuf_->parallel_for_region_pixels(reg_, [&](TD& p, int x, int y)
-				{
-					auto pe = convol_[0] * double(inbuf_->pixelAbsolute(x, y));
-					for (int i = 1; i <= BR; ++i)
-						pe += convol_[i] * (double(inbuf_->pixelAbsolute(x - i, y)) + double(inbuf_->pixelAbsolute(x + i, y)));
-					p = IMGD::itkPixel(pe);
-				});
-		else
-			outbuf_->parallel_for_region_pixels(reg_, [&](TD& p, int x, int y)
-				{
-					auto pe = (convol_[0] * eigenPixel<double>(inbuf_->pixelAbsolute(x, y))).eval();
-					for (int i = 1; i <= BR; ++i)
-						pe += convol_[i] * (eigenPixel<double>(inbuf_->pixelAbsolute(x - i, y))
-							+ eigenPixel<double>(inbuf_->pixelAbsolute(x + i, y)));
-					p = IMGD::itkPixel(pe);
-				});
+		outbuf_->parallel_for_region_pixels(reg_, [&](TD& p, int x, int y)
+		{
+			TED pe = (convol_[0] * eigenPixel<double>(inbuf_->pixelAbsolute(x, y)));
+			for (int i = 1; i <= BR; ++i)
+				pe += convol_[i] * (eigenPixel<double>(inbuf_->pixelAbsolute(x - i, y))
+					+ eigenPixel<double>(inbuf_->pixelAbsolute(x + i, y)));
+			p = IMGD::itkPixel(pe);
+		});
 	}
 
 public:
-	BlurringColorMaps(const IMGD* colormap, const std::vector<double>& convol) :
-		color_map_(colormap), convol_(convol)
+	BlurringColorMaps(const IMGD* colormap, const std::vector<double>& convol, int nb) :
+		color_map_(colormap), convol_(convol),N(nb)
 	{
 		BR = convol.size() - 1;
 		width_ = color_map_->width();
@@ -92,15 +92,14 @@ public:
 		reg_ = gen_region(BR, 0, width_, width_);
 		inbuf_ = &buffer1_;
 		outbuf_ = &buffer2_;
-		for (int j = 0; j < N; ++j)
-			for (int i = 0; i < N; ++i)
-				res_[j][i].initItk(color_map_->width(), color_map_->width());
-
+		blurred_.resize(N * N);
+		for(auto& bl: blurred_)
+			bl.initItk(color_map_->width(), color_map_->width());
 	}
 
 	void compute_column0()
 	{
-		res_[0][0].for_all_pixels([&](TD& p, int x, int y)
+		blurred_[0].for_all_pixels([&](TD& p, int x, int y)
 			{
 				p = color_map_->pixelAbsolute(x, y);
 			});
@@ -140,7 +139,7 @@ public:
 				++ip;
 			}
 			
-			res_[j][0].for_all_pixels([&](TD& p, int x, int y)
+			blurred_[j*N].for_all_pixels([&](TD& p, int x, int y)
 				{
 					p = inbuf_->pixelAbsolute(y + BR, x);
 				});
@@ -151,26 +150,27 @@ public:
 	{
 		for (int i = 0; i < N; ++i)
 		{
+			auto& firstColBlurred = blurred_[i * N];
 			for (int y = 0; y < width_; ++y)
 			{
 				for (int k = 0; k < BR; ++k)
 				{
-					inbuf_->pixelAbsolute(k, y) = res_[i][0].pixelAbsolute(0, y);
-					outbuf_->pixelAbsolute(k, y) = res_[i][0].pixelAbsolute(0, y);
+					inbuf_->pixelAbsolute(k, y) =  firstColBlurred.pixelAbsolute(0, y);
+					outbuf_->pixelAbsolute(k, y) = firstColBlurred.pixelAbsolute(0, y);
 				}
 			}
 
 			inbuf_->for_region_pixels(reg_, [&](TD& p, int x, int y)
 				{
-					p = res_[i][0].pixelAbsolute(x - BR, y);
+					p = firstColBlurred.pixelAbsolute(x - BR, y);
 				});
 
 			for (int y = 0; y < width_; ++y)
 			{
 				for (int k = 0; k < BR; ++k)
 				{
-					inbuf_->pixelAbsolute(width_ + BR + k, y) = res_[i][0].pixelAbsolute(width_ - 1, y);
-					outbuf_->pixelAbsolute(width_ + BR + k, y) = res_[i][0].pixelAbsolute(width_ - 1, y);
+					inbuf_->pixelAbsolute(width_ + BR + k, y) = firstColBlurred.pixelAbsolute(width_ - 1, y);
+					outbuf_->pixelAbsolute(width_ + BR + k, y) = firstColBlurred.pixelAbsolute(width_ - 1, y);
 				}
 			}
 			int ip = 0;
@@ -184,7 +184,7 @@ public:
 					++ip;
 				}
 				//                   Region r =gen_region(0,gy,width_,1);
-				res_[i][j].for_all_pixels([&](TD& p, int x, int y)
+				blurred_[i * N + j].for_all_pixels([&](TD& p, int x, int y)
 					{
 						p = inbuf_->pixelAbsolute(x + BR, y);
 					});
@@ -205,9 +205,9 @@ public:
 			for (int j = 0; j < N; ++j)
 			{
 				std::string fn = base + std::string("_cm_blur_X_Y.png");
-				fn[fn.length() - 7] = '0' + i;
-				fn[fn.length() - 5] = '0' + j;
-				IO::save01_in_u8(res_[i][j], fn);
+				fn[fn.length() - 7] = '0' + j;
+				fn[fn.length() - 5] = '0' + i;
+				IO::save01_in_u8(blurred_[i * N + j], fn);
 			}
 		}
 	}
@@ -224,16 +224,59 @@ public:
 		Eigen::Vector2d a = uvd - uvfl;
 		Eigen::Vector2i c{int(uvfl[0]),int(uvfl[1])};
 
-		auto acces_repeat = [&] (int xp, int yp)
+		auto acces_edge = [&] (int xp, int yp)
 		{
 			int xx = xp < 0 ? 0 : ( xp >= width_ ? width_-1 : xp );
 			int yy = yp < 0 ? 0 : ( yp >= width_ ? width_-1 : yp );
-			return eigenPixel<double>(res_[j][i].pixelAbsolute(xx, yy));
+			return eigenPixel<double>(blurred_[jp * N + ip].pixelAbsolute(xx, yy));
 		};
 
-		TED V1 = (1.0 - a[0]) * acces_repeat(c[0],c[1])	+ a[0] * acces_repeat(c[0]+1,c[1]);
-		TED V2 = (1.0 - a[0]) * acces_repeat(c[0],c[1]+1) + a[0] * acces_repeat(c[0]+1,c[1]+1);
+		TED V1 = (1.0 - a[0]) * acces_edge(c[0],c[1])	+ a[0] * acces_edge(c[0]+1,c[1]);
+		TED V2 = (1.0 - a[0]) * acces_edge(c[0],c[1]+1) + a[0] * acces_edge(c[0]+1,c[1]+1);
 		TED V = (1.0 - a[1]) * V1 + a[1] * V2;
+
+		return IMGD::itkPixel(V);
+	}
+
+	TD fetch(const Eigen::Vector2d& uv, double ui, double uj) const
+	{
+
+		auto acces_edge = [&](int xp, int yp, int ip, int jp)
+		{
+			int xx = xp < 0 ? 0 : (xp >= width_ ? width_ - 1 : xp);
+			int yy = yp < 0 ? 0 : (yp >= width_ ? width_ - 1 : yp);
+			return eigenPixel<double>(blurred_[jp*N+ip].pixelAbsolute(xx, yy));
+		};
+
+		double w = double(width_);
+		Eigen::Vector2d uvd{ -0.5 + w * uv[0] , -0.5 + w * uv[1] };
+		Eigen::Vector2d uvfl{ std::floor(uvd[0]), std::floor(uvd[1]) };
+		Eigen::Vector2d a = uvd - uvfl;
+		Eigen::Vector2i c{ int(uvfl[0]),int(uvfl[1]) };
+
+		auto fetch_cm = [&](int xp, int yp)
+		{
+			int xx = xp < 0 ? 0 : (xp >= N ? N - 1 : xp);
+			int yy = yp < 0 ? 0 : (yp >= N ? N - 1 : yp);
+
+			TED V1 = (1.0 - a[0]) * acces_edge(c[0], c[1], xx, yy) + a[0] * acces_edge(c[0] + 1, c[1], xx, yy);
+			TED V2 = (1.0 - a[0]) * acces_edge(c[0], c[1] + 1, xx, yy) + a[0] * acces_edge(c[0] + 1, c[1] + 1, xx, yy);
+			TED V = (1.0 - a[1]) * V1 + a[1] * V2;
+
+			return V;
+		};
+
+		double uifl = floor(ui);
+		double ai = ui - uifl;
+		int i = int(uifl);
+
+		double ujfl = floor(uj);
+		double aj = uj - ujfl;
+		int j = int(ujfl);
+
+		TED V1 = (1.0 - ai) * fetch_cm(i, j) + ai * fetch_cm(i + 1, j);
+		TED V2 = (1.0 - ai) * fetch_cm(i, j + 1) + ai * fetch_cm(i + 1, j + 1);
+		TED V = (1.0 - aj) * V1 + aj * V2;
 
 		return IMGD::itkPixel(V);
 	}
@@ -418,8 +461,11 @@ public:
 void TriangleGrid(const Eigen::Vector2d& p_uv, Eigen::Vector3d& Bi, Eigen::Vector2d& vertex1, Eigen::Vector2d& vertex2, Eigen::Vector2d& vertex3)
 {
 	const Eigen::Vector2d uv = p_uv * 2.0 * std::sqrt(3.0);
+
 	Eigen::Matrix2d gridToSkewedGrid;
-	gridToSkewedGrid << 1.0, 0.0, -0.57735027, 1.15470054;
+	gridToSkewedGrid << 1.0, -0.57735027,
+	                    0.0, 01.15470054;
+
 	Eigen::Vector2d skewedCoord = gridToSkewedGrid * uv;
 	Eigen::Vector2d baseId{ std::floor(skewedCoord[0]), std::floor(skewedCoord[1]) };
 	Eigen::Vector3d temp{ skewedCoord[0] - baseId[0], skewedCoord[1] - baseId[1], 0.0 };
@@ -441,15 +487,14 @@ void TriangleGrid(const Eigen::Vector2d& p_uv, Eigen::Vector3d& Bi, Eigen::Vecto
 	}
 }
 
-//std::random_device rd;  // Will be used to obtain a seed for the random number engine
-//std::mt19937 gen(rd()); // Standard mersenne_twister_engine seeded with rd()
-//std::uniform_real_distribution<> dis(0.0, 1.0);
 
 Eigen::Vector2d hash(const Eigen::Vector2d& p)
 {
-//	return Eigen::Vector2d(dis(gen), dis(gen));
 	Eigen::Matrix2d hashMat;
-	hashMat << 127.1, 311.7, 269.5, 183.3;
+	hashMat << 127.1, 269.5,
+	           311.7, 183.3;
+
+	//hashMat << 127.1, 311.7, 269.5, 183.3;
 	Eigen::Vector2d q = hashMat * p ;
 	q[0] = std::sin(q[0]);
 	q[1] = std::sin(q[1]);
@@ -498,8 +543,8 @@ void repete(const PackedInputNoises& noises, double level, const Eigen::Vector2d
 }
 
 
-template <typename IMGD, int N, typename FUNC>
-void patterns(IMGD& pat, int w, const PackedInputNoises& noises, const BlurringColorMaps<IMGD, N >& bcm, double scale, FUNC tile)
+template <typename IMGD, typename FUNC>
+void patterns(IMGD& pat, int w, const PackedInputNoises& noises, const BlurringColorMaps<IMGD>& bcm, double scale, FUNC tile)
 {
 	using TD = typename IMGD::PixelType;
 
@@ -524,7 +569,7 @@ void patterns(IMGD& pat, int w, const PackedInputNoises& noises, const BlurringC
 
 			Eigen::Vector2d sigma{ sqrt(sigm2[0]),sqrt(sigm2[1]) };
 
-			Eigen::Vector2d var = sigma * 256.0 ;
+			Eigen::Vector2d var = sigma * 256.0;
 			//var[0] = std::max(1.0, var[0]);
 			//var[1] = std::max(1.0, var[1]);
 			//double pnbcm = std::pow(2.0, double(bcm.table_width())) - 0.1;
@@ -532,22 +577,14 @@ void patterns(IMGD& pat, int w, const PackedInputNoises& noises, const BlurringC
 			//var[1] = std::min(pnbcm, var[1]);
 
 
-			Eigen::Vector2d flod = Eigen::Vector2d(std::log2(1.0+var[0]), std::log2(1.0+var[1]));
+			Eigen::Vector2d flod = Eigen::Vector2d(std::log2(1.0 + var[0]), std::log2(1.0 + var[1]));
 
-			//flod[0] = std::max(0.0, flod[0]);
-			//flod[1] = std::max(0.0, flod[1]);
-			//double pnbcm =  double(table_width()) - 1.0;
-			//flod[0] = std::min(pnbcm, flod[0]);
-			//flod[1] = std::min(pnbcm, flod[1]);
+			//int ilodrx = std::min(N - 1, int(std::round(flod[0])));
+			//int ilodry = std::min(N - 1, int(std::round(flod[1])));
+			//p = bcm.fetch(uv_cm, ilodrx, ilodry);
+			p = bcm.fetch(uv_cm, flod[0], flod[1]);
 
-			//Eigen::Vector2i ilod = ivec2(floor(flod));
-			//Eigen::Vector2d t = fract(flod);
-			//Eigen::Vector2i ilodr = ivec2(round(flod));
 
-			int ilodrx = std::min(N-1, int(std::round(flod[0])));
-			int ilodry = std::min(N-1, int(std::round(flod[1])));
-
-			p = bcm.fetch(uv_cm, ilodrx, ilodry);
 
 			//lx[ilodrx]++;
 			//ly[ilodry]++;	
@@ -586,7 +623,8 @@ int main(int argc, char** argv)
 		{"hexa", "n1", "n2", "hexa_cm"},
 		{"phasor_sand", "noise_sin_3", "noise_cos_3", "colormap_phasor_sand"},
 		{"phasor_sin", "noise_sin_1", "noise_cos_1", "colormap_phasor_sin"},
-		{"phasor_square", "noise_sin_1", "noise_cos_1", "colormap_phasor_square"} };
+		{"phasor_square", "noise_sin_1", "noise_cos_1", "colormap_phasor_square"},
+		{"hexa_cm", "n1", "n2", "grey_cm_1"}};
 
 	if (argc == 1)
 	{
@@ -597,15 +635,14 @@ int main(int argc, char** argv)
 	}
 
 	bool bs = false;
-	if (argc == 3)
-		bs = std::string{ argv[2] } == std::string{ "save" };
+	bs = std::string{ argv[argc-1] } == std::string{ "save" };
 
 	int conf = std::atoi(argv[1]);
 	std::string dir = "../../data/";
 	T_IMG_D cm;
 	IO::loadu8_in_01(cm, dir+"colormap/"+names[conf][3] + ".png");
 	auto start_chrono = std::chrono::system_clock::now();
-	BlurringColorMaps<T_IMG_D, 8> bcm{ &cm,{0.375,0.25,0.0625} };
+	BlurringColorMaps<T_IMG_D> bcm{ &cm,{0.375,0.25,0.0625}, 7 };
 	bcm.compute_column0();
 	bcm.compute_rows();
 	std::chrono::duration<double> elapsed_seconds = std::chrono::system_clock::now() - start_chrono;
@@ -623,23 +660,33 @@ int main(int argc, char** argv)
 	std::cout << "noise var mipmaped in " << elapsed_seconds.count() << " s." << std::endl;
 	if (bs)
 		pin.save(names[conf][0]);
-	int SZGEN = 1024;
+	int SZGEN = 2048;
 	T_IMG_D img_patterns;
-	for (int i = 0; i < 1; i++)
-	{
-		double scale =  std::pow(2.0, i);
-		double sz = SZGEN / scale;
+
+	//for (int i = 0; i < 11; i++)
+	//{
+	//	double scale =  std::pow(2.0, i);
+	//	int sz = int(SZGEN / scale);
+	//	start_chrono = std::chrono::system_clock::now();
+	//	patterns(img_patterns, sz, pin, bcm, scale, Tile_n_blend);
+	//	std::string fn = names[conf][0] + "_.png";
+	//	fn[fn.length() - 5] = (i <= 9) ? '0' + i : 'A' + i - 10;
+	//	elapsed_seconds = std::chrono::system_clock::now() - start_chrono;
+	//	std::cout << fn << " of " << sz<<" x "<< sz << " pixels generated in " << elapsed_seconds.count() << " s." << std::endl;
+	//	IO::save01_in_u8(img_patterns, fn);
+	//	std::cout << "file exported "<< std::endl;
+	//	
+	//}
+
+		double scale =  std::atof(argv[3]);
+		int sz = std::atoi(argv[2]);
 		start_chrono = std::chrono::system_clock::now();
 		patterns(img_patterns, sz, pin, bcm, scale, Tile_n_blend);
-		std::string fn = names[conf][0] + "_.png";
-		fn[fn.length() - 5] = (i <= 9) ? '0' + i : 'A' + i - 10;
+		std::string fn = names[conf][0] + "_X.png";
 		elapsed_seconds = std::chrono::system_clock::now() - start_chrono;
 		std::cout << fn << " of " << sz<<" x "<< sz << " pixels generated in " << elapsed_seconds.count() << " s." << std::endl;
 		IO::save01_in_u8(img_patterns, fn);
 		std::cout << "file exported "<< std::endl;
-		
-	}
-
 
 	//T_IMG_D cm;
 	//IO::loadu8_in_01(cm, std::string(argv[1]));
