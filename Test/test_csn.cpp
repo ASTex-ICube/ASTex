@@ -1,9 +1,9 @@
-#include <stdlib.h>
-#include "ASTex/easy_io.h"
+#include <cstdlib>
+#include <map>
 #include "ASTex/CSN/csn_texture.h"
+#include "ASTex/easy_io.h"
 #include "ASTex/image_rgb.h"
 #include "ASTex/Stamping/stamper.h"
-#include <map>
 #include "ASTex/histogram.h"
 
 using namespace ASTex;

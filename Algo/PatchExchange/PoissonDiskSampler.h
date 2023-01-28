@@ -26,11 +26,8 @@
 #ifndef __CONTENTEXCHG__POISSONDISKSAMPLER__
 #define __CONTENTEXCHG__POISSONDISKSAMPLER__
 
-
-
-
+#include <Eigen/Eigen>
 #include <ASTex/image_gray.h>
-#include "Eigen/Eigen"
 
 
 namespace ASTex

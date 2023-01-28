@@ -2,11 +2,12 @@
 #define __MIPMAP__H__
 
 #include <cmath>
-#include <ASTex/special_io.h>
+#include <type_traits>
 #include <ASTex/utils.h>
+#include <ASTex/special_io.h>
 #include <ASTex/colorspace_filters.h>
 #include <ASTex/mask.h>
-#include <type_traits>
+
 
 namespace ASTex
 {

@@ -1,8 +1,11 @@
+
+#include <cstdio>
+#include "pnf.h"
+#include "utils.h"
+
 #include "histogram.h"
 #include "gaussian_transfer.h"
 #include "color_map.h"
-#include "pnf.h"
-#include <cstdio>
 
 #ifdef WIN32
 #include "win_opt.h"
@@ -14,7 +17,6 @@
 #include <ASTex/easy_io.h>
 #include <ASTex/rpn_utils.h>
 #include <ASTex/exr_io.h>
-#include "utils.h"
 
 using namespace ASTex;
 
