@@ -3,6 +3,7 @@
 
 #include <ASTex/special_io.h>
 #include <ASTex/easy_io.h>
+
 #include <random>
 #include<iomanip>
 
@@ -43,6 +44,38 @@ VEC vecfract(const VEC& u)
 	return applyFuncCompo(u, [](double d) { return d - std::floor(d); });
 }
 
+
+class PreHashed
+{
+	int grid_width_;
+	int nb_;
+	std::vector < Eigen::Vector2d > rands_;
+
+public:
+	void init(bool default_seed = false)
+	{
+		std::random_device rd;  // Will be used to obtain a seed for the random number engine
+		std::mt19937 gen = default_seed ? std::mt19937() : std::mt19937(rd());
+		std::uniform_real_distribution<> dis(0.0, 1.0);
+		rands_.clear();
+		for (int i = 0; i < nb_; ++i)
+			rands_.emplace_back(dis(gen), dis(gen));
+	}
+
+	PreHashed(int w, bool default_seed = false) : grid_width_(w)
+	{
+		nb_ = (2 + grid_width_ * 3) * (2 + grid_width_ * 3);
+		rands_.reserve(nb_);
+		init(default_seed);
+	}
+	
+	const Eigen::Vector2d& get(const Eigen::Vector2i& p) const
+	{
+		int i = p[0] + grid_width_;
+		int j = p[0] + grid_width_;
+		return rands_[j * 3 * grid_width_ + j];
+	}
+};
 
 template <typename IMGD>
 class BlurringColorMaps
@@ -228,7 +261,7 @@ public:
 		{
 			int xx = xp < 0 ? 0 : ( xp >= width_ ? width_-1 : xp );
 			int yy = yp < 0 ? 0 : ( yp >= width_ ? width_-1 : yp );
-			return eigenPixel<double>(blurred_[jp * N + ip].pixelAbsolute(xx, yy));
+			return eigenPixel<double>(blurred_[j * N + i].pixelAbsolute(xx, yy));
 		};
 
 		TED V1 = (1.0 - a[0]) * acces_edge(c[0],c[1])	+ a[0] * acces_edge(c[0]+1,c[1]);
@@ -405,7 +438,6 @@ public:
 	Eigen::Vector4d fetch(const Eigen::Vector2d& uv, double level) const
 	{
 		level = std::max(0.0,std::min(level, double(mipmap.size())));
-
 		int l = int(std::floor(level));
 		Eigen::Vector2d uvm{uv[0] - floor(uv[0]), uv[1] - floor(uv[1])};
 		double w = double(mipmap[l].width());
@@ -458,11 +490,11 @@ public:
 };
 
 
-void TriangleGrid(const Eigen::Vector2d& p_uv, Eigen::Vector3d& Bi, Eigen::Vector2d& vertex1, Eigen::Vector2d& vertex2, Eigen::Vector2d& vertex3)
-{
-	const Eigen::Vector2d uv = p_uv * 2.0 * std::sqrt(3.0);
+void TriangleGrid(const Eigen::Vector2d& p_uv, Eigen::Vector3d& Bi, Eigen::Vector2i& vertex1, Eigen::Vector2i& vertex2, Eigen::Vector2i& vertex3)
+	{
+		const Eigen::Vector2d uv = p_uv * 2.0 * std::sqrt(3.0);
 
-	Eigen::Matrix2d gridToSkewedGrid;
+		Eigen::Matrix2d gridToSkewedGrid;
 	gridToSkewedGrid << 1.0, -0.57735027,
 	                    0.0, 01.15470054;
 
@@ -471,49 +503,57 @@ void TriangleGrid(const Eigen::Vector2d& p_uv, Eigen::Vector3d& Bi, Eigen::Vecto
 	Eigen::Vector3d temp{ skewedCoord[0] - baseId[0], skewedCoord[1] - baseId[1], 0.0 };
 	temp[2] = 1.0 - temp[0] - temp[1];
 
+
 	if (temp[2] > 0.0)
 	{
 		Bi = Eigen::Vector3d(temp[2], temp[1], temp[0]);
-		vertex1 = baseId;
-		vertex2 = baseId + Eigen::Vector2d(0.0, 1.0);
-		vertex3 = baseId + Eigen::Vector2d(1.0, 0.0);
+		Eigen::Vector2i ibaseId = baseId.cast<int>();
+		vertex1 = ibaseId;
+		vertex2 = ibaseId + Eigen::Vector2i(0, 1);
+		vertex3 = ibaseId + Eigen::Vector2i(1, 0);
 	}
 	else
 	{
 		Bi = Eigen::Vector3d(-temp[2], 1.0 - temp[1], 1.0 - temp[0]);
-		vertex1 = baseId + Eigen::Vector2d(1.0, 1.0);
-		vertex2 = baseId + Eigen::Vector2d(1.0, 0.0);
-		vertex3 = baseId + Eigen::Vector2d(0.0, 1.0);
+		Eigen::Vector2i ibaseId = baseId.cast<int>();
+		vertex1 = ibaseId + Eigen::Vector2i(1, 1);
+		vertex2 = ibaseId + Eigen::Vector2i(1, 0);
+		vertex3 = ibaseId + Eigen::Vector2i(0, 1);
 	}
+//	std::cout << p_uv.transpose()  <<" => " << vertex1.transpose() << " & " << vertex2.transpose() << " & " << vertex3.transpose() << std::endl;
 }
 
 
-Eigen::Vector2d hash(const Eigen::Vector2d& p)
+//original hash version
+Eigen::Vector2d hash(const Eigen::Vector2i& p)
 {
 	Eigen::Matrix2d hashMat;
 	hashMat << 127.1, 269.5,
 	           311.7, 183.3;
 
 	//hashMat << 127.1, 311.7, 269.5, 183.3;
-	Eigen::Vector2d q = hashMat * p ;
+	Eigen::Vector2d q = hashMat * p.cast<double>();
 	q[0] = std::sin(q[0]);
 	q[1] = std::sin(q[1]);
 	q *= 43758.5453;
 	return Eigen::Vector2d(q[0] - std::floor(q[0]), q[1] - std::floor(q[1]));
 }
 
-void Tile_n_blend(const PackedInputNoises& noises, double level, const Eigen::Vector2d& uv, Eigen::Vector2d& mean, Eigen::Vector2d& variance)
+void Tile_n_blend(const PackedInputNoises& noises, double level, const Eigen::Vector2d& uv, Eigen::Vector2d& mean, Eigen::Vector2d& variance, const PreHashed& prH)
 {
 	Eigen::Vector3d B;
-	Eigen::Vector2d  vertex1, vertex2, vertex3;
-	TriangleGrid(uv, B,//b1, b2, b3,
-		vertex1, vertex2, vertex3);
+	Eigen::Vector2i  vertex1, vertex2, vertex3;
+	TriangleGrid(uv, B,	vertex1, vertex2, vertex3);
 
 	// Assign random offset to each triangle vertex
-	Eigen::Vector2d uv1 = uv + hash(vertex1);
-	Eigen::Vector2d uv2 = uv + hash(vertex2);
-	Eigen::Vector2d uv3 = uv + hash(vertex3);
-	
+	//Eigen::Vector2d uv1 = uv + hash(vertex1);
+	//Eigen::Vector2d uv2 = uv + hash(vertex2);
+	//Eigen::Vector2d uv3 = uv + hash(vertex3);
+	Eigen::Vector2d uv1 = uv + prH.get(vertex1);
+	Eigen::Vector2d uv2 = uv + prH.get(vertex2);
+	Eigen::Vector2d uv3 = uv + prH.get(vertex3);
+
+
 	Eigen::Vector4d n1 = noises.fetch(uv1, level);
 	Eigen::Vector4d n2 = noises.fetch(uv2, level);
 	Eigen::Vector4d n3 = noises.fetch(uv3, level);
@@ -521,7 +561,7 @@ void Tile_n_blend(const PackedInputNoises& noises, double level, const Eigen::Ve
 	Eigen::Vector4d nu = noises.fetch_average();
 
 	B.normalize();
-	Eigen::Matrix<double, 2, 3> M;// = mat3x2(n1.xy - nu, n2.xy - nu, n3.xy - nu);
+	Eigen::Matrix<double, 2, 3> M;
 	M << n1[0] - nu[0], n2[0] - nu[0], n3[0] - nu[0],
 		 n1[1] - nu[1], n2[1] - nu[1], n3[1] - nu[1];
 	mean = M * B + Eigen::Vector2d(nu[0], nu[1]);
@@ -529,18 +569,25 @@ void Tile_n_blend(const PackedInputNoises& noises, double level, const Eigen::Ve
 	mean[1] = std::max(0.0,std::min(1.0,mean[1]));
 
 	B = B.cwiseProduct(B);
-	Eigen::Matrix<double, 2, 3> S; // = mat3x2(n1.zw, n2.zw, n3.zw) 
+	Eigen::Matrix<double, 2, 3> S; 
 	S << n1[2], n2[2], n3[2],
 		 n1[3], n2[3], n3[3];
 	variance = S * B;
 }
 
-void repete(const PackedInputNoises& noises, double level, const Eigen::Vector2d& uv, Eigen::Vector2d& mean, Eigen::Vector2d& variance)
+void repete(const PackedInputNoises& noises, double level, const Eigen::Vector2d& uv, Eigen::Vector2d& mean, Eigen::Vector2d& variance, const PreHashed&)
 {
 	Eigen::Vector4d n = noises.fetch(uv, level);
 	mean = Eigen::Vector2d(n[0], n[1]);
 	variance = Eigen::Vector2d(n[2], n[3]);
 }
+
+
+// 
+//  void tile(const PackedInputNoises& noises, double level, const Eigen::Vector2d& uv, Eigen::Vector2d& mean, Eigen::Vector2d& variance)
+//  noises : MIPMAP de N1,N2,ecart N1/moyenne ,ecart N2/moyenne 
+//  
+
 
 
 template <typename IMGD, typename FUNC>
@@ -556,18 +603,23 @@ void patterns(IMGD& pat, int w, const PackedInputNoises& noises, const BlurringC
 	//	ly[i] = 0;
 	//}
 
+	int grsz = int(std::ceil((scale * w) / noises.width()));
+	PreHashed prehashed(grsz);
+
 	pat.initItk(w,w);
 	double level = std::log2(scale);
-	pat.parallel_for_all_pixels([&](typename IMGD::PixelType& p, int x, int y)
+	pat.for_all_pixels([&](typename IMGD::PixelType& p, int x, int y)
 		{
+			Eigen::Vector3d color;
 			Eigen::Vector2d uv_cm;
 			Eigen::Vector2d sigm2;
 			Eigen::Vector2d uv{ double(x) / (noises.width()), double(y) / (noises.width()) };
 			Eigen::Vector2d uvs = uv * scale;
 			//Tile_n_blend(noises, level, uvs, uv_cm, sigm2);
-			tile(noises, level, uvs, uv_cm, sigm2);
+			tile(noises, level, uvs, uv_cm, sigm2, prehashed);
 
 			Eigen::Vector2d sigma{ sqrt(sigm2[0]),sqrt(sigm2[1]) };
+			//Eigen::Vector2d sigma{ sigm2[0],sigm2[1] };
 
 			Eigen::Vector2d var = sigma * 256.0;
 			//var[0] = std::max(1.0, var[0]);
@@ -579,12 +631,11 @@ void patterns(IMGD& pat, int w, const PackedInputNoises& noises, const BlurringC
 
 			Eigen::Vector2d flod = Eigen::Vector2d(std::log2(1.0 + var[0]), std::log2(1.0 + var[1]));
 
-			//int ilodrx = std::min(N - 1, int(std::round(flod[0])));
-			//int ilodry = std::min(N - 1, int(std::round(flod[1])));
-			//p = bcm.fetch(uv_cm, ilodrx, ilodry);
+	//		p = bcm.fetch(uv_cm, int(std::round(flod[0])), int(std::round(flod[1])));
+
 			p = bcm.fetch(uv_cm, flod[0], flod[1]);
 
-
+	//		p = IMGD::itkPixel(uv_cm[0],uv_cm[0],uv_cm[0]);
 
 			//lx[ilodrx]++;
 			//ly[ilodry]++;	
@@ -611,7 +662,7 @@ using T_IMG = ImageGray8;
 using T_IMG_D = ImageGrayd;
 #endif
 
-int main(int argc, char** argv)
+int main_n(int argc, char** argv)
 {
 	std::vector<std::array < std::string, 4>> names = { {"stone", "noise_pierre_1", "noise_pierre_2", "cm11"},
 		{"bark", "noise_ecorce_1", "noise_ecorce_2", "cm10"},
@@ -663,64 +714,97 @@ int main(int argc, char** argv)
 	int SZGEN = 2048;
 	T_IMG_D img_patterns;
 
-	//for (int i = 0; i < 11; i++)
-	//{
-	//	double scale =  std::pow(2.0, i);
-	//	int sz = int(SZGEN / scale);
-	//	start_chrono = std::chrono::system_clock::now();
-	//	patterns(img_patterns, sz, pin, bcm, scale, Tile_n_blend);
-	//	std::string fn = names[conf][0] + "_.png";
-	//	fn[fn.length() - 5] = (i <= 9) ? '0' + i : 'A' + i - 10;
-	//	elapsed_seconds = std::chrono::system_clock::now() - start_chrono;
-	//	std::cout << fn << " of " << sz<<" x "<< sz << " pixels generated in " << elapsed_seconds.count() << " s." << std::endl;
-	//	IO::save01_in_u8(img_patterns, fn);
-	//	std::cout << "file exported "<< std::endl;
-	//	
-	//}
-
-		double scale =  std::atof(argv[3]);
-		int sz = std::atoi(argv[2]);
+	for (int i = 0; i < 11; i++)
+	{
+		double scale =  std::pow(2.0, i);
+		int sz = int(SZGEN / scale);
 		start_chrono = std::chrono::system_clock::now();
 		patterns(img_patterns, sz, pin, bcm, scale, Tile_n_blend);
-		std::string fn = names[conf][0] + "_X.png";
+		std::string fn = names[conf][0] + "_.png";
+		fn[fn.length() - 5] = (i <= 9) ? '0' + i : 'A' + i - 10;
 		elapsed_seconds = std::chrono::system_clock::now() - start_chrono;
 		std::cout << fn << " of " << sz<<" x "<< sz << " pixels generated in " << elapsed_seconds.count() << " s." << std::endl;
 		IO::save01_in_u8(img_patterns, fn);
 		std::cout << "file exported "<< std::endl;
-
-	//T_IMG_D cm;
-	//IO::loadu8_in_01(cm, std::string(argv[1]));
-	//BlurringColorMaps<T_IMG_D, 7> bcm{ &cm,{0.375,0.25,0.0625} };
-	//bcm.compute_column0();
-	//bcm.compute_rows();
-	//std::cout << "Color maps blurred" << std::endl;
-	////bcm.save();
-
-	//ImageGrayd nA;
-	//IO::loadu8_in_01(nA, std::string(argv[2]));
-	//ImageGrayd nB;
-	//IO::loadu8_in_01(nB, std::string(argv[3]));
-
-	//PackedInputNoises pin(nA, nB);
-	//std::cout << "noise var mipmaped" << std::endl;
-	////pin.save();
-	//int SZGEN =4096;
-	//T_IMG_D img_patterns;
-	//for(int i=4;i<8;i++)
-	//{
-	//	double scale = std::pow(2.0, i);
-	//	double sz = SZGEN / int(scale);
-	//	patterns(img_patterns, sz, pin, bcm, scale,Tile_n_blend);	
-	//	std::string fn("patterns0.png");
-	//	fn[fn.length() - 5] = (i<=9) ? '0' + i : 'A' + i - 10;
-	//	IO::save01_in_u8(img_patterns, fn);
-	//	std::cout << fn<<" generated" << std::endl;
-	//}
-
+		
+	}
+	
 	return EXIT_SUCCESS;
 
 
 }
+
+int main_one(int argc, char** argv)
+{
+	std::vector<std::array < std::string, 4>> names = { {"stone", "noise_pierre_1", "noise_pierre_2", "cm11"},
+		{"bark", "noise_ecorce_1", "noise_ecorce_2", "cm10"},
+		{"camouflage", "noise_1024_2", "noise_1024_4", "cm1"},
+		{"green", "noise_1024_4", "noise_1024_2", "cm2"},
+		{"blue", "noise_256_2", "noise_256_4", "cm5"},
+		{"lava", "noise_1024_2", "noise_1024_4", "cm8"},
+		{"water", "n1", "n2", "eau_cm"},
+		{"hexa", "n1", "n2", "hexa_cm"},
+		{"phasor_sand", "noise_sin_3", "noise_cos_3", "colormap_phasor_sand"},
+		{"phasor_sin", "noise_sin_1", "noise_cos_1", "colormap_phasor_sin"},
+		{"phasor_square", "noise_sin_1", "noise_cos_1", "colormap_phasor_square"},
+		{"grey_cm", "n1", "n2", "grey_cm_1"} };
+
+	if (argc == 1)
+	{
+		for (int i = 0; i < names.size(); ++i)
+			std::cout << i << ":" << names[i][0] << " / ";
+		std::cout << std::endl;
+		return EXIT_SUCCESS;
+	}
+
+	bool bs = false;
+	bs = std::string{ argv[argc - 1] } == std::string{ "save" };
+
+	double scale = std::atof(argv[3]);
+	int sz = std::atoi(argv[2]);
+
+	int conf = std::atoi(argv[1]);
+	std::string dir = "../../data/";
+	T_IMG_D cm;
+	IO::loadu8_in_01(cm, dir + "colormap/" + names[conf][3] + ".png");
+	auto start_chrono = std::chrono::system_clock::now();
+	BlurringColorMaps<T_IMG_D> bcm{ &cm,{0.375,0.25,0.0625}, (scale<2.0)?4:7};
+	bcm.compute_column0();
+	bcm.compute_rows();
+	std::chrono::duration<double> elapsed_seconds = std::chrono::system_clock::now() - start_chrono;
+	std::cout << "Color maps blurred in " << elapsed_seconds.count() << " s." << std::endl;
+	if (bs)
+		bcm.save(names[conf][0]);
+
+	ImageGrayd nA;
+	IO::loadu8_in_01(nA, dir + names[conf][1] + ".png");
+	ImageGrayd nB;
+	IO::loadu8_in_01(nB, dir + names[conf][2] + ".png");
+	start_chrono = std::chrono::system_clock::now();
+	PackedInputNoises pin(nA, nB);
+	elapsed_seconds = std::chrono::system_clock::now() - start_chrono;
+	std::cout << "noise var mipmaped in " << elapsed_seconds.count() << " s." << std::endl;
+	if (bs)
+		pin.save(names[conf][0]);
+	int SZGEN = 2048;
+	T_IMG_D img_patterns;
+
+	start_chrono = std::chrono::system_clock::now();
+	patterns(img_patterns, sz, pin, bcm, scale, repete); // Tile_n_blend);
+	std::string fn = names[conf][0] + "_X.png";
+	elapsed_seconds = std::chrono::system_clock::now() - start_chrono;
+	std::cout << fn << " of " << sz << " x " << sz << " pixels generated in " << elapsed_seconds.count() << " s." << std::endl;
+	IO::save01_in_u8(img_patterns, fn);
+	std::cout << "file exported " << std::endl;
+
+	return EXIT_SUCCESS;
+}
+
+int main(int argc, char** argv)
+{
+	main_one(argc, argv);
+}
+
 
 //["stone", "noise_pierre_1", "noise_pierre_2", "cm11"],
 //["bark", "noise_ecorce_1", "noise_ecorce_2", "cm10"],

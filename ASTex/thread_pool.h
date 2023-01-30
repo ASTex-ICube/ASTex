@@ -221,7 +221,7 @@ ThreadPool::Future launch_thread(const F& f, Args&&... args)
 */
 inline uint16_t nb_launched_threads()
 {
-	return uint16_t(std::thread::hardware_concurrency() * 4);
+	return uint16_t(std::thread::hardware_concurrency());
 }
 
 

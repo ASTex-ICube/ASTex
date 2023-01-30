@@ -127,6 +127,7 @@ if(MSVC)
     target_compile_definitions(${PROJECT_NAME} PUBLIC "-DBUILD_STATIC")
   endif()
 else()
+  target_compile_options(${PROJECT_NAME} PUBLIC -Wall -Wextra -Wno-unknown-pragmas -Wno-missing-braces -fPIC )
   if (ITK_VERSION VERSION_LESS 4.10.0)
     target_compile_options(${PROJECT_NAME} PUBLIC -fpermissive )
     message (INFO " Old ITK version, add -fpermissive compil option")
@@ -135,14 +136,8 @@ else()
       target_compile_options(${PROJECT_NAME} PUBLIC ${OpenMP_CXX_FLAGS})
   endif()
 endif()
-  target_compile_options(${PROJECT_NAME} PUBLIC -Wall -Wextra -Wno-unknown-pragmas -Wno-missing-braces -fPIC )
   
-#  if (${ASTEX_USE_CPP14})
-#      target_compile_options(${PROJECT_NAME} PUBLIC -std=c++14 )
-#  else()
-#      target_compile_options(${PROJECT_NAME} PUBLIC -std=c++11 )
-#  endif()
-#endif()
+  
 target_compile_features(${PROJECT_NAME} PUBLIC cxx_std_17)
 # target_compile_options(${PROJECT_NAME} PUBLIC -std=c++11)
 
@@ -150,11 +145,8 @@ target_compile_definitions(${PROJECT_NAME} PUBLIC "${PNG_DEFINITION}")
 
 if(WIN32 OR APPLE)
 	target_link_libraries(${PROJECT_NAME} PUBLIC OpenEXR::OpenEXR Eigen3::Eigen)
-	target_include_directories(${PROJECT_NAME} PUBLIC ${OPENEXR_INCLUDE_DIRS})
-	MESSAGE(WARNING OPENEXR= ${OPENEXR_LIBRARIES} )
-	MESSAGE(WARNING OPENEXR= ${OPENEXR_INCLUDE_DIR} )
-
 endif()
+
 target_link_libraries(${PROJECT_NAME} PUBLIC ${ASTEX_LIBRARIES})
 
 file(GLOB HEADERS "." "*.h" "*.hpp")
