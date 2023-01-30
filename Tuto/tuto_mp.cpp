@@ -790,7 +790,7 @@ int main_one(int argc, char** argv)
 	T_IMG_D img_patterns;
 
 	start_chrono = std::chrono::system_clock::now();
-	patterns(img_patterns, sz, pin, bcm, scale, repete); // Tile_n_blend);
+	patterns(img_patterns, sz, pin, bcm, scale, Tile_n_blend);
 	std::string fn = names[conf][0] + "_X.png";
 	elapsed_seconds = std::chrono::system_clock::now() - start_chrono;
 	std::cout << fn << " of " << sz << " x " << sz << " pixels generated in " << elapsed_seconds.count() << " s." << std::endl;

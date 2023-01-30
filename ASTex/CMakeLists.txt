@@ -113,7 +113,7 @@ target_include_directories(${PROJECT_NAME} PUBLIC ${ITK_INCLUDE_DIRS} ${PNG_INCL
 target_include_directories(${PROJECT_NAME} PUBLIC $<INSTALL_INTERFACE:include> $<BUILD_INTERFACE:${ASTEX_SOURCE_DIR}>)
 
 
-set ( ASTEX_LIBRARIES ${ITK_LIBRARIES} ${FFTW_LIBRARIES} ${PNG_LIBRARIES} )
+set ( ASTEX_LIBRARIES ${ITK_LIBRARIES} ${FFTW_LIBRARIES} ${PNG_LIBRARIES})
 
 if (NOT(MSVC OR APPLE))
 	set ( ASTEX_LIBRARIES ${ASTEX_LIBRARIES} -pthread )
@@ -144,7 +144,10 @@ target_compile_features(${PROJECT_NAME} PUBLIC cxx_std_17)
 target_compile_definitions(${PROJECT_NAME} PUBLIC "${PNG_DEFINITION}")
 
 if(WIN32 OR APPLE)
-	target_link_libraries(${PROJECT_NAME} PUBLIC OpenEXR::OpenEXR Eigen3::Eigen)
+	target_link_libraries(${PROJECT_NAME} PUBLIC OpenEXR::OpenEXR)
+else()
+	target_link_libraries(${PROJECT_NAME} PUBLIC ${OPENEXR_LIBRARIES})
+	target_include_directories(${PROJECT_NAME} PUBLIC ${OPENEXR_INCLUDE_DIRS} ${EIGEN3_INCLUDE_DIRS})
 endif()
 
 target_link_libraries(${PROJECT_NAME} PUBLIC ${ASTEX_LIBRARIES})
