@@ -47,33 +47,34 @@ VEC vecfract(const VEC& u)
 
 class PreHashed
 {
-	int grid_width_;
+	int width_;
+	int shift_;
 	int nb_;
 	std::vector < Eigen::Vector2d > rands_;
 
 public:
-	void init(bool default_seed = false)
+	void init(uint32_t seed)
 	{
-		std::random_device rd;  // Will be used to obtain a seed for the random number engine
-		std::mt19937 gen = default_seed ? std::mt19937() : std::mt19937(rd());
+		std::mt19937 gen{seed};
 		std::uniform_real_distribution<> dis(0.0, 1.0);
 		rands_.clear();
 		for (int i = 0; i < nb_; ++i)
 			rands_.emplace_back(dis(gen), dis(gen));
+	std::cout << nb_ << " random couples gnerated"<<std::endl;
 	}
 
-	PreHashed(int w, bool default_seed = false) : grid_width_(w)
+	PreHashed(int w, uint32_t seed) : width_(6*w+1),shift_(2*w)
 	{
-		nb_ = (2 + grid_width_ * 3) * (2 + grid_width_ * 3);
+		nb_ = width_ * width_;
 		rands_.reserve(nb_);
-		init(default_seed);
+		init(seed);
 	}
 	
 	const Eigen::Vector2d& get(const Eigen::Vector2i& p) const
 	{
-		int i = p[0] + grid_width_;
-		int j = p[0] + grid_width_;
-		return rands_[j * 3 * grid_width_ + j];
+		int i = p[0] + shift_;
+		int j = p[1] + shift_;
+		return rands_[j * width_ + i];
 	}
 };
 
@@ -489,93 +490,103 @@ public:
 	}
 };
 
+class Tiling_n_Blendinng
+{
 
-void TriangleGrid(const Eigen::Vector2d& p_uv, Eigen::Vector3d& Bi, Eigen::Vector2i& vertex1, Eigen::Vector2i& vertex2, Eigen::Vector2i& vertex3)
+	PreHashed prH_;
+
+	void TriangleGrid(const Eigen::Vector2d& p_uv, Eigen::Vector3d& Bi, Eigen::Vector2i& vertex1, Eigen::Vector2i& vertex2, Eigen::Vector2i& vertex3)
 	{
 		const Eigen::Vector2d uv = p_uv * 2.0 * std::sqrt(3.0);
 
 		Eigen::Matrix2d gridToSkewedGrid;
-	gridToSkewedGrid << 1.0, -0.57735027,
-	                    0.0, 01.15470054;
+		gridToSkewedGrid << 1.0, -0.57735027,
+							0.0, 01.15470054;
 
-	Eigen::Vector2d skewedCoord = gridToSkewedGrid * uv;
-	Eigen::Vector2d baseId{ std::floor(skewedCoord[0]), std::floor(skewedCoord[1]) };
-	Eigen::Vector3d temp{ skewedCoord[0] - baseId[0], skewedCoord[1] - baseId[1], 0.0 };
-	temp[2] = 1.0 - temp[0] - temp[1];
+		Eigen::Vector2d skewedCoord = gridToSkewedGrid * uv;
+		Eigen::Vector2d baseId{ std::floor(skewedCoord[0]), std::floor(skewedCoord[1]) };
+		Eigen::Vector3d temp{ skewedCoord[0] - baseId[0], skewedCoord[1] - baseId[1], 0.0 };
+		temp[2] = 1.0 - temp[0] - temp[1];
 
 
-	if (temp[2] > 0.0)
-	{
-		Bi = Eigen::Vector3d(temp[2], temp[1], temp[0]);
-		Eigen::Vector2i ibaseId = baseId.cast<int>();
-		vertex1 = ibaseId;
-		vertex2 = ibaseId + Eigen::Vector2i(0, 1);
-		vertex3 = ibaseId + Eigen::Vector2i(1, 0);
+		if (temp[2] > 0.0)
+		{
+			Bi = Eigen::Vector3d(temp[2], temp[1], temp[0]);
+			Eigen::Vector2i ibaseId = baseId.cast<int>();
+			vertex1 = ibaseId;
+			vertex2 = ibaseId + Eigen::Vector2i(0, 1);
+			vertex3 = ibaseId + Eigen::Vector2i(1, 0);
+		}
+		else
+		{
+			Bi = Eigen::Vector3d(-temp[2], 1.0 - temp[1], 1.0 - temp[0]);
+			Eigen::Vector2i ibaseId = baseId.cast<int>();
+			vertex1 = ibaseId + Eigen::Vector2i(1, 1);
+			vertex2 = ibaseId + Eigen::Vector2i(1, 0);
+			vertex3 = ibaseId + Eigen::Vector2i(0, 1);
+		}
+//		std::cout << p_uv.transpose()  <<" => " << vertex1.transpose() << " & " << vertex2.transpose() << " & " << vertex3.transpose() << std::endl;
 	}
-	else
+
+
+	//original hash version
+	Eigen::Vector2d hash(const Eigen::Vector2i& p)
 	{
-		Bi = Eigen::Vector3d(-temp[2], 1.0 - temp[1], 1.0 - temp[0]);
-		Eigen::Vector2i ibaseId = baseId.cast<int>();
-		vertex1 = ibaseId + Eigen::Vector2i(1, 1);
-		vertex2 = ibaseId + Eigen::Vector2i(1, 0);
-		vertex3 = ibaseId + Eigen::Vector2i(0, 1);
+		Eigen::Matrix2d hashMat;
+		hashMat << 127.1, 269.5,
+				311.7, 183.3;
+
+		//hashMat << 127.1, 311.7, 269.5, 183.3;
+		Eigen::Vector2d q = hashMat * p.cast<double>();
+		q[0] = std::sin(q[0]);
+		q[1] = std::sin(q[1]);
+		q *= 43758.5453;
+		return Eigen::Vector2d(q[0] - std::floor(q[0]), q[1] - std::floor(q[1]));
 	}
-//	std::cout << p_uv.transpose()  <<" => " << vertex1.transpose() << " & " << vertex2.transpose() << " & " << vertex3.transpose() << std::endl;
-}
+
+	public:
+	Tiling_n_Blendinng(double scale_max, bool default_seed): prH_(int(std::ceil(scale_max)),default_seed)
+	{
+	}
+
+	void operator()(const PackedInputNoises& noises, double level, const Eigen::Vector2d& uv, Eigen::Vector2d& mean, Eigen::Vector2d& variance)
+	{
+		Eigen::Vector3d B;
+		Eigen::Vector2i  vertex1, vertex2, vertex3;
+		TriangleGrid(uv, B,	vertex1, vertex2, vertex3);
+
+		// Assign random offset to each triangle vertex
+		//Eigen::Vector2d uv1 = uv + hash(vertex1);
+		//Eigen::Vector2d uv2 = uv + hash(vertex2);
+		//Eigen::Vector2d uv3 = uv + hash(vertex3);
+		Eigen::Vector2d uv1 = uv + prH_.get(vertex1);
+		Eigen::Vector2d uv2 = uv + prH_.get(vertex2);
+		Eigen::Vector2d uv3 = uv + prH_.get(vertex3);
 
 
-//original hash version
-Eigen::Vector2d hash(const Eigen::Vector2i& p)
-{
-	Eigen::Matrix2d hashMat;
-	hashMat << 127.1, 269.5,
-	           311.7, 183.3;
+		Eigen::Vector4d n1 = noises.fetch(uv1, level);
+		Eigen::Vector4d n2 = noises.fetch(uv2, level);
+		Eigen::Vector4d n3 = noises.fetch(uv3, level);
 
-	//hashMat << 127.1, 311.7, 269.5, 183.3;
-	Eigen::Vector2d q = hashMat * p.cast<double>();
-	q[0] = std::sin(q[0]);
-	q[1] = std::sin(q[1]);
-	q *= 43758.5453;
-	return Eigen::Vector2d(q[0] - std::floor(q[0]), q[1] - std::floor(q[1]));
-}
+		Eigen::Vector4d nu = noises.fetch_average();
 
-void Tile_n_blend(const PackedInputNoises& noises, double level, const Eigen::Vector2d& uv, Eigen::Vector2d& mean, Eigen::Vector2d& variance, const PreHashed& prH)
-{
-	Eigen::Vector3d B;
-	Eigen::Vector2i  vertex1, vertex2, vertex3;
-	TriangleGrid(uv, B,	vertex1, vertex2, vertex3);
+		B.normalize();
+		Eigen::Matrix<double, 2, 3> M;
+		M << n1[0] - nu[0], n2[0] - nu[0], n3[0] - nu[0],
+			n1[1] - nu[1], n2[1] - nu[1], n3[1] - nu[1];
+		mean = M * B + Eigen::Vector2d(nu[0], nu[1]);
+		mean[0] = std::max(0.0,std::min(1.0,mean[0]));
+		mean[1] = std::max(0.0,std::min(1.0,mean[1]));
 
-	// Assign random offset to each triangle vertex
-	//Eigen::Vector2d uv1 = uv + hash(vertex1);
-	//Eigen::Vector2d uv2 = uv + hash(vertex2);
-	//Eigen::Vector2d uv3 = uv + hash(vertex3);
-	Eigen::Vector2d uv1 = uv + prH.get(vertex1);
-	Eigen::Vector2d uv2 = uv + prH.get(vertex2);
-	Eigen::Vector2d uv3 = uv + prH.get(vertex3);
+		B = B.cwiseProduct(B);
+		Eigen::Matrix<double, 2, 3> S; 
+		S << n1[2], n2[2], n3[2],
+			n1[3], n2[3], n3[3];
+		variance = S * B;
+	}
+};
 
-
-	Eigen::Vector4d n1 = noises.fetch(uv1, level);
-	Eigen::Vector4d n2 = noises.fetch(uv2, level);
-	Eigen::Vector4d n3 = noises.fetch(uv3, level);
-
-	Eigen::Vector4d nu = noises.fetch_average();
-
-	B.normalize();
-	Eigen::Matrix<double, 2, 3> M;
-	M << n1[0] - nu[0], n2[0] - nu[0], n3[0] - nu[0],
-		 n1[1] - nu[1], n2[1] - nu[1], n3[1] - nu[1];
-	mean = M * B + Eigen::Vector2d(nu[0], nu[1]);
-	mean[0] = std::max(0.0,std::min(1.0,mean[0]));
-	mean[1] = std::max(0.0,std::min(1.0,mean[1]));
-
-	B = B.cwiseProduct(B);
-	Eigen::Matrix<double, 2, 3> S; 
-	S << n1[2], n2[2], n3[2],
-		 n1[3], n2[3], n3[3];
-	variance = S * B;
-}
-
-void repete(const PackedInputNoises& noises, double level, const Eigen::Vector2d& uv, Eigen::Vector2d& mean, Eigen::Vector2d& variance, const PreHashed&)
+void repete(const PackedInputNoises& noises, double level, const Eigen::Vector2d& uv, Eigen::Vector2d& mean, Eigen::Vector2d& variance)
 {
 	Eigen::Vector4d n = noises.fetch(uv, level);
 	mean = Eigen::Vector2d(n[0], n[1]);
@@ -603,12 +614,10 @@ void patterns(IMGD& pat, int w, const PackedInputNoises& noises, const BlurringC
 	//	ly[i] = 0;
 	//}
 
-	int grsz = int(std::ceil((scale * w) / noises.width()));
-	PreHashed prehashed(grsz);
 
 	pat.initItk(w,w);
 	double level = std::log2(scale);
-	pat.for_all_pixels([&](typename IMGD::PixelType& p, int x, int y)
+	pat.parallel_for_all_pixels([&](typename IMGD::PixelType& p, int x, int y)
 		{
 			Eigen::Vector3d color;
 			Eigen::Vector2d uv_cm;
@@ -616,7 +625,7 @@ void patterns(IMGD& pat, int w, const PackedInputNoises& noises, const BlurringC
 			Eigen::Vector2d uv{ double(x) / (noises.width()), double(y) / (noises.width()) };
 			Eigen::Vector2d uvs = uv * scale;
 			//Tile_n_blend(noises, level, uvs, uv_cm, sigm2);
-			tile(noises, level, uvs, uv_cm, sigm2, prehashed);
+			tile(noises, level, uvs, uv_cm, sigm2);
 
 			Eigen::Vector2d sigma{ sqrt(sigm2[0]),sqrt(sigm2[1]) };
 			//Eigen::Vector2d sigma{ sigm2[0],sigm2[1] };
@@ -649,6 +658,37 @@ void patterns(IMGD& pat, int w, const PackedInputNoises& noises, const BlurringC
 	//}
 }
 
+
+template<typename IMGD>
+void mipmap_sqp2_image(const IMGD& img, std::vector<IMGD>& mipmap)
+{
+	using TD = typename IMGD::PixelType;
+	using TED = typename IMGD::DoublePixelEigen;
+	int nbl = std::log2(img.width())+1;
+	mipmap.clear();
+	mipmap.reserve(nbl);
+	int w = img.width();
+	const IMGD* mipmap_up = &img;
+	while(w>1)
+	{
+		w /= 2;
+		mipmap.emplace_back();
+		mipmap.back().initItk(w, w);
+		mipmap.back().parallel_for_all_pixels([&](TD& p, int x, int y)
+		{
+			int x2 = x * 2;
+			int y2 = y * 2;
+
+			TED v = eigenPixel<double>(mipmap_up->pixelAbsolute(x2, y2));
+			v += eigenPixel<double>(mipmap_up->pixelAbsolute(x2 + 1, y2));
+			v += eigenPixel<double>(mipmap_up->pixelAbsolute(x2, y2 + 1));
+			v += eigenPixel<double>(mipmap_up->pixelAbsolute(x2 + 1, y2 + 1));
+			v/=4.0;
+			p = IMGD::itkPixel(v);
+		});
+		mipmap_up = &(mipmap.back());
+	}
+}
 
 
 
@@ -711,22 +751,26 @@ int main_n(int argc, char** argv)
 	std::cout << "noise var mipmaped in " << elapsed_seconds.count() << " s." << std::endl;
 	if (bs)
 		pin.save(names[conf][0]);
-	int SZGEN = 2048;
+	int sz = std::atoi(argv[2]);;
+	double scale = std::atof(argv[3]);;
 	T_IMG_D img_patterns;
 
-	for (int i = 0; i < 11; i++)
+	Tiling_n_Blendinng tnb((scale * std::log2(sz) * sz) / pin.width(), 753418);
+	int i=0; //for the name
+	while(sz>0)
 	{
-		double scale =  std::pow(2.0, i);
-		int sz = int(SZGEN / scale);
 		start_chrono = std::chrono::system_clock::now();
-		patterns(img_patterns, sz, pin, bcm, scale, Tile_n_blend);
+
+		patterns(img_patterns, sz, pin, bcm, scale, tnb);
 		std::string fn = names[conf][0] + "_.png";
 		fn[fn.length() - 5] = (i <= 9) ? '0' + i : 'A' + i - 10;
 		elapsed_seconds = std::chrono::system_clock::now() - start_chrono;
 		std::cout << fn << " of " << sz<<" x "<< sz << " pixels generated in " << elapsed_seconds.count() << " s." << std::endl;
 		IO::save01_in_u8(img_patterns, fn);
 		std::cout << "file exported "<< std::endl;
-		
+		sz /= 2;
+		scale *= 2.0;
+		i++;
 	}
 	
 	return EXIT_SUCCESS;
@@ -786,15 +830,27 @@ int main_one(int argc, char** argv)
 	std::cout << "noise var mipmaped in " << elapsed_seconds.count() << " s." << std::endl;
 	if (bs)
 		pin.save(names[conf][0]);
-	int SZGEN = 2048;
+
 	T_IMG_D img_patterns;
 
 	start_chrono = std::chrono::system_clock::now();
-	patterns(img_patterns, sz, pin, bcm, scale, Tile_n_blend);
-	std::string fn = names[conf][0] + "_X.png";
+	Tiling_n_Blendinng tnb((scale * std::log2(sz) * sz) / pin.width(), 753418);
+	// Tiling_n_Blendinng tnb((scale * sz) / pin.width(),753418);
+	patterns(img_patterns, sz, pin, bcm, scale, tnb);
+	std::string fn = names[conf][0] + "_mm_0.png";
 	elapsed_seconds = std::chrono::system_clock::now() - start_chrono;
 	std::cout << fn << " of " << sz << " x " << sz << " pixels generated in " << elapsed_seconds.count() << " s." << std::endl;
+	std::vector<T_IMG_D> mm_im;
+	mipmap_sqp2_image(img_patterns, mm_im);
 	IO::save01_in_u8(img_patterns, fn);
+	int i=1;
+	for(const auto& im : mm_im)
+	{
+		std::string fn = names[conf][0] + "_mm_X.png";
+		fn[fn.length() - 5] = (i <= 9) ? '0' + i : 'A' + i - 10;
+		IO::save01_in_u8(im, fn);
+		++i;
+	}
 	std::cout << "file exported " << std::endl;
 
 	return EXIT_SUCCESS;
