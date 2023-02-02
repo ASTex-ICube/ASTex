@@ -144,7 +144,7 @@ target_compile_features(${PROJECT_NAME} PUBLIC cxx_std_17)
 target_compile_definitions(${PROJECT_NAME} PUBLIC "${PNG_DEFINITION}")
 
 if(WIN32 OR APPLE)
-	target_link_libraries(${PROJECT_NAME} PUBLIC OpenEXR::OpenEXR)
+	target_link_libraries(${PROJECT_NAME} PUBLIC OpenEXR::OpenEXR Eigen3::Eigen)
 else()
 	target_link_libraries(${PROJECT_NAME} PUBLIC ${OPENEXR_LIBRARIES})
 	target_include_directories(${PROJECT_NAME} PUBLIC ${OPENEXR_INCLUDE_DIRS} ${EIGEN3_INCLUDE_DIRS})
