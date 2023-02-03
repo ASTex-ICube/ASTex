@@ -39,9 +39,12 @@
 #include <ASTex/image_gray.h>
 #include <ASTex/image_rgb.h>
 #include <ASTex/image_rgba.h>
+#include <ASTex/utils.h>
+
 
 namespace ASTex
 {
+
 
 
 //#ifdef WIN32

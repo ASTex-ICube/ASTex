@@ -26,14 +26,12 @@
 #ifndef __ASTEX__SLIC_H__
 #define __ASTEX__SLIC_H__
 
-
-
+#include <Eigen/Eigen>
 
 #include <ASTex/region_growing/connected_components.h>
 #include <itkImageToImageFilter.h>
 #include <ASTex/image_rgb.h>
 #include <ASTex/colorspace_filters.h>
-#include <Eigen/Eigen>
 #include <mutex>
 
 

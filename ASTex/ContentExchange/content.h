@@ -1,9 +1,10 @@
 #ifndef __CTEXCH_CONTENT_H__
 #define __CTEXCH_CONTENT_H__
 
+#include <Eigen/Eigen>
 #include "ASTex/mipmap.h"
 #include "patch.h"
-#include "Eigen/Eigen"
+
 
 namespace ASTex
 {

@@ -1,15 +1,15 @@
 #ifndef __NOISE__H__
 #define __NOISE__H__
 
-#include <cmath>
+#include<Eigen/Eigen>
+#include <ASTex/pca.h>
+#include <ASTex/utils.h>
 #include <ASTex/special_io.h>
 #include <ASTex/fourier.h>
 #include <ASTex/local_spectrum.h>
-#include <ASTex/utils.h>
 #include <ASTex/colorspace_filters.h>
 #include <ASTex/mask.h>
 #include <ASTex/distances_maps.h>
-#include <ASTex/pca.h>
 #include <ASTex/easy_io.h>
 #include "histogram.h"
 

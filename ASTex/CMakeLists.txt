@@ -2,9 +2,10 @@ cmake_minimum_required(VERSION 3.0)
 
 project(ASTex LANGUAGES CXX)
 
-if (WIN32)
+if (WIN32 OR APPLE )
   find_package(Imath CONFIG REQUIRED)
   find_package(OpenEXR CONFIG REQUIRED)
+
 else()
   find_package(OpenEXR REQUIRED)
 endif()
@@ -83,6 +84,8 @@ target_sources (${PROJECT_NAME} PRIVATE
 
 	CSN/csn_texture.h
 	CSN/tpsd.h
+
+	TilingBlending/simple_tnb.h
 )
 
 target_sources (${PROJECT_NAME} PRIVATE
@@ -112,7 +115,7 @@ target_include_directories(${PROJECT_NAME} PUBLIC ${ITK_INCLUDE_DIRS} ${PNG_INCL
 target_include_directories(${PROJECT_NAME} PUBLIC $<INSTALL_INTERFACE:include> $<BUILD_INTERFACE:${ASTEX_SOURCE_DIR}>)
 
 
-set ( ASTEX_LIBRARIES ${ITK_LIBRARIES} ${FFTW_LIBRARIES} ${PNG_LIBRARIES} )
+set ( ASTEX_LIBRARIES ${ITK_LIBRARIES} ${FFTW_LIBRARIES} ${PNG_LIBRARIES})
 
 if (NOT(MSVC OR APPLE))
 	set ( ASTEX_LIBRARIES ${ASTEX_LIBRARIES} -pthread )
@@ -126,33 +129,29 @@ if(MSVC)
     target_compile_definitions(${PROJECT_NAME} PUBLIC "-DBUILD_STATIC")
   endif()
 else()
+  target_compile_options(${PROJECT_NAME} PUBLIC -Wall -Wextra -Wno-unknown-pragmas -Wno-missing-braces -fPIC )
   if (ITK_VERSION VERSION_LESS 4.10.0)
     target_compile_options(${PROJECT_NAME} PUBLIC -fpermissive )
     message (INFO " Old ITK version, add -fpermissive compil option")
   endif()
-
   if (${OpenMP_CXX_FLAGS})
       target_compile_options(${PROJECT_NAME} PUBLIC ${OpenMP_CXX_FLAGS})
   endif()
-
-  target_compile_options(${PROJECT_NAME} PUBLIC -Wall -Wextra -Wno-unknown-pragmas -Wno-missing-braces -fPIC )
-  
-#  if (${ASTEX_USE_CPP14})
-#      target_compile_options(${PROJECT_NAME} PUBLIC -std=c++14 )
-#  else()
-#      target_compile_options(${PROJECT_NAME} PUBLIC -std=c++11 )
-#  endif()
 endif()
+  
+  
 target_compile_features(${PROJECT_NAME} PUBLIC cxx_std_17)
 # target_compile_options(${PROJECT_NAME} PUBLIC -std=c++11)
 
 target_compile_definitions(${PROJECT_NAME} PUBLIC "${PNG_DEFINITION}")
-if(MSVC)
-		target_link_libraries(${PROJECT_NAME} PUBLIC Imath::Imath Imath::ImathConfig OpenEXR::OpenEXR  Eigen3::Eigen)
+
+if(WIN32 OR APPLE)
+	target_link_libraries(${PROJECT_NAME} PUBLIC OpenEXR::OpenEXR Eigen3::Eigen)
 else()
-	target_link_libraries(${PROJECT_NAME} PUBLIC ${OPENEXR_LIBRARIES} Eigen3::Eigen)
-	target_include_directories(${PROJECT_NAME} PUBLIC ${OPENEXR_INCLUDE_DIRS})
+	target_link_libraries(${PROJECT_NAME} PUBLIC ${OPENEXR_LIBRARIES})
+	target_include_directories(${PROJECT_NAME} PUBLIC ${OPENEXR_INCLUDE_DIRS} ${EIGEN3_INCLUDE_DIRS})
 endif()
+
 target_link_libraries(${PROJECT_NAME} PUBLIC ${ASTEX_LIBRARIES})
 
 file(GLOB HEADERS "." "*.h" "*.hpp")

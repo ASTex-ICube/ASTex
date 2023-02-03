@@ -24,6 +24,10 @@
 
 
 #include <cmath>
+#include <ctime>
+#include <ASTex/pca.h>
+#include <ASTex/rpn_utils.h>
+
 #include <ASTex/special_io.h>
 #include <ASTex/fourier.h>
 #include <ASTex/local_spectrum.h>
@@ -31,9 +35,7 @@
 #include <ASTex/colorspace_filters.h>
 #include <ASTex/mask.h>
 #include <ASTex/distances_maps.h>
-#include <ASTex/pca.h>
-#include <ASTex/rpn_utils.h>
-#include <ctime>
+
 
 
 namespace ASTex
