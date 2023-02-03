@@ -11,7 +11,8 @@ set( exec_list
  tuto_filter1 tuto_filter2 tuto_filter3 tuto_filter4 tuto_filter5 tuto_filter6 tuto_filter7 
  tuto_png_indexed
  tuto_store
- tuto_mp)
+ tuto_mp
+ tuto_tnb)
 
 foreach(exec ${exec_list})
 	add_executable(${exec} "")

@@ -1,13 +1,33 @@
-#include <ASTex/image_gray.h>
-#include <ASTex/image_rgb.h>
+/*******************************************************************************
+* ASTex:                                                                       *
+* Copyright (C) IGG Group, ICube, University of Strasbourg, France             *
+*                                                                              *
+* This library is free software; you can redistribute it and/or modify it      *
+* under the terms of the GNU Lesser General Public License as published by the *
+* Free Software Foundation; either version 2.1 of the License, or (at your     *
+* option) any later version.                                                   *
+*                                                                              *
+* This library is distributed in the hope that it will be useful, but WITHOUT  *
+* ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or        *
+* FITNESS FOR A PARTICULAR PURPOSE. See the GNU Lesser General Public License  *
+* for more details.                                                            *
+*                                                                              *
+* You should have received a copy of the GNU Lesser General Public License     *
+* along with this library; if not, write to the Free Software Foundation,      *
+* Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301 USA.           *
+*                                                                              *
+* Web site: https://astex-icube.github.io                                      *
+* Contact information: astex@icube.unistra.fr                                  *
+*                                                                              *
+*******************************************************************************/
 
-#include <ASTex/special_io.h>
-#include <ASTex/easy_io.h>
+namespace ASTex
+{
 
-
-using namespace ASTex;
-
-
+/**
+ Simple Tiling n blending algo 
+ Need Gaussian imagea as input
+ */
 template<typename IMG>
 class Tiling_n_Blending
 {
@@ -211,33 +231,4 @@ Tiling_n_Blending<IMG> make_Tiling_n_Blending(const IMG& img)
     return Tiling_n_Blending<IMG>(img);
 }
 
-
-
-
-int main(int argc, char** argv)
-{
-	if (argc<5)
-	{
-		std::cout << argv[0] << " img_example img_to_gen width height" << std::endl;
-		return 1;
-	}
-
-    using IMGT = ImageRGBu8;
-    IMGT img_ex;
-	img_ex.load(std::string(argv[1]));
-
-    int w = atoi(argv[3]);
-	int h = atoi(argv[4]);
-	IMGT img_out{w, h, false};
-
-	auto tnb = make_Tiling_n_Blending(img_ex);
-
-	tnb.tile_img(img_out);
- 
-	img_out.save(std::string(argv[2]));
-
-    return EXIT_SUCCESS;
-
 }
-
-

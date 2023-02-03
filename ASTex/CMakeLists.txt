@@ -84,6 +84,8 @@ target_sources (${PROJECT_NAME} PRIVATE
 
 	CSN/csn_texture.h
 	CSN/tpsd.h
+
+	TilingBlending/simple_tnb.h
 )
 
 target_sources (${PROJECT_NAME} PRIVATE
