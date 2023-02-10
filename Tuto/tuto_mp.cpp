@@ -10,18 +10,6 @@
 
 using namespace ASTex;
 
-
-// inline double convert_pix(uint8xp>=_)
-// {
-// 	return doubxp>=l) / 255.0;
-// }
-
-// inline itk::RGBPixel<double> convert_pix(const itk::RGBPixel<uint8_txp>=>)
-// {
-// 	double d[3] = { doubxp>=l[0]) / 255.0,doubxp>=l[1]) / 255.0,doubxp>=l[2]) / 255.0 };
-// 	return itk::RGBPixel<double>(d);
-// }
-
 template <typename VEC, typename FUNC>
 VEC applyFuncCompo(const VEC& u , const FUNC& f)
 { 
@@ -33,16 +21,50 @@ VEC applyFuncCompo(const VEC& u , const FUNC& f)
 
 
 template <typename VEC>
-VEC vecfloor(const VEC& u)
+VEC vec_floor(const VEC& u)
 {
 	return applyFuncCompo(u, [](double d) { return std::floor(d); });
 }
 
 template <typename VEC>
-VEC vecfract(const VEC& u)
+VEC vec_fract(const VEC& u)
 {
 	return applyFuncCompo(u, [](double d) { return d - std::floor(d); });
 }
+
+
+template <typename VEC>
+VEC vec_clamp01(const VEC& u)
+{
+	return applyFuncCompo(u, [](double d) { return std::max(0.0,std::min(1.0,d)); });
+}
+
+
+class MicroPatternsInput
+{
+	/**
+	* @param uv coordinate to fetch
+	* @param level level of mipmap in which to fetch
+	* @return Eigen::Vector4d(noiseA-average(NoiseA),noiseB-average(noiseB),var(noiseA),var(noiseB)
+	*/
+	virtual Eigen::Vector4d fetch(const Eigen::Vector2d& uv, double level) const = 0;
+
+	/**
+	* @return average value (noiseA,noiseB)
+	*/
+	virtual Eigen::Vector2d fetch_average() const = 0;
+
+	/**
+	* @return width of based squared textures of mipmap
+	*/
+	virtual int width() const = 0;
+
+	/**
+	* @return return number of level in the mipmap
+	*/
+	virtual int depth() const = 0;
+};
+
 
 
 template <typename IMGD>
@@ -59,11 +81,9 @@ class BlurredColorMaps
 	IMGD* outbuf_;
 	Region reg_;
 
-	//    std::array<double,BR+1> convol_;
 	std::vector<double> convol_;
 	int BR;
 
-//	std::array<std::array<IMGD, nb_blurred_>, nb_blurred_> res_;
 	std::vector<IMGD> blurred_;
 
 	int nb_blurred_;
@@ -81,6 +101,7 @@ class BlurredColorMaps
 			p = IMGD::itkPixel(pe);
 		});
 	}
+	
 	void average1D_X(const IMGD& img_in, IMGD& img_out)
 	{
 		TED z;
@@ -153,7 +174,8 @@ class BlurredColorMaps
 		int ip = 0;
 		for (int j = 1; j < N_1; ++j)
 		{
-			int nb = 1 << (2 * (j - 1));
+			//int nb = 1 << (2 * (j - 1));
+			int nb = 1 << (2 * (j - 1)); //WARNINNNNG
 			while (ip < nb)
 			{
 				blur1D();
@@ -199,7 +221,8 @@ class BlurredColorMaps
 			int ip = 0;
 			for (int j = 1; j < N_1; ++j)
 			{
-				int nb = 1 << (2 * (j - 1));
+				//int nb = 1 << (2 * (j - 1));
+				int nb = 1 << (2 * (j - 1)); //WARNINNNNG
 				while (ip < nb)
 				{
 					blur1D();
@@ -229,7 +252,9 @@ public:
 	* @param convol the convolution mask, default {0.375 0.25 0.0625}
 	* @param nb number of blur img computed in the 2 directions, last is average (defaault 7)
 	*/
-	BlurredColorMaps(const IMGD* colormap, const std::vector<double>& convol = { 0.375,0.25,0.0625 }, int nb=8) :
+	BlurredColorMaps(const IMGD* colormap,
+	 const std::vector<double>& convol = { 0.375,0.25,0.0625 },
+	 int nb=8) :
 		color_map_(colormap), convol_(convol),nb_blurred_(nb)
 	{
 		BR = convol.size() - 1;
@@ -273,7 +298,7 @@ public:
 		j = std::min(nb_blurred_ - 1, j);
 
 		double w = double(width_);
-		Eigen::Vector2d uvd{-0.5 + w * uv[0] , -0.5 + w * uv[1] };
+		Eigen::Vector2d uvd =  w * uv - Eigen::Vector2d{ 0.5,0.5 } ;
 		Eigen::Vector2d uvfl {std::floor(uvd[0]), std::floor(uvd[1])};
 		Eigen::Vector2d a = uvd - uvfl;
 		Eigen::Vector2i c{int(uvfl[0]),int(uvfl[1])};
@@ -334,15 +359,16 @@ public:
 
 		return IMGD::itkPixel(V);
 	}
-
 };
 
 
-class PackedInputNoises
+class PackedInputNoises: public MicroPatternsInput
 {
 	using IMG = ImageRGBAd;
-	using PIXT = IMG::PixelType;
 	std::vector<IMG> mipmap;
+	using PIXT = IMG::PixelType;
+	Eigen::Vector2d	average_value_;
+
 public:
 	PackedInputNoises(const ImageGrayd& noiseA, const ImageGrayd& noiseB)
 	{
@@ -350,39 +376,41 @@ public:
 		mipmap.resize(nbl);
 		int lp2 = 1;
 		int w = noiseA.width();
-		for (int ni = 0; ni < nbl; ++ni)
+
+		mipmap[0].initItk(w, w);
+		mipmap[0].parallel_for_all_pixels([&](PIXT& p, int x, int y)
 		{
+			double eA = noiseA.pixelAbsolute(x, y);
+			double eB = noiseB.pixelAbsolute(x, y);
+			p = ImageRGBAd::itkPixel(eA, eB, 0.0, 0.0);
+		});
+		
+		for (int ni = 1; ni < nbl; ++ni)
+		{
+			lp2 *= 2;
+			w /= 2;
 			mipmap[ni].initItk(w, w);
-			mipmap[ni].parallel_for_all_pixels([&](PIXT& p, int x, int y)
+			mipmap[ni].	parallel_for_all_pixels([&](PIXT& p, int x, int y)
 				{
-
-					double eA;
-					double eB;
-					if (ni == 0)
-					{
-						eA = noiseA.pixelAbsolute(x, y);
-						eB = noiseB.pixelAbsolute(x, y);
-					}
-					else
-					{
-						int x2 = x * 2;
-						int y2 = y * 2;
-
-						const auto& v0 = mipmap[ni - 1].pixelAbsolute(x2, y2);
-						eA = v0[0];
-						eB = v0[1];
-						const auto& v1 = mipmap[ni - 1].pixelAbsolute(x2 + 1, y2);
-						eA += v1[0];
-						eB += v1[1];
-						const auto& v2 = mipmap[ni - 1].pixelAbsolute(x2, y2 + 1);
-						eA += v2[0];
-						eB += v2[1];
-						const auto& v3 = mipmap[ni - 1].pixelAbsolute(x2 + 1, y2 + 1);
-						eA += v3[0];
-						eB += v3[1];
-						eA /= 4.0;
-						eB /= 4.0;
-					}
+					int x2 = x * 2;
+					int y2 = y * 2;	
+					const auto& v0 = mipmap[ni - 1].pixelAbsolute(x2, y2);
+					double eA = v0[0];
+					double eB = v0[1];
+					++x2;
+					const auto& v1 = mipmap[ni - 1].pixelAbsolute(x2, y2);
+					eA += v1[0];
+					eB += v1[1];
+					++y2;
+					const auto& v3 = mipmap[ni - 1].pixelAbsolute(x2, y2);
+					eA += v3[0];
+					eB += v3[1];
+					--x2;
+					const auto& v2 = mipmap[ni - 1].pixelAbsolute(x2, y2);
+					eA += v2[0];
+					eB += v2[1];
+					eA /= 4.0;
+					eB /= 4.0;
 
 					int xx = x * lp2;
 					int yy = y * lp2;
@@ -402,17 +430,35 @@ public:
 						}
 					}
 					double nb = double(lp2 * lp2);
-				p = ImageRGBAd::itkPixel(eA, eB, varA / nb, varB / nb);
+					p = ImageRGBAd::itkPixel(eA, eB, varA / nb, varB / nb);
 				});
-			lp2 *= 2;
-			w /= 2;
+			
 		}
+	
+		const auto& p = mipmap.back().pixelAbsolute(0, 0);
+		average_value_ = Eigen::Vector2d{p[0], p[1]};
+
+		for (int ni = 0; ni < nbl; ++ni)
+		{
+			mipmap[ni].parallel_for_all_pixels([&](PIXT& p)
+				{
+					p[0] -= average_value_[0];
+					p[1] -= average_value_[1];
+				});
+		}
+
 	}
 
-	int width() const
+	int width() const override
 	{
 		return mipmap[0].width();
 	}
+
+	int depth() const override
+	{
+		return mipmap.size();
+	}
+
 
 	void save(const std::string& base)
 	{
@@ -430,10 +476,10 @@ public:
 
 			mi.parallel_for_all_pixels([&](const PIXT& p, int x, int y)
 				{
-					imA.pixelAbsolute(x, y) =  p[0];
-					imB.pixelAbsolute(x, y) =  p[1];
-					imVA.pixelAbsolute(x, y) = p[2] * 64.0;
-					imVB.pixelAbsolute(x, y) = p[3] * 64.0;
+					imA.pixelAbsolute(x, y) =  p[0] + average_value_[0];
+					imB.pixelAbsolute(x, y) =  p[1] + average_value_[1];
+					imVA.pixelAbsolute(x, y) = p[2] * 16.0;
+					imVB.pixelAbsolute(x, y) = p[3] * 16.0;
 				});
 
 			std::string  fn = base + std::string("noiseA_X.png");
@@ -456,21 +502,22 @@ public:
 	}
 
 
-	Eigen::Vector4d fetch(const Eigen::Vector2d& uv, double level) const
+	Eigen::Vector4d fetch(const Eigen::Vector2d& uv, double level) const override
 	{
 		level = std::max(0.0,std::min(level, double(mipmap.size())));
 		int l = int(std::floor(level));
-		Eigen::Vector2d uvm{uv[0] - floor(uv[0]), uv[1] - floor(uv[1])};
+		
 		double w = double(mipmap[l].width());
-		Eigen::Vector2d uvd = Eigen::Vector2d{ -0.5,-0.5 } + w * uvm;
-		Eigen::Vector2d uvfl {std::floor(uvd[0]), std::floor(uvd[1])};
+		Eigen::Vector2d uvd =  w * vec_fract(uv) - Eigen::Vector2d{ 0.5,0.5 } ;
+		Eigen::Vector2d uvfl = vec_floor(uvd);//{std::floor(uvd[0]), std::floor(uvd[1])};
 		Eigen::Vector2d a = uvd - uvfl;
 		Eigen::Vector2i c = uvfl.cast<int>();
 
 		auto acces_repeat = [&] (int lp, int xp, int yp) ->Eigen::Vector4d
 		{
-			int xx = xp < 0 ? mipmap[lp].width() - 1 : ( xp >= mipmap[lp].width() ? 0 : xp );
-			int yy = yp < 0 ? mipmap[lp].width() - 1 : ( yp >= mipmap[lp].width() ? 0 : yp );
+			int w = mipmap[lp].width();
+			int xx = xp < 0 ? w - 1 : ( xp >= w ? 0 : xp );
+			int yy = yp < 0 ? w - 1 : ( yp >= w ? 0 : yp );
 			return eigenPixel<double>(mipmap[lp].pixelAbsolute(xx, yy));
 		};
 
@@ -486,8 +533,8 @@ public:
 		l = le; //for usage in access_repeat
 
 		w = double(mipmap[le].width());
-		uvd = Eigen::Vector2d { -0.5+w*(uv[0] - floor(uv[0])),-0.5+w*(uv[1] - floor(uv[1])) };
-		uvfl = Eigen::Vector2d { std::floor(uvd[0]), std::floor(uvd[1]) };
+		uvd = Eigen::Vector2d {-0.5, -0.5} + w * vec_fract(uv);//Eigen::Vector2d { -0.5+w*(uv[0] - floor(uv[0])),-0.5+w*(uv[1] - floor(uv[1])) };
+		uvfl = vec_floor(uvd); //Eigen::Vector2d { std::floor(uvd[0]), std::floor(uvd[1]) };
 		a = uvd - uvfl;
 		c = Eigen::Vector2i{int(uvfl[0]),int(uvfl[1])};
 
@@ -503,10 +550,9 @@ public:
 	}
 
 
-	Eigen::Vector4d fetch_average() const
+	Eigen::Vector2d fetch_average() const override
 	{
-		const auto& p = mipmap.back().pixelAbsolute(0, 0);
-		return Eigen::Vector4d	{p[0], p[1], p[2], p[3]};
+		return average_value_;
 	}
 };
 
@@ -528,7 +574,7 @@ class Tiling_n_Blendinng
 
 
 		if (temp[2] > 0.0)
-		{
+		{																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																
 			Bi = Eigen::Vector3d(temp[2], temp[1], temp[0]);
 			Eigen::Vector2i ibaseId = baseId.cast<int>();
 			vertex1 = ibaseId;
@@ -543,7 +589,6 @@ class Tiling_n_Blendinng
 			vertex2 = ibaseId + Eigen::Vector2i(1, 0);
 			vertex3 = ibaseId + Eigen::Vector2i(0, 1);
 		}
-//		std::cout << p_uv.transpose()  <<" => " << vertex1.transpose() << " & " << vertex2.transpose() << " & " << vertex3.transpose() << std::endl;
 	}
 
 
@@ -554,7 +599,6 @@ class Tiling_n_Blendinng
 		hashMat << 127.1, 269.5,
 				311.7, 183.3;
 
-		//hashMat << 127.1, 311.7, 269.5, 183.3;
 		Eigen::Vector2d q = hashMat * p.cast<double>();
 		q[0] = std::sin(q[0]);
 		q[1] = std::sin(q[1]);
@@ -581,13 +625,13 @@ class Tiling_n_Blendinng
 		Eigen::Vector4d n2 = noises.fetch(uv2, level);
 		Eigen::Vector4d n3 = noises.fetch(uv3, level);
 
-		Eigen::Vector4d nu = noises.fetch_average();
+		Eigen::Vector2d nu = noises.fetch_average();
 
 		B.normalize();
 		Eigen::Matrix<double, 2, 3> M;
-		M << n1[0] - nu[0], n2[0] - nu[0], n3[0] - nu[0],
-			 n1[1] - nu[1], n2[1] - nu[1], n3[1] - nu[1];
-		mean = M * B + Eigen::Vector2d(nu[0], nu[1]);
+		M << n1[0], n2[0], n3[0],
+			 n1[1], n2[1], n3[1];
+		mean = M * B +nu;
 		mean[0] = std::max(0.0,std::min(1.0,mean[0]));
 		mean[1] = std::max(0.0,std::min(1.0,mean[1]));
 
@@ -612,13 +656,13 @@ void patterns(IMGD& pat, int w, const PackedInputNoises& noises, const BlurredCo
 	using TD = typename IMGD::PixelType;
 
 	pat.initItk(w,w);
-	double level = std::log2(scale);
+	double level = std::min(double(noises.depth()-1), std::log2(scale));
 	pat.parallel_for_all_pixels([&](typename IMGD::PixelType& p, int x, int y)
 		{
 			Eigen::Vector3d color;
 			Eigen::Vector2d uv_cm;
 			Eigen::Vector2d sigm2;
-			Eigen::Vector2d uv{ double(x) / (noises.width()), double(y) / (noises.width()) };
+			Eigen::Vector2d uv{ (double(x)+0.5) / (noises.width()), (double(y)+0.5) / (noises.width()) };
 			Eigen::Vector2d uvs = uv * scale;
 			tile(noises, level, uvs, uv_cm, sigm2);
 
@@ -627,8 +671,8 @@ void patterns(IMGD& pat, int w, const PackedInputNoises& noises, const BlurredCo
 			Eigen::Vector2d var = sigma * 256.0;
 			Eigen::Vector2d flod = Eigen::Vector2d(std::log2(1.0 + var[0]), std::log2(1.0 + var[1]));
 
-	//		p = bcm.fetch(uv_cm, int(std::round(flod[0])), int(std::round(flod[1])));
-			p = bcm.fetch(uv_cm, flod[0], flod[1]);
+			p = bcm.fetch(uv_cm, std::min(bcm.table_width(),int(std::round(flod[0]))), std::min(bcm.table_width(),int(std::round(flod[1]))));
+	//		p = bcm.fetch(uv_cm, flod[0], flod[1]);
 		});
 }
 
@@ -646,13 +690,16 @@ void patterns_stat(IMGD& pat, int w, const PackedInputNoises& noises, const Blur
 	//{ bcm.table_width() + 4, 0.0 };
 
 	pat.initItk(w, w);
-	double level = std::log2(scale);
+	double level = std::min(double(noises.depth()), std::log2(scale));
+	std::cout << "level = "<< level<< std::endl;
+	std::cout << "level max = "<< noises.depth()<< std::endl;
+
 	pat.for_all_pixels([&](typename IMGD::PixelType& p, int x, int y)
 		{
 			Eigen::Vector3d color;
 			Eigen::Vector2d uv_cm;
 			Eigen::Vector2d sigm2;
-			Eigen::Vector2d uv{ double(x) / (noises.width()), double(y) / (noises.width()) };
+			Eigen::Vector2d uv{ (double(x)+0.5) / (noises.width()), (double(y)+0.5) / (noises.width()) };
 			Eigen::Vector2d uvs = uv * scale;
 			tile(noises, level, uvs, uv_cm, sigm2);
 
@@ -660,24 +707,21 @@ void patterns_stat(IMGD& pat, int w, const PackedInputNoises& noises, const Blur
 			Eigen::Vector2d var = sigma * mult;//256.0 ;
 			Eigen::Vector2d flod = Eigen::Vector2d(std::log2(1.0 + var[0]), std::log2(1.0 + var[1]));
 
-			//		p = bcm.fetch(uv_cm, int(std::round(flod[0])), int(std::round(flod[1])));
-			p = bcm.fetch(uv_cm, flod[0], flod[1]);
+			p = bcm.fetch(uv_cm, int(std::round(flod[0])), int(std::round(flod[1])));
+			//p = bcm.fetch(uv_cm, flod[0], flod[1]);
 
 			double a = flod[0]-std::floor(flod[0]);
-			lx[int(std::floor(flod[0]))] += 1.0 - a;
-			lx[int(std::ceil(flod[0]))] += a;
-			double b = flod[1] - std::floor(flod[1]);
-			ly[int(std::floor(flod[1]))] += 1.0 - b;
-			ly[int(std::ceil(flod[1]))] += b;
-
+			lx[int(std::round(flod[0]))] += 1.0;
+			ly[int(std::round(flod[1]))] += 1.0;	
 		});
 
-	for (int i = 0; i < lx.size(); ++i)
+	for (int i = 0; i < 8; ++i)
 	{
 		double xl = 0.001 * int(double(lx[i]) / (0.001 * w * w));
 		double yl = 0.001 * int(double(ly[i]) / (0.001 * w * w));
 		std::cout << "L[" << i << "] = " << std::setprecision(3) << xl << " / " << yl << std::endl;
 	}
+
 }
 
 
@@ -702,9 +746,12 @@ void mipmap_sqp2_image(const IMGD& img, std::vector<IMGD>& mipmap)
 			int y2 = y * 2;
 
 			TED v = eigenPixel<double>(mipmap_up->pixelAbsolute(x2, y2));
-			v += eigenPixel<double>(mipmap_up->pixelAbsolute(x2 + 1, y2));
-			v += eigenPixel<double>(mipmap_up->pixelAbsolute(x2, y2 + 1));
-			v += eigenPixel<double>(mipmap_up->pixelAbsolute(x2 + 1, y2 + 1));
+			++x2;
+			v += eigenPixel<double>(mipmap_up->pixelAbsolute(x2, y2));
+			++y2;
+			v += eigenPixel<double>(mipmap_up->pixelAbsolute(x2, y2));
+			--x2;
+			v += eigenPixel<double>(mipmap_up->pixelAbsolute(x2, y2));
 			v/=4.0;
 			p = IMGD::itkPixel(v);
 		});
@@ -729,29 +776,8 @@ using T_IMG = ImageGray8;
 using T_IMG_D = ImageGrayd;
 #endif
 
-int main_n(int argc, char** argv)
+int main_n(int argc, char** argv, const std::vector<std::array < std::string, 4>>& names)
 {
-	std::vector<std::array < std::string, 4>> names = { {"stone", "noise_pierre_1", "noise_pierre_2", "cm11"},
-		{"bark", "noise_ecorce_1", "noise_ecorce_2", "cm10"},
-		{"camouflage", "noise_1024_2", "noise_1024_4", "cm1"},
-		{"green", "noise_1024_4", "noise_1024_2", "cm2"},
-		{"blue", "noise_256_2", "noise_256_4", "cm5"},
-		{"lava", "noise_1024_2", "noise_1024_4", "cm8"},
-		{"water", "n1", "n2", "eau_cm"},
-		{"hexa", "n1", "n2", "hexa_cm"},
-		{"phasor_sand", "noise_sin_3", "noise_cos_3", "colormap_phasor_sand"},
-		{"phasor_sin", "noise_sin_1", "noise_cos_1", "colormap_phasor_sin"},
-		{"phasor_square", "noise_sin_1", "noise_cos_1", "colormap_phasor_square"},
-		{"hexa_cm", "n1", "n2", "grey_cm_1"}};
-
-	if (argc == 1)
-	{
-		for (int i = 0; i < names.size(); ++i)
-			std::cout << i << ":" << names[i][0] << " / ";
-		std::cout << std::endl;
-		return EXIT_SUCCESS;
-	}
-
 	bool bs = false;
 	bs = std::string{ argv[argc-1] } == std::string{ "save" };
 
@@ -787,12 +813,15 @@ int main_n(int argc, char** argv)
 	while(sz>0)
 	{
 		start_chrono = std::chrono::system_clock::now();
+		std::cout << "compute "<<i<<" => sz="<<sz<<" => sc="<<scale<< std::endl;
 		patterns(img_patterns, sz, pin, bcm, scale, tnb);
+		std::cout << i << " computed "<<std::endl;
 		std::string fn = names[conf][0] + "_.png";
 		fn[fn.length() - 5] = (i <= 9) ? '0' + i : 'A' + i - 10;
 		elapsed_seconds = std::chrono::system_clock::now() - start_chrono;
 		std::cout << fn << " of " << sz<<" x "<< sz << " pixels generated in " << elapsed_seconds.count() << " s." << std::endl;
 		IO::save01_in_u8(img_patterns, fn);
+		
 		std::cout << "file exported "<< std::endl;
 		sz /= 2;
 		scale *= 2.0;
@@ -802,29 +831,8 @@ int main_n(int argc, char** argv)
 	return EXIT_SUCCESS;
 }
 
-int main_one_mipmap(int argc, char** argv)
+int main_one_mipmap(int argc, char** argv, const std::vector<std::array < std::string, 4>>& names)
 {
-	std::vector<std::array < std::string, 4>> names = { {"stone", "noise_pierre_1", "noise_pierre_2", "cm11"},
-		{"bark", "noise_ecorce_1", "noise_ecorce_2", "cm10"},
-		{"camouflage", "noise_1024_2", "noise_1024_4", "cm1"},
-		{"green", "noise_1024_4", "noise_1024_2", "cm2"},
-		{"blue", "noise_256_2", "noise_256_4", "cm5"},
-		{"lava", "noise_1024_2", "noise_1024_4", "cm8"},
-		{"water", "n1", "n2", "eau_cm"},
-		{"hexa", "n1", "n2", "hexa_cm"},
-		{"phasor_sand", "noise_sin_3", "noise_cos_3", "colormap_phasor_sand"},
-		{"phasor_sin", "noise_sin_1", "noise_cos_1", "colormap_phasor_sin"},
-		{"phasor_square", "noise_sin_1", "noise_cos_1", "colormap_phasor_square"},
-		{"grey_cm", "n1", "n2", "grey_cm_1"} };
-
-	if (argc == 1)
-	{
-		for (int i = 0; i < names.size(); ++i)
-			std::cout << i << ":" << names[i][0] << " / ";
-		std::cout << std::endl;
-		return EXIT_SUCCESS;
-	}
-
 	bool bs = false;
 	bs = std::string{ argv[argc - 1] } == std::string{ "save" };
 
@@ -869,7 +877,7 @@ int main_one_mipmap(int argc, char** argv)
 	{
 		std::string fn = names[conf][0] + "_mm_X.png";
 		fn[fn.length() - 5] = (i <= 9) ? '0' + i : 'A' + i - 10;
-		IO::save01_in_u8(im, fn);
+							IO::save01_in_u8(im, fn);
 		++i;
 	}
 	std::cout << "file exported " << std::endl;
@@ -877,7 +885,35 @@ int main_one_mipmap(int argc, char** argv)
 	return EXIT_SUCCESS;
 }
 
-int main_stat(int argc, char** argv)
+int main_stat(int argc, char** argv, const std::vector<std::array < std::string, 4>>& names)
+{
+	double scale = std::atof(argv[3]);
+	int sz = std::atoi(argv[2]);
+
+	int conf = std::atoi(argv[1]);
+	std::string dir = "../../data/";
+	T_IMG_D cm;
+	IO::loadu8_in_01(cm, dir + "colormap/" + names[conf][3] + ".png");
+	BlurredColorMaps<T_IMG_D> bcm{ &cm };
+
+	ImageGrayd nA;
+	IO::loadu8_in_01(nA, dir + names[conf][1] + ".png");
+	ImageGrayd nB;
+	IO::loadu8_in_01(nB, dir + names[conf][2] + ".png");
+	PackedInputNoises pin(nA, nB);
+
+
+	T_IMG_D img_patterns;
+
+	Tiling_n_Blendinng tnb;
+	double mult = (argc>4) ? std::atof(argv[4]) : 256.0;
+	patterns_stat(img_patterns, sz, pin, bcm, scale, tnb ,mult); 
+		
+	return EXIT_SUCCESS;
+}
+
+
+int main(int argc, char** argv)
 {
 	std::vector<std::array < std::string, 4>> names = { {"stone", "noise_pierre_1", "noise_pierre_2", "cm11"},
 		{"bark", "noise_ecorce_1", "noise_ecorce_2", "cm10"},
@@ -894,69 +930,26 @@ int main_stat(int argc, char** argv)
 
 	if (argc == 1)
 	{
+		std::cout << "all config size scale_initial" << std::endl;
+		std::cout << "mipmap config size scale_initial" << std::endl;
+		std::cout << "stat config size scale" <<std::endl;
+
+		std::cout << "config: ";
 		for (int i = 0; i < names.size(); ++i)
+		
 			std::cout << i << ":" << names[i][0] << " / ";
 		std::cout << std::endl;
 		return EXIT_SUCCESS;
 	}
 
-	bool bs = false;
-	bs = std::string{ argv[argc - 1] } == std::string{ "save" };
 
-	double scale = std::atof(argv[3]);
-	int sz = std::atoi(argv[2]);
-
-	int conf = std::atoi(argv[1]);
-	std::string dir = "../../data/";
-	T_IMG_D cm;
-	IO::loadu8_in_01(cm, dir + "colormap/" + names[conf][3] + ".png");
-	auto start_chrono = std::chrono::system_clock::now();
-	BlurredColorMaps<T_IMG_D> bcm{ &cm };
-	std::chrono::duration<double> elapsed_seconds = std::chrono::system_clock::now() - start_chrono;
-	std::cout << "Color maps blurred in " << elapsed_seconds.count() << " s." << std::endl;
-	if (bs)
-		bcm.save(names[conf][0]);
-
-	ImageGrayd nA;
-	IO::loadu8_in_01(nA, dir + names[conf][1] + ".png");
-	ImageGrayd nB;
-	IO::loadu8_in_01(nB, dir + names[conf][2] + ".png");
-	start_chrono = std::chrono::system_clock::now();
-	PackedInputNoises pin(nA, nB);
-	elapsed_seconds = std::chrono::system_clock::now() - start_chrono;
-	std::cout << "noise var mipmaped in " << elapsed_seconds.count() << " s." << std::endl;
-	if (bs)
-		pin.save(names[conf][0]);
-
-	T_IMG_D img_patterns;
-
-	start_chrono = std::chrono::system_clock::now();
-	Tiling_n_Blendinng tnb;
-
-	patterns_stat(img_patterns, sz, pin, bcm, scale, tnb ,256.0); // tnb);
-	std::string fn = names[conf][0] + "_0_256.png";
-	IO::save01_in_u8(img_patterns, fn);
-
-	patterns_stat(img_patterns, sz, pin, bcm, scale, tnb, 512.0); // tnb);
-	fn = names[conf][0] + "_0_512.png";
-	IO::save01_in_u8(img_patterns, fn);
-
-	patterns_stat(img_patterns, sz, pin, bcm, scale, tnb, 1024.0); // tnb);
-	fn = names[conf][0] + "_0_1024.png";
-	IO::save01_in_u8(img_patterns, fn);
-
-
-	return EXIT_SUCCESS;
+	if (std::string(argv[1])=="mipmap")
+		main_one_mipmap(argc-1, argv+1,names);
+	if (std::string(argv[1])=="all")
+		main_n(argc-1, argv+1,names);
+	if (std::string(argv[1])=="stat")
+		main_stat(argc-1, argv+1,names);
 }
-
-
-int main(int argc, char** argv)
-{
-	//main_one_mipmap(argc, argv);
-	//main_n(argc, argv);
-	main_stat(argc, argv);
-}
-
 
 //["stone", "noise_pierre_1", "noise_pierre_2", "cm11"],
 //["bark", "noise_ecorce_1", "noise_ecorce_2", "cm10"],
