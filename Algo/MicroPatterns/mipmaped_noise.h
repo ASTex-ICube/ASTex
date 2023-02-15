@@ -110,7 +110,8 @@ public:
 
 	void save(const std::string& base)
 	{
-		for (int i = 0; i < mipmap.size(); ++i)
+		int mmp_sz = int(mipmap.size());
+		for (int i = 0; i < mmp_sz; ++i)
 		{
 			const auto& mi = mipmap[i];
 			ImageGrayd imA;

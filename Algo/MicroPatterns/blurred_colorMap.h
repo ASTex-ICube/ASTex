@@ -50,13 +50,13 @@ class BlurredColorMaps
 		z.setZero();
 		std::vector<TED> aver{ std::size_t(width_), z };
 
-		img_in.for_all_pixels([&](const TD& p, int x, int y)
+		img_in.for_all_pixels([&](const TD& p, int, int y)
 			{
 				aver[y] += eigenPixel<double>(p);
 			});
 		for (auto& a : aver)
 			a /= width_;
-		img_out.for_all_pixels([&](TD& p, int x, int y)
+		img_out.for_all_pixels([&](TD& p, int, int y)
 			{
 				p = IMGD::itkPixel(aver[y]);
 			});
@@ -69,13 +69,13 @@ class BlurredColorMaps
 		z.setZero();
 		std::vector<TED> aver{ std::size_t(width_), z };
 
-		img_in.for_all_pixels([&](const TD& p, int x, int y)
+		img_in.for_all_pixels([&](const TD& p, int x, int )
 			{
 				aver[x] += eigenPixel<double>(p);
 			});
 		for (auto& a : aver)
 			a /= width_;
-		img_out.for_all_pixels([&](TD& p, int x, int y)
+		img_out.for_all_pixels([&](TD& p, int x, int )
 			{
 				p = IMGD::itkPixel(aver[x]);
 			});
@@ -107,8 +107,8 @@ class BlurredColorMaps
 			auto bound = color_map_->pixelAbsolute(x, width_ - 1);
 			for (int k = 0; k < BR; ++k)
 			{
-				inbuf_->pixelAbsolute(width_ + BR + k, x) = color_map_->pixelAbsolute(x, width_ - 1);
-				outbuf_->pixelAbsolute(width_ + BR + k, x) = color_map_->pixelAbsolute(x, width_ - 1);
+				inbuf_->pixelAbsolute(width_ + BR + k, x) = bound;
+				outbuf_->pixelAbsolute(width_ + BR + k, x) = bound;
 			}
 		}
 
