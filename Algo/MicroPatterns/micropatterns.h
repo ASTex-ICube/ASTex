@@ -4,6 +4,7 @@
 
 #include <Algo/MicroPatterns/blurred_colorMap.h>
 #include <Algo/MicroPatterns/mp_inputs.h>
+#include<iomanip>
 
 namespace ASTex
 {
@@ -16,8 +17,6 @@ namespace ASTex
 template <typename IMGD, typename FUNC>
 void patterns(IMGD& pat, int w, const MicroPatternsInput& noises, const BlurredColorMaps<IMGD>& bcm, double scale, FUNC tile)
 {
-	using TD = typename IMGD::PixelType;
-
 	pat.initItk(w,w);
 	double level = std::min(double(noises.depth()-1), std::log2(scale));
 	pat.parallel_for_all_pixels([&](typename IMGD::PixelType& p, int x, int y)
@@ -44,8 +43,6 @@ void patterns(IMGD& pat, int w, const MicroPatternsInput& noises, const BlurredC
 template <typename IMGD, typename FUNC>
 void patterns_stat(IMGD& pat, int w, const MicroPatternsInput& noises, const BlurredColorMaps<IMGD>& bcm, double scale, FUNC tile, double mult)
 {
-	using TD = typename IMGD::PixelType;
-
 	std::vector < double> lx;
 	lx.resize(bcm.table_width() + 4, 0.0);
 	std::vector < double> ly;
@@ -72,7 +69,6 @@ void patterns_stat(IMGD& pat, int w, const MicroPatternsInput& noises, const Blu
 			p = bcm.fetch(uv_cm, int(std::round(flod[0])), int(std::round(flod[1])));
 			//p = bcm.fetch(uv_cm, flod[0], flod[1]);
 
-			double a = flod[0]-std::floor(flod[0]);
 			lx[int(std::round(flod[0]))] += 1.0;
 			ly[int(std::round(flod[1]))] += 1.0;	
 		});

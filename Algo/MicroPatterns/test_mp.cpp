@@ -70,7 +70,7 @@ int main_all(int argc, char** argv, const std::vector<std::array < std::string, 
 	bool bs = false;
 	bs = std::string{ argv[argc-1] } == std::string{ "save" };
 
-	std::string dir{argv[1]};
+	std::string dir {argv[1]};
 	int conf = std::atoi(argv[2]);
 
 	T_IMG_D cm;
@@ -225,7 +225,7 @@ int main(int argc, char** argv)
 		std::cout << "stat dir config size scale" <<std::endl;
 
 		std::cout << "config: ";
-		for (int i = 0; i < names.size(); ++i)
+		for (int i = 0; i < int(names.size()); ++i)
 		
 			std::cout << i << ":" << names[i][0] << " / ";
 		std::cout << std::endl;
