@@ -813,7 +813,7 @@ int noiseCm(int argc, char **argv)
 {
 	if(argc < 2) usage(argv[0]);
 
-	std::string filename("noise_color_mapped.png");
+	std::string filename("/home/grenier/Documents/ASTex_fork/results/noise_color_mapped.png");
 	std::string inputname;
 	int w(512),h(512);
 	double z(1);
@@ -893,6 +893,7 @@ int noiseCm(int argc, char **argv)
 	std::chrono::duration<double> elapsed_seconds;
 	if(!example)
 	{
+        std::cout<<"generation..."<<std::endl;
 		Noise<double> n(number_of_cosines, fr_min, fr_max);
 		Vec2 w_size(z,z);
 		if(cm){
