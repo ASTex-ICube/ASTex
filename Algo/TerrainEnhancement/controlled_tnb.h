@@ -9,17 +9,17 @@ namespace ASTex
  Simple Tiling n blending algo
  Need Gaussian imagea as input
  */
-    template<typename IMG>
+//    template<typename IMG>
     class Tiling_n_Blending
     {
-        using PIXT = typename IMG::PixelType;
-        using EPIXT = typename IMG::DoublePixelEigen;
+//        using PIXT = typename IMG::PixelType;
+//        using EPIXT = typename IMG::DoublePixelEigen;
 
-        const IMG& img_input_; // exemple d'entrée
-        const IMG& frequency_input_; // carte de fréquence f
-        const IMG& orientation_input_; // carte d'orientation theta
+        const ImageRGBu8& img_input_; // exemple d'entrée
+        const ImageGrayu8& frequency_input_; // carte de fréquence f
+        const ImageGrayu8& orientation_input_; // carte d'orientation theta
 
-        EPIXT img_average_;
+        ImageRGBu8::DoublePixelEigen img_average_;
 
     protected:
 
@@ -45,7 +45,7 @@ namespace ASTex
 
         inline void clamp_channel(double& c)
         {
-            if (std::is_floating_point<typename IMG::DataType>::value)
+            if (std::is_floating_point<typename ImageRGBu8::DataType>::value)
                 c = std::max(0.0,std::min(1.0,c));
             else
                 c = std::max(0.0,std::min(255.0,c));
@@ -124,13 +124,15 @@ namespace ASTex
             Eigen::Matrix2d Rotation;
             Eigen::Matrix2d Scale;
 
-            double angle = std::fmod(theta, 2.*M_PI);
-            angle -= M_PI;
+            // theta est sur -pi, pi; mappé sur 0, 255, on veut angle dans -pi,pi
+//            std::cout<<theta<<std::endl;
+            double angle = (theta*2.*M_PI/255.) - M_PI;
+//            std::cout<<angle<<std::endl;
 
             double cos = std::cos(angle);
             double sin = std::sin(angle);
 
-            Rotation << cos, sin, -sin, cos;
+            Rotation << cos, sin, -sin, cos; // rotation autour de l'axe -z ( (0,0) en haut à gauche avec x vers la droite et y vers le bas)
             Scale << scale, 0., 0., scale;
 
             return Rotation*Scale;
@@ -153,15 +155,15 @@ namespace ASTex
         }
 
     public:
-        Tiling_n_Blending(const IMG& in, const IMG& freq, const IMG& theta): // constructeur : récupère l'image d'entrée et calcul la moyenne
+        Tiling_n_Blending(const ImageRGBu8& in, const ImageGrayu8& freq, const ImageGrayu8& theta): // constructeur : récupère l'image d'entrée et calcul la moyenne
                 img_input_(in), frequency_input_(freq), orientation_input_(theta)
         {
             // compute average img value
-            EPIXT sum;
+            ImageRGBu8::DoublePixelEigen sum;
             set_zero(sum);
-            img_input_.for_all_pixels([&] ( const PIXT& P)
+            img_input_.for_all_pixels([&] ( const ImageRGBu8::PixelType& P)
                                       {
-                                          EPIXT lv = eigenPixel<double>(P);
+                                          ImageRGBu8::DoublePixelEigen lv = eigenPixel<double>(P);
                                           sum += lv;
                                       });
 
@@ -169,7 +171,7 @@ namespace ASTex
 
         }
 
-        EPIXT fetch(const Eigen::Vector2d& uv)
+        ImageRGBu8::DoublePixelEigen fetch(const Eigen::Vector2d& uv)
         {
             // take fract part of uv mult by image size
             Eigen::Vector2d uvd = Eigen::Vector2d{-0.5 + (uv[0] - std::floor(uv[0]))*img_input_.width(),
@@ -190,15 +192,15 @@ namespace ASTex
 
             return acces_repeat(c[0],c[1]);
 
-            EPIXT V1 = (1.0 - a[0]) * acces_repeat(c[0],c[1])	+ a[0] * acces_repeat(c[0]+1,c[1]);
-            EPIXT V2 = (1.0 - a[0]) * acces_repeat(c[0],c[1]+1) + a[0] * acces_repeat(c[0]+1,c[1]+1);
-            EPIXT V = (1.0 - a[1]) * V1 + a[1] * V2;
+            ImageRGBu8::DoublePixelEigen V1 = (1.0 - a[0]) * acces_repeat(c[0],c[1])	+ a[0] * acces_repeat(c[0]+1,c[1]);
+            ImageRGBu8::DoublePixelEigen V2 = (1.0 - a[0]) * acces_repeat(c[0],c[1]+1) + a[0] * acces_repeat(c[0]+1,c[1]+1);
+            ImageRGBu8::DoublePixelEigen V = (1.0 - a[1]) * V1 + a[1] * V2;
 
             return V;
         }
 
 
-        double fetch_map(const Eigen::Vector2d& uv, const IMG& map)
+        double fetch_map(const Eigen::Vector2d& uv, const ImageGrayu8& map)
         {
             // uv mult by map size
             Eigen::Vector2d pix_uv = Eigen::Vector2d{uv[0]*(map.width()-1), uv[1]*(map.height()-1)}; // uv in [0, 1], pix_uv in [0, 255]
@@ -217,16 +219,16 @@ namespace ASTex
             };
 
             // interpolation bi-linéaire
-            EPIXT map_interp_1 = (1.-pix_fract[0]) * map_acces(ipix_floor[0], ipix_floor[1])   + pix_fract[0] * map_acces(ipix_floor[0]+1, ipix_floor[1]);
-            EPIXT map_interp_2 = (1.-pix_fract[0]) * map_acces(ipix_floor[0], ipix_floor[1]+1) + pix_fract[0] * map_acces(ipix_floor[0]+1, ipix_floor[1]+1);
+            double map_interp_1 = (1.-pix_fract[0]) * map_acces(ipix_floor[0], ipix_floor[1])   + pix_fract[0] * map_acces(ipix_floor[0]+1, ipix_floor[1]);
+            double map_interp_2 = (1.-pix_fract[0]) * map_acces(ipix_floor[0], ipix_floor[1]+1) + pix_fract[0] * map_acces(ipix_floor[0]+1, ipix_floor[1]+1);
 
-            EPIXT map_interp = (1.-pix_fract[1]) * map_interp_1 + pix_fract[1] * map_interp_2;
+            double map_interp = (1.-pix_fract[1]) * map_interp_1 + pix_fract[1] * map_interp_2;
 
-            return map_interp(0,0)/255.;
+            return map_interp;
         }
 
 
-        PIXT tile_pixel(const Eigen::Vector2d& uv ) // fait le tnb pour un pixel
+        ImageRGBu8::PixelType tile_pixel(const Eigen::Vector2d& uv ) // fait le tnb pour un pixel
         {
             // grille
             Eigen::Vector3d B;
@@ -234,8 +236,9 @@ namespace ASTex
             TriangleGrid(uv, B,	vertex1, vertex2, vertex3);
 
             // control maps
-            double freq = fetch_map(uv, frequency_input_) + 1.; //1.; //uv[0]+1.; //
-            double theta = fetch_map(uv, orientation_input_) * M_PI; //0.; //uv[1]*M_PI; //
+            double freq = fetch_map(uv, frequency_input_); // fetch sur 0, 255
+            double theta = fetch_map(uv, orientation_input_); // fetch sur 0, 255
+
             Eigen::Matrix2d M_transfo = TransfoMatrix(theta, freq);
 
             // centers of tiles
@@ -250,23 +253,23 @@ namespace ASTex
             Eigen::Vector2d uv3 = M_transfo*(uv-cen3) + cen3 + hash(vertex3);
 
 
-            EPIXT t1 = fetch(uv1) - img_average_;
-            EPIXT t2 = fetch(uv2) - img_average_;
-            EPIXT t3 = fetch(uv3) - img_average_;
+            ImageRGBu8::DoublePixelEigen t1 = fetch(uv1) - img_average_;
+            ImageRGBu8::DoublePixelEigen t2 = fetch(uv2) - img_average_;
+            ImageRGBu8::DoublePixelEigen t3 = fetch(uv3) - img_average_;
 
             auto W = B.normalized();
 
-            EPIXT P = W[0] * t1 + W[1] * t2 + W[2] * t3 + img_average_ ;
+            ImageRGBu8::DoublePixelEigen P = W[0] * t1 + W[1] * t2 + W[2] * t3 + img_average_ ;
 
             clamp(P);
 
-            return IMG::itkPixel(P);
+            return ImageRGBu8::itkPixel(P);
         }
 
 
-        void tile_img(IMG& img_out) // récupère le tnb pour chaque pixel de l'image de sortie
+        void tile_img(ImageRGBu8& img_out) // récupère le tnb pour chaque pixel de l'image de sortie
         {
-            img_out.parallel_for_all_pixels([&] (typename IMG::PixelType& P, int x, int y)
+            img_out.parallel_for_all_pixels([&] (typename ImageRGBu8::PixelType& P, int x, int y)
                                             {
                                                 Eigen::Vector2d uv{ double(x) / (img_out.width()), double(y) / (img_out.height()) };
                                                 P = tile_pixel(uv);
@@ -278,10 +281,10 @@ namespace ASTex
 
 
 
-    template<typename IMG>
-    Tiling_n_Blending<IMG> make_Tiling_n_Blending(const IMG& img, const IMG& freq, const IMG& theta) // appel au constructeur
+//    template<typename IMG>
+    Tiling_n_Blending make_Tiling_n_Blending(const ImageRGBu8& img, const ImageGrayu8& freq, const ImageGrayu8& theta) // appel au constructeur
     {
-        return Tiling_n_Blending<IMG>(img, freq, theta);
+        return Tiling_n_Blending(img, freq, theta);
     }
 
 }

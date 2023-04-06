@@ -43,13 +43,13 @@ int main(int argc, char** argv)
 
     // control maps
     IMGT control_freq;
-    control_freq.load(ctrl_fr_name); // TODO : générer avec le terrain
+    control_freq.load(ctrl_fr_name);
 
     IMGT control_or;
-    control_or.load(ctrl_or_name); // TODO : générer avec le terrain
+    control_or.load(ctrl_or_name);
 
     IMGT control_ampl;
-    control_ampl.load(ctrl_ampl_name); // TODO : générer avec le terrain
+    control_ampl.load(ctrl_ampl_name);
 
     IMGT control_mod;
     control_mod.load(ctrl_modulation_name); // TODO : noise

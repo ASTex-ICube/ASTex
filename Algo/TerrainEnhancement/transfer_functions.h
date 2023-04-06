@@ -8,15 +8,15 @@
 
 namespace ASTex
 {
-    template<typename IMG>
+//    template<typename IMG>
     class Varying_Profile
     {
-        using PIXT = typename IMG::PixelType;
-        using EPIXT = typename IMG::DoublePixelEigen;
+//        using PIXT = typename IMG::PixelType;
+//        using EPIXT = typename IMG::DoublePixelEigen;
 
-        const IMG& vector_noise_; // champ gaussien complexe G
-        const IMG& amplitude_input_; // carte d'amplitude a
-        const IMG& modulation_input_; // modulation du profile N
+        const ImageRGBu8& vector_noise_; // champ gaussien complexe G
+        const ImageGrayu8& amplitude_input_; // carte d'amplitude a
+        const ImageGrayu8& modulation_input_; // modulation du profile N
 
 
     private:
@@ -26,7 +26,7 @@ namespace ASTex
             return t*t*(3.-2.*t);
         }
 
-        double argument(EPIXT& vector_value)
+        double argument(ImageRGBu8::DoublePixelEigen& vector_value)
         { // pour un uv donné, récupère les donnée du vector noise et retourn l'atan (dans -pi, pi)
             double x = vector_value(0,0)/255. - 0.5;
             double y = vector_value(1,0)/255. - 0.5;
@@ -41,18 +41,20 @@ namespace ASTex
 //            else{
 //                return phase/M_PI;
 //            }
-            return std::abs(phase/M_PI);
+            double profile = std::abs(phase/M_PI);
+            return profile;
         }
 
         double mask_profile(double phase, double step_param_l, double step_param_u)
         { // M : valeur d'entrée dans -pi, pi (phase) et 0, pi (params); valeur de sortie dans 0, 1
-            return smoothstep(step_param_l, step_param_u, std::abs(phase));
+            double profile = smoothstep(step_param_l, step_param_u, std::abs(phase));
+            return profile;
         }
 
     protected:
         inline void clamp_channel(double& c)
         {
-            if (std::is_floating_point<typename IMG::DataType>::value)
+            if (std::is_floating_point<typename ImageRGBu8::DataType>::value)
                 c = std::max(0.0,std::min(1.0,c));
             else
                 c = std::max(0.0,std::min(255.0,c));
@@ -85,13 +87,13 @@ namespace ASTex
         }
 
     public:
-        Varying_Profile(const IMG& input, const IMG& amplitude, const IMG& modulation): // constructeur
+        Varying_Profile(const ImageRGBu8& input, const ImageGrayu8& amplitude, const ImageGrayu8& modulation): // constructeur
         vector_noise_(input), amplitude_input_(amplitude), modulation_input_(modulation)
         {
 
         }
 
-        EPIXT fetch(const Eigen::Vector2d& uv, const IMG& input)
+        ImageRGBu8::DoublePixelEigen fetch(const Eigen::Vector2d& uv, const ImageRGBu8& input)
         {
             // uv mult by map size
             Eigen::Vector2d pix_uv = Eigen::Vector2d{uv[0]*(input.width()-1), uv[1]*(input.height()-1)}; // uv in [0, 1], pix_uv in [0, 255]
@@ -110,40 +112,69 @@ namespace ASTex
             };
 
             // interpolation bi-linéaire
-            EPIXT input_interp_1 = (1.-pix_fract[0]) * input_acces(ipix_floor[0], ipix_floor[1])   + pix_fract[0] * input_acces(ipix_floor[0]+1, ipix_floor[1]);
-            EPIXT input_interp_2 = (1.-pix_fract[0]) * input_acces(ipix_floor[0], ipix_floor[1]+1) + pix_fract[0] * input_acces(ipix_floor[0]+1, ipix_floor[1]+1);
+            ImageRGBu8::DoublePixelEigen input_interp_1 = (1.-pix_fract[0]) * input_acces(ipix_floor[0], ipix_floor[1])   + pix_fract[0] * input_acces(ipix_floor[0]+1, ipix_floor[1]);
+            ImageRGBu8::DoublePixelEigen input_interp_2 = (1.-pix_fract[0]) * input_acces(ipix_floor[0], ipix_floor[1]+1) + pix_fract[0] * input_acces(ipix_floor[0]+1, ipix_floor[1]+1);
 
-            EPIXT input_interp = (1.-pix_fract[1]) * input_interp_1 + pix_fract[1] * input_interp_2;
+            ImageRGBu8::DoublePixelEigen input_interp = (1.-pix_fract[1]) * input_interp_1 + pix_fract[1] * input_interp_2;
 
             return input_interp;
         }
 
 
-        PIXT create_varying_profile(Eigen::Vector2d uv)
-        { // retourne la hauteur des détails pour une coordonnée uv donnée
-            // = a * (T + M*N)(uv)
-            EPIXT G_field = fetch(uv, vector_noise_); // champ gaussien
-            EPIXT ampl = fetch(uv, amplitude_input_); // amplitude a
-            EPIXT mod = fetch(uv, modulation_input_); // modulation de profile N
+        double fetch_map(const Eigen::Vector2d& uv, const ImageGrayu8& map)
+        {
+            // uv mult by map size
+            Eigen::Vector2d pix_uv = Eigen::Vector2d{uv[0]*(map.width()-1), uv[1]*(map.height()-1)}; // uv in [0, 1], pix_uv in [0, 255]
 
-            double arg_field = argument(G_field); // champ de phase
+            // partie entière et cast en int
+            Eigen::Vector2d pix_floor {std::floor(pix_uv[0]), std::floor(pix_uv[1])}; // pix_floor in {0, 255}
+            Eigen::Vector2i ipix_floor = pix_floor.cast<int>();
 
-            double profile_T = global_profile(arg_field); // profile triangle
-            double profile_M = mask_profile(arg_field, 0.25*M_PI, M_PI); // mask
-            double mod_noise = mod(0,0)/255.;
+            // partie décimale
+            Eigen::Vector2d pix_fract = pix_uv - pix_floor; // pix_fract in [0, 1[
 
-            double blend = (profile_T + mod_noise*profile_M)*0.5;
+            // accès
+            auto map_acces = [&] (int xp, int yp)
+            {
+                return eigenPixel<double>(map.pixelAbsolute(xp, yp));
+            };
 
+            // interpolation bi-linéaire
+            double map_interp_1 = (1.-pix_fract[0]) * map_acces(ipix_floor[0], ipix_floor[1])   + pix_fract[0] * map_acces(ipix_floor[0]+1, ipix_floor[1]);
+            double map_interp_2 = (1.-pix_fract[0]) * map_acces(ipix_floor[0], ipix_floor[1]+1) + pix_fract[0] * map_acces(ipix_floor[0]+1, ipix_floor[1]+1);
 
-            return IMG::itkPixel(blend*ampl);
+            double map_interp = (1.-pix_fract[1]) * map_interp_1 + pix_fract[1] * map_interp_2;
+
+            return map_interp;
         }
 
 
-        void details_heighmap(IMG& img_out) // récupère la hauteur des détails pour chaque pixel de l'image de sortie
+
+        double create_varying_profile(Eigen::Vector2d uv)
+        { // retourne la hauteur des détails pour une coordonnée uv donnée
+            // = a * (T + M*N)(uv)
+            ImageRGBu8::DoublePixelEigen G_field = fetch(uv, vector_noise_); // champ gaussien
+            double ampl = fetch_map(uv, amplitude_input_)/255.; // amplitude a, fetch sur 0, 255
+            double mod = fetch_map(uv, modulation_input_)/255.; // modulation de profile N, fetch sur 0, 255
+
+            double arg_field = argument(G_field); // champ de phase
+//
+            double profile_T = global_profile(arg_field); // profile triangle, valeurs dans 0, 1
+            double profile_M = mask_profile(arg_field, 0.25*M_PI, M_PI); // mask, valeurs dans 0, 1
+//            double mod_noise = mod(0,0)/255.;
+//
+            double blend = (profile_T + mod*profile_M)*0.5; // valeurs sur 0, 1
+
+
+            return ampl*blend *255.; // TODO : quelle plage de valeur ?
+        }
+
+
+        void details_heighmap(ImageGrayu8& img_out) // récupère la hauteur des détails pour chaque pixel de l'image de sortie
         {
-            img_out.parallel_for_all_pixels([&] (typename IMG::PixelType& P, int x, int y)
+            img_out.parallel_for_all_pixels([&] (typename ImageGrayu8::PixelType& P, int x, int y)
                                             {
-                                                Eigen::Vector2d uv{ double(x) / (vector_noise_.width()), double(y) / (vector_noise_.height()) };
+                                                Eigen::Vector2d uv{ double(x) / (img_out.width()), double(y) / (img_out.height()) };
                                                 P = create_varying_profile(uv);
                                             });
         }
@@ -153,10 +184,10 @@ namespace ASTex
 
 
 
-    template<typename IMG>
-    Varying_Profile<IMG> create_procedural_details(const IMG& input, const IMG& amplitude, const IMG& modulation) // appel au constructeur
+//    template<typename IMG>
+    Varying_Profile create_procedural_details(const ImageRGBu8& input, const ImageGrayu8& amplitude, const ImageGrayu8& modulation) // appel au constructeur
     {
-        return Varying_Profile<IMG>(input, amplitude, modulation); // input = champ gaussien complexe, controlé en fréquence et en orientation
+        return Varying_Profile(input, amplitude, modulation); // input = champ gaussien complexe, controlé en fréquence et en orientation
     }
 
 }

@@ -3,48 +3,118 @@
 //
 #include <ASTex/image_gray.h>
 #include <ASTex/image_rgb.h>
+#include <ASTex/Noises/Perlin.h>
 
-#include <ASTex/special_io.h>
-#include <ASTex/easy_io.h>
-#include <ASTex/TilingBlending/controlled_tnb.h>
-#include <Algo/TerrainEnhancement/transfer_functions.h>
 #include <Algo/TerrainEnhancement/input_terrain.h>
+#include <Algo/TerrainEnhancement/control_maps.h>
+#include <Algo/TerrainEnhancement/controlled_tnb.h>
+#include <Algo/TerrainEnhancement/transfer_functions.h>
 
 using namespace ASTex;
 
 
 
-int main(int argc, char** argv)
+int main()
 {
-    if (argc<2)
-    {
-        std::cout << argv[0] << " img_terrain out_name " << std::endl;
-        return 1;
-    }
+//    using IMGT = ImageRGBu8;
+//    using IMGG = ImageGrayu8;
 
-    using IMGT = ImageRGBu8;
-    using IMGG = ImageGrayu8;
+    /* principe :
+     * en entrée j'ai un terrain,
+     * je récupère le champ de hauteur et les gradients
+     * en sortie j'ai les carte de fréquence, orientation et amplitude
+     */
+
+    std::string tnb_example_name = "/home/grenier/Documents/ASTex_fork/results/bi_chanel_noise.png";
+    std::string terrain_name = "/home/grenier/Documents/ASTex_fork/results/terrain_HR.png";
+    std::string img_to_gen_name = "/home/grenier/Documents/ASTex_fork/results/test_result";
+
+//    std::string ctrl_fr_name = "/home/grenier/Documents/ASTex_fork/results/un.png";
+//    std::string ctrl_or_name = "/home/grenier/Documents/ASTex_fork/results/grad_y.png";
+    std::string ctrl_ampl_name = "/home/grenier/Documents/ASTex_fork/results/un.png";
+    std::string ctrl_modulation_name = "/home/grenier/Documents/ASTex_fork/results/BF_HF.png";
+
+    // génération d'un gradient de test
+//    ImageGrayu8 img_grad{256, 256, false};
+//    img_grad.parallel_for_all_pixels([&] (typename ImageGrayu8::PixelType& P, int x, int y){P = ImageGrayu8::PixelType(std::clamp(x+y, 0, 255));});
+//    img_grad.save(img_to_gen_name+"_sample.png");
+
+
     // input terrain
-    IMGT img_terrain;
-    img_terrain.load(std::string(argv[1]));
+    ImageGrayu8 img_terrain;
+    img_terrain.load(terrain_name);
+
+    // input example
+    ImageRGBu8 img_ex;
+    img_ex.load(tnb_example_name);
+
+
+    // control maps
+//    ImageGrayu8 control_freq;
+//    control_freq.load(ctrl_fr_name);
+
+//    ImageGrayu8 control_or;
+//    control_or.load(ctrl_or_name);
+
+    ImageGrayu8 control_ampl;
+    control_ampl.load(ctrl_ampl_name);
+
+    ImageGrayu8 control_mod;
+    control_mod.load(ctrl_modulation_name);
+
+
+
 
 
     // output image
-    int w = 256;
-    int h = 256;
-    IMGT img_out{w, h, false};
-    IMGG gradX_out{w, h, false};
-    IMGG gradY_out{w, h, false};
+    int w_coarse = img_terrain.width()/50.;
+    int h_coarse = img_terrain.height()/50.;
+    int w_fine = img_terrain.width();
+    int h_fine = img_terrain.height();
+
+    ImageGrayu8 img_out_terrain{w_coarse, h_coarse, false};
+    ImageGrayu8 gradX_out{w_coarse, h_coarse, false};
+    ImageGrayu8 gradY_out{w_coarse, h_coarse, false};
+//
+    ImageGrayu8 control_freq{w_coarse, h_coarse, false};
+    ImageGrayu8 control_or{w_coarse, h_coarse, false};
+//    ImageGrayu8 control_ampl{w_coarse, h_coarse, false};
+
+    ImageRGBu8 img_out_tnb{w_fine, h_fine, false};
+    ImageGrayu8 img_out_details{w_fine, h_fine, false};
 
 
-    // test récupération terrain et des gradient
-    auto terrain = grab_Input_terrain(img_terrain, img_out.height(), img_out.width());
-    terrain.terrain_img(img_out);
-    compute_Gradient_terrain(img_out, gradX_out, gradY_out);
 
-    img_out.save(std::string(argv[2])+".png");
-    gradX_out.save(std::string(argv[2])+"_gradX.png");
-    gradY_out.save(std::string(argv[2])+"_gradY.png");
+
+    // terrain information
+    auto terrain = grab_Input_terrain(img_terrain, h_coarse, w_coarse);
+    terrain.terrain_img(img_out_terrain, gradX_out, gradY_out);
+
+    img_out_terrain.save(img_to_gen_name+"_terrain.png");
+    gradX_out.save(img_to_gen_name+"_gradX.png");
+    gradY_out.save(img_to_gen_name+"_gradY.png");
+
+
+    // cartes de controle
+    auto control_maps = create_control_maps(img_out_terrain, gradX_out, gradY_out);
+    control_maps.compute_control(control_freq, control_or, control_ampl);
+
+    control_freq.save(img_to_gen_name+"_frequ.png");
+    control_ampl.save(img_to_gen_name+"_ampl.png");
+    control_or.save(img_to_gen_name+"_or.png");
+
+
+
+    // tiling and blending
+    auto tnb = make_Tiling_n_Blending(img_ex, control_freq, control_or);
+    tnb.tile_img(img_out_tnb);
+    img_out_tnb.save(img_to_gen_name+"_tnb.png");
+
+
+    // transfer function
+    auto tr_func = create_procedural_details(img_out_tnb, control_ampl, control_mod);
+    tr_func.details_heighmap(img_out_details);
+    img_out_details.save(img_to_gen_name+"_details.png");
 
 
     return EXIT_SUCCESS;
