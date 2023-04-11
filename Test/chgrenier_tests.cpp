@@ -9,6 +9,7 @@
 #include <Algo/TerrainEnhancement/control_maps.h>
 #include <Algo/TerrainEnhancement/controlled_tnb.h>
 #include <Algo/TerrainEnhancement/transfer_functions.h>
+#include <Algo/TerrainEnhancement/terrain_enhancement.h>
 
 using namespace ASTex;
 
@@ -23,15 +24,17 @@ int main()
      * en entrée j'ai un terrain,
      * je récupère le champ de hauteur et les gradients
      * en sortie j'ai les carte de fréquence, orientation et amplitude
+     * que j'utilise pour générer des détails à ajouter au terrain
      */
 
     std::string tnb_example_name = "/home/grenier/Documents/ASTex_fork/results/bi_chanel_noise.png";
     std::string terrain_name = "/home/grenier/Documents/ASTex_fork/results/terrain_HR.png";
+
     std::string img_to_gen_name = "/home/grenier/Documents/ASTex_fork/results/test_result";
 
 //    std::string ctrl_fr_name = "/home/grenier/Documents/ASTex_fork/results/un.png";
 //    std::string ctrl_or_name = "/home/grenier/Documents/ASTex_fork/results/grad_y.png";
-    std::string ctrl_ampl_name = "/home/grenier/Documents/ASTex_fork/results/un.png";
+//    std::string ctrl_ampl_name = "/home/grenier/Documents/ASTex_fork/results/un.png";
     std::string ctrl_modulation_name = "/home/grenier/Documents/ASTex_fork/results/BF_HF.png";
 
     // génération d'un gradient de test
@@ -56,8 +59,8 @@ int main()
 //    ImageGrayu8 control_or;
 //    control_or.load(ctrl_or_name);
 
-    ImageGrayu8 control_ampl;
-    control_ampl.load(ctrl_ampl_name);
+//    ImageGrayu8 control_ampl;
+//    control_ampl.load(ctrl_ampl_name);
 
     ImageGrayu8 control_mod;
     control_mod.load(ctrl_modulation_name);
@@ -67,10 +70,10 @@ int main()
 
 
     // output image
-    int w_coarse = img_terrain.width()/50.;
-    int h_coarse = img_terrain.height()/50.;
-    int w_fine = img_terrain.width();
-    int h_fine = img_terrain.height();
+    int w_coarse = img_terrain.width()/60.;
+    int h_coarse = img_terrain.height()/60.;
+    int w_fine = img_terrain.width()*2.;
+    int h_fine = img_terrain.height()*2.;
 
     ImageGrayu8 img_out_terrain{w_coarse, h_coarse, false};
     ImageGrayu8 gradX_out{w_coarse, h_coarse, false};
@@ -78,10 +81,11 @@ int main()
 //
     ImageGrayu8 control_freq{w_coarse, h_coarse, false};
     ImageGrayu8 control_or{w_coarse, h_coarse, false};
-//    ImageGrayu8 control_ampl{w_coarse, h_coarse, false};
+    ImageGrayu8 control_ampl{w_coarse, h_coarse, false};
 
     ImageRGBu8 img_out_tnb{w_fine, h_fine, false};
     ImageGrayu8 img_out_details{w_fine, h_fine, false};
+    ImageGrayu8 img_out_final{w_fine, h_fine, false};
 
 
 
@@ -97,6 +101,8 @@ int main()
 
     // cartes de controle
     auto control_maps = create_control_maps(img_out_terrain, gradX_out, gradY_out);
+    control_maps.Set_Frequency_param(2., 2.);
+    control_maps.Set_Amplitude_param(2., 6.);
     control_maps.compute_control(control_freq, control_or, control_ampl);
 
     control_freq.save(img_to_gen_name+"_frequ.png");
@@ -107,14 +113,32 @@ int main()
 
     // tiling and blending
     auto tnb = make_Tiling_n_Blending(img_ex, control_freq, control_or);
+    tnb.Set_Frequency_max(2.);
     tnb.tile_img(img_out_tnb);
+
     img_out_tnb.save(img_to_gen_name+"_tnb.png");
 
 
     // transfer function
-    auto tr_func = create_procedural_details(img_out_tnb, control_ampl, control_mod);
+    auto tr_func = create_procedural_details(img_out_tnb, control_mod);
     tr_func.details_heighmap(img_out_details);
+
     img_out_details.save(img_to_gen_name+"_details.png");
+
+
+    // terrain amplifié
+    auto final_terrain = compute_final_terrain(img_terrain, img_out_details, control_ampl);
+    final_terrain.Set_Amplitude_max(.1);
+    final_terrain.final_terrain_img(img_out_final);
+
+    img_out_final.save(img_to_gen_name+"_final.png");
+
+    /* détail d'implem :
+     * j'ai finalement mis l'utilisation de l'amplitude au moment de l'application des détails
+     * la carte de contrôle est calculée avant mais ne donne que les variation spatiale de l'amplitude (valeurs normées)
+     * définir l'amplitude max à la fin permet de garder la séparation des étpaes dans des images séparées (y'a peut être mieux comme méthode mais c'ets la seule que j'ai vu)
+     */
+
 
 
     return EXIT_SUCCESS;

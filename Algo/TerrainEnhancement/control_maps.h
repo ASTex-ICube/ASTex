@@ -16,10 +16,10 @@ namespace ASTex{
         const ImageGrayu8& input_gradX_;
         const ImageGrayu8& input_gradY_;
 
-        double p_frequ1_;
-        double p_frequ2_;
-        double p_ampl1_;
-        double p_ampl2_;
+        double p_frequ1_ = 2.;
+        double p_frequ2_ = 1.;
+        double p_ampl1_ = 2.;
+        double p_ampl2_ = 4.;
 
 
     private:
@@ -58,21 +58,29 @@ namespace ASTex{
         Control_Maps(const ImageGrayu8& terrain, const ImageGrayu8& gradX, const ImageGrayu8& gradY):
         input_heightfield_(terrain), input_gradX_(gradX), input_gradY_(gradY)
         {
-            p_frequ1_ = 2.;
-            p_frequ2_ = 1.;
-            p_ampl1_ = 1.;
-            p_ampl2_ = 1.;
+
+        }
+
+        void Set_Frequency_param(double facteur, double puissance)
+        {
+            p_frequ1_ = facteur;
+            p_frequ2_ = puissance;
+        }
+
+        void Set_Amplitude_param(double facteur, double puissance)
+        {
+            p_ampl1_ = facteur;
+            p_ampl2_ = puissance;
         }
 
 
-
-        double frequency_map(Eigen::Vector2d& uv)
+        double frequency_map(Eigen::Vector2d& uv) // définit comment la fréquence varie spatialment, pas les valeur min et max
         {
             double h = fetch(uv, input_heightfield_)/255.; // valeurs sur 0,1
 
-            double freq = p_frequ1_*std::pow(h, p_frequ2_) + 1.; // +1 pour ne pas tomber à 0
+            double freq = p_frequ1_*std::pow(h, p_frequ2_); // sur 0, p1
 
-            return freq; // valeur retournée directement, donc fréquence possible entre 1 et 255 // TODO : à changer ?
+            return freq*(255./p_frequ1_); // sortie sur 0, 255
         }
 
 
@@ -90,17 +98,16 @@ namespace ASTex{
         }
 
 
-        double amplitude_map(Eigen::Vector2d& uv)
+        double amplitude_map(Eigen::Vector2d& uv) // définit comment l'amplitude varie spatialment, pas les valeur min et max
         {
-            double Gx = fetch(uv, input_gradX_);
-            double Gy = fetch(uv, input_gradY_);
+            double Gx = (fetch(uv, input_gradX_)-127)/127.; // fetch sur 0, 255
+            double Gy = (fetch(uv, input_gradY_)-127)/127.; // valeurs sur -1, 1
 
-            Eigen::Vector2d Grad{Gx, Gy};
-            double norme = Grad.norm(); // TODO : pb avec la saturation des gradient
+            double norm = std::sqrt(Gx*Gx + Gy*Gy); // sur 0, sqrt(2)
 
-            double ampl = p_ampl1_*std::pow(norme,p_ampl2_);
+            double ampl = p_ampl1_*std::pow(norm,p_ampl2_); // sur 0, p1*sqrt(2)^p2
 
-            return ampl*255./std::sqrt(2.); // TODO : quelle plage de valeur ?
+            return ampl*(255./(p_ampl1_*std::pow(std::sqrt(2.),p_ampl2_))); // sortie sur 0, 255
         }
 
 
@@ -111,12 +118,12 @@ namespace ASTex{
                                                 Eigen::Vector2d uv{ double(x) / (output_frequ.width()), double(y) / (output_frequ.height()) };
                                                 P = frequency_map(uv);
                                             });
-//
-//            output_ampl.parallel_for_all_pixels([&] (typename ImageGrayu8::PixelType& P, int x, int y)
-//                                                 {
-//                                                     Eigen::Vector2d uv{ double(x) / (output_ampl.width()), double(y) / (output_ampl.height()) };
-//                                                     P = amplitude_map(uv);
-//                                                 });
+
+            output_ampl.parallel_for_all_pixels([&] (typename ImageGrayu8::PixelType& P, int x, int y)
+                                                 {
+                                                     Eigen::Vector2d uv{ double(x) / (output_ampl.width()), double(y) / (output_ampl.height()) };
+                                                     P = amplitude_map(uv);
+                                                 });
 
             output_or.parallel_for_all_pixels([&] (typename ImageGrayu8::PixelType& P, int x, int y)
                                                 {

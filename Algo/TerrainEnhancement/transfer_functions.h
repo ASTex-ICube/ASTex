@@ -15,8 +15,10 @@ namespace ASTex
 //        using EPIXT = typename IMG::DoublePixelEigen;
 
         const ImageRGBu8& vector_noise_; // champ gaussien complexe G
-        const ImageGrayu8& amplitude_input_; // carte d'amplitude a
+//        const ImageGrayu8& amplitude_input_; // carte d'amplitude a
         const ImageGrayu8& modulation_input_; // modulation du profile N
+
+//        double ampl_max_ = 1.;
 
 
     private:
@@ -35,12 +37,6 @@ namespace ASTex
 
         double global_profile(double phase)
         { // T : valeur d'entrée dans -pi, pi; valeur de sortie dans 0, 1
-//            if(phase<0.){
-//                return -phase/M_PI;
-//            }
-//            else{
-//                return phase/M_PI;
-//            }
             double profile = std::abs(phase/M_PI);
             return profile;
         }
@@ -52,46 +48,6 @@ namespace ASTex
         }
 
     protected:
-        inline void clamp_channel(double& c)
-        {
-            if (std::is_floating_point<typename ImageRGBu8::DataType>::value)
-                c = std::max(0.0,std::min(1.0,c));
-            else
-                c = std::max(0.0,std::min(255.0,c));
-        }
-
-        inline void clamp(Eigen::Vector2d& v)
-        {
-            clamp_channel(v[0]);
-            clamp_channel(v[1]);
-        }
-
-        inline void clamp(Eigen::Vector3d& v)
-        {
-            clamp_channel(v[0]);
-            clamp_channel(v[1]);
-            clamp_channel(v[2]);
-        }
-
-        inline void clamp(Eigen::Vector4d& v)
-        {
-            clamp_channel(v[0]);
-            clamp_channel(v[1]);
-            clamp_channel(v[2]);
-            clamp_channel(v[3]);
-        }
-
-        inline void clamp(double& v)
-        {
-            clamp_channel(v);
-        }
-
-    public:
-        Varying_Profile(const ImageRGBu8& input, const ImageGrayu8& amplitude, const ImageGrayu8& modulation): // constructeur
-        vector_noise_(input), amplitude_input_(amplitude), modulation_input_(modulation)
-        {
-
-        }
 
         ImageRGBu8::DoublePixelEigen fetch(const Eigen::Vector2d& uv, const ImageRGBu8& input)
         {
@@ -149,24 +105,29 @@ namespace ASTex
         }
 
 
+    public:
+        Varying_Profile(const ImageRGBu8& input, const ImageGrayu8& modulation): // constructeur // const ImageGrayu8& amplitude,
+        vector_noise_(input), modulation_input_(modulation) // , amplitude_input_(amplitude)
+        {
+
+        }
+
 
         double create_varying_profile(Eigen::Vector2d uv)
         { // retourne la hauteur des détails pour une coordonnée uv donnée
             // = a * (T + M*N)(uv)
             ImageRGBu8::DoublePixelEigen G_field = fetch(uv, vector_noise_); // champ gaussien
-            double ampl = fetch_map(uv, amplitude_input_)/255.; // amplitude a, fetch sur 0, 255
+//            double ampl = ampl_max_*fetch_map(uv, amplitude_input_)/255.; // amplitude a, fetch sur 0, 255
             double mod = fetch_map(uv, modulation_input_)/255.; // modulation de profile N, fetch sur 0, 255
 
             double arg_field = argument(G_field); // champ de phase
 //
             double profile_T = global_profile(arg_field); // profile triangle, valeurs dans 0, 1
-            double profile_M = mask_profile(arg_field, 0.25*M_PI, M_PI); // mask, valeurs dans 0, 1
-//            double mod_noise = mod(0,0)/255.;
-//
+            double profile_M = mask_profile(arg_field, 0.25*M_PI, M_PI); // mask, valeurs dans 0, 1 // TODO : exposer les param du mask ?
+
             double blend = (profile_T + mod*profile_M)*0.5; // valeurs sur 0, 1
 
-
-            return ampl*blend *255.; // TODO : quelle plage de valeur ?
+            return blend *255.; // ampl*
         }
 
 
@@ -185,9 +146,9 @@ namespace ASTex
 
 
 //    template<typename IMG>
-    Varying_Profile create_procedural_details(const ImageRGBu8& input, const ImageGrayu8& amplitude, const ImageGrayu8& modulation) // appel au constructeur
+    Varying_Profile create_procedural_details(const ImageRGBu8& input, const ImageGrayu8& modulation) // appel au constructeur
     {
-        return Varying_Profile(input, amplitude, modulation); // input = champ gaussien complexe, controlé en fréquence et en orientation
+        return Varying_Profile(input, modulation); // input = champ gaussien complexe, controlé en fréquence et en orientation
     }
 
 }

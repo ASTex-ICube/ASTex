@@ -20,41 +20,18 @@ namespace ASTex
         const ImageGrayu8& orientation_input_; // carte d'orientation theta
 
         ImageRGBu8::DoublePixelEigen img_average_;
+        double freq_max_ = 2.; // TODO : mettre des setter
 
     protected:
-
-        inline void set_zero(Eigen::Vector2d& v)
-        {
-            v.setZero();
-        }
 
         inline void set_zero(Eigen::Vector3d& v)
         {
             v.setZero();
         }
 
-        inline void set_zero(Eigen::Vector4d& v)
-        {
-            v.setZero();
-        }
-
-        inline void set_zero(double& v)
-        {
-            v = 0.0;
-        }
-
         inline void clamp_channel(double& c)
         {
-            if (std::is_floating_point<typename ImageRGBu8::DataType>::value)
-                c = std::max(0.0,std::min(1.0,c));
-            else
-                c = std::max(0.0,std::min(255.0,c));
-        }
-
-        inline void clamp(Eigen::Vector2d& v)
-        {
-            clamp_channel(v[0]);
-            clamp_channel(v[1]);
+            c = std::max(0.0,std::min(255.0,c));
         }
 
         inline void clamp(Eigen::Vector3d& v)
@@ -64,18 +41,6 @@ namespace ASTex
             clamp_channel(v[2]);
         }
 
-        inline void clamp(Eigen::Vector4d& v)
-        {
-            clamp_channel(v[0]);
-            clamp_channel(v[1]);
-            clamp_channel(v[2]);
-            clamp_channel(v[3]);
-        }
-
-        inline void clamp(double& v)
-        {
-            clamp_channel(v);
-        }
 
 
         void TriangleGrid(const Eigen::Vector2d& p_uv, Eigen::Vector3d& Bi, Eigen::Vector2i& vertex1, Eigen::Vector2i& vertex2, Eigen::Vector2i& vertex3)
@@ -125,15 +90,17 @@ namespace ASTex
             Eigen::Matrix2d Scale;
 
             // theta est sur -pi, pi; mappé sur 0, 255, on veut angle dans -pi,pi
-//            std::cout<<theta<<std::endl;
             double angle = (theta*2.*M_PI/255.) - M_PI;
-//            std::cout<<angle<<std::endl;
 
             double cos = std::cos(angle);
             double sin = std::sin(angle);
 
+            // sclae est mappé sur 0, 255; à valeur dans 1, frequ_max_
+            double frequence = std::max(scale, 1.); // pas de fréquence nulle
+            frequence = freq_max_*frequence/255.;
+
             Rotation << cos, sin, -sin, cos; // rotation autour de l'axe -z ( (0,0) en haut à gauche avec x vers la droite et y vers le bas)
-            Scale << scale, 0., 0., scale;
+            Scale << frequence, 0., 0., frequence;
 
             return Rotation*Scale;
         }
@@ -154,22 +121,6 @@ namespace ASTex
 
         }
 
-    public:
-        Tiling_n_Blending(const ImageRGBu8& in, const ImageGrayu8& freq, const ImageGrayu8& theta): // constructeur : récupère l'image d'entrée et calcul la moyenne
-                img_input_(in), frequency_input_(freq), orientation_input_(theta)
-        {
-            // compute average img value
-            ImageRGBu8::DoublePixelEigen sum;
-            set_zero(sum);
-            img_input_.for_all_pixels([&] ( const ImageRGBu8::PixelType& P)
-                                      {
-                                          ImageRGBu8::DoublePixelEigen lv = eigenPixel<double>(P);
-                                          sum += lv;
-                                      });
-
-            img_average_ = sum / double(img_input_.width()*img_input_.height());
-
-        }
 
         ImageRGBu8::DoublePixelEigen fetch(const Eigen::Vector2d& uv)
         {
@@ -178,7 +129,7 @@ namespace ASTex
                                                   -0.5 + (uv[1] - std::floor(uv[1]))*img_input_.height()};
             Eigen::Vector2d uvfl {std::floor(uvd[0]), std::floor(uvd[1])};
             //  a = coef for linear interpolation
-            Eigen::Vector2d a = uvd - uvfl;
+//            Eigen::Vector2d a = uvd - uvfl;
             // c = integer texel coord
             Eigen::Vector2i c = uvfl.cast<int>();
 
@@ -192,11 +143,11 @@ namespace ASTex
 
             return acces_repeat(c[0],c[1]);
 
-            ImageRGBu8::DoublePixelEigen V1 = (1.0 - a[0]) * acces_repeat(c[0],c[1])	+ a[0] * acces_repeat(c[0]+1,c[1]);
-            ImageRGBu8::DoublePixelEigen V2 = (1.0 - a[0]) * acces_repeat(c[0],c[1]+1) + a[0] * acces_repeat(c[0]+1,c[1]+1);
-            ImageRGBu8::DoublePixelEigen V = (1.0 - a[1]) * V1 + a[1] * V2;
-
-            return V;
+//            ImageRGBu8::DoublePixelEigen V1 = (1.0 - a[0]) * acces_repeat(c[0],c[1])	+ a[0] * acces_repeat(c[0]+1,c[1]);
+//            ImageRGBu8::DoublePixelEigen V2 = (1.0 - a[0]) * acces_repeat(c[0],c[1]+1) + a[0] * acces_repeat(c[0]+1,c[1]+1);
+//            ImageRGBu8::DoublePixelEigen V = (1.0 - a[1]) * V1 + a[1] * V2;
+//
+//            return V;
         }
 
 
@@ -226,6 +177,31 @@ namespace ASTex
 
             return map_interp;
         }
+
+
+    public:
+        Tiling_n_Blending(const ImageRGBu8& in, const ImageGrayu8& freq, const ImageGrayu8& theta): // constructeur : récupère l'image d'entrée et calcul la moyenne
+                img_input_(in), frequency_input_(freq), orientation_input_(theta)
+        {
+            // compute average img value
+            ImageRGBu8::DoublePixelEigen sum;
+            set_zero(sum);
+            img_input_.for_all_pixels([&] ( const ImageRGBu8::PixelType& P)
+                                      {
+                                          ImageRGBu8::DoublePixelEigen lv = eigenPixel<double>(P);
+                                          sum += lv;
+                                      });
+
+            img_average_ = sum / double(img_input_.width()*img_input_.height());
+
+        }
+
+        void Set_Frequency_max(double freq_max)
+        {
+            freq_max_ = freq_max;
+        }
+
+
 
 
         ImageRGBu8::PixelType tile_pixel(const Eigen::Vector2d& uv ) // fait le tnb pour un pixel

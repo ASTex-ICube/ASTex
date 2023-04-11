@@ -59,7 +59,8 @@ namespace ASTex{
             double delta_h = (xph+xmh) * (1./output_width_);
             double diff = (F_xph-F_xmh)/delta_h;
 
-            diff = std::clamp(0.5*diff + 127.5, 0., 255.);
+            double saturation = 0.5;
+            diff = std::clamp(saturation*diff + 127.5, 0., 255.);
 //            std::cout<<diff<<std::endl;
 
             return diff;///255.;
@@ -75,7 +76,8 @@ namespace ASTex{
             double delta_h = (xph+xmh) * (1./output_height_);
             double diff = (F_xph-F_xmh)/delta_h;
 
-            diff = std::clamp(0.5*diff + 127.5, 0., 255.);
+            double saturation = 0.5;
+            diff = std::clamp(saturation*diff + 127.5, 0., 255.);
 //            std::cout<<diff<<std::endl;
 
             return diff;///255.;
@@ -140,58 +142,6 @@ namespace ASTex{
     }
 
 
-
-
-    void compute_GradX(const ImageGrayu8& input, ImageGrayu8& out_GradX)
-    {
-        typedef itk::Image< uint8_t, 2 > ImageType;
-        typedef itk::Image< float, 2 > FloatImageType;
-        typedef itk::DerivativeImageFilter< ImageType, FloatImageType > DerivativeFilterType;
-        typedef itk::RescaleIntensityImageFilter< FloatImageType, ImageType > NormalizeFilterType;
-        typedef itk::ShiftScaleImageFilter< FloatImageType, FloatImageType > ScaleFilterType;
-
-        auto filter = DerivativeFilterType::New();
-//        filter->SetOrder(1);
-        filter->SetDirection(0);
-        filter->SetInput(input.itk());
-        filter->Update();
-
-        auto shift = ScaleFilterType::New();
-        shift->SetInput(filter->GetOutput());
-        shift->SetShift(127);
-        shift->Update();
-//
-        auto normalizer = NormalizeFilterType::New();
-        normalizer->SetInput(shift->GetOutput());
-//        normalizer->SetOutputMinimum(0);
-//        normalizer->SetOutputMaximum(255);
-        normalizer->Update();
-
-        out_GradX.itk() = ImageGrayu8(normalizer->GetOutput()).itk();
-    }
-
-
-
-    void compute_GradY(const ImageGrayu8& input, ImageGrayu8& out_GradY)
-    {
-        typedef itk::Image< uint8_t, 2 > ImageType;
-        typedef itk::Image< float, 2 > FloatImageType;
-        typedef itk::DerivativeImageFilter< ImageType, FloatImageType > DerivativeFilterType;
-        typedef itk::RescaleIntensityImageFilter< FloatImageType, ImageType > NormalizeFilterType;
-
-        auto filter = DerivativeFilterType::New();
-//        filter->SetOrder(1);
-        filter->SetDirection(1);
-        filter->SetInput(input.itk());
-
-        auto normalizer = NormalizeFilterType::New();
-        normalizer->SetInput(filter->GetOutput());
-        normalizer->SetOutputMinimum(0);
-        normalizer->SetOutputMaximum(255);
-        normalizer->Update();
-
-        out_GradY.itk() = ImageGrayu8(normalizer->GetOutput()).itk();
-    }
 
 
 }
