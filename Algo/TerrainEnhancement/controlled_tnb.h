@@ -20,7 +20,8 @@ namespace ASTex
         const ImageGrayu8& orientation_input_; // carte d'orientation theta
 
         ImageRGBu8::DoublePixelEigen img_average_;
-        double freq_max_ = 2.; // TODO : mettre des setter
+        double freq_max_ = 2.;
+        double lattice_resolution_ = 1.;
 
     protected:
 
@@ -45,7 +46,7 @@ namespace ASTex
 
         void TriangleGrid(const Eigen::Vector2d& p_uv, Eigen::Vector3d& Bi, Eigen::Vector2i& vertex1, Eigen::Vector2i& vertex2, Eigen::Vector2i& vertex3)
         {
-            const Eigen::Vector2d uv = p_uv * 2.0 * std::sqrt(3.0); // iGridSize
+            const Eigen::Vector2d uv = p_uv * 2.0 * std::sqrt(3.0) * lattice_resolution_; // uv * iGridSize
 
             Eigen::Matrix2d gridToSkewedGrid;
             gridToSkewedGrid << 1.0, -1./sqrt(3.),
@@ -80,7 +81,7 @@ namespace ASTex
             invSkewMat << 1.0, 0.5,
                           0.0, sqrt(3.)/2.;
 
-            Eigen::Vector2d center = (invSkewMat * vertex.cast<double>())/(2.0 * std::sqrt(3.0));
+            Eigen::Vector2d center = (invSkewMat * vertex.cast<double>())/(2.0 * std::sqrt(3.0) * lattice_resolution_);
             return center;
         }
 
@@ -199,6 +200,11 @@ namespace ASTex
         void Set_Frequency_max(double freq_max)
         {
             freq_max_ = freq_max;
+        }
+
+        void Set_Lattice_resolution(double resolution)
+        {// définit combien de hauteur de triangle il y a dans un côté de la texture de sortie (défaut : 4 hauteur)
+            lattice_resolution_ = resolution;
         }
 
 

@@ -114,6 +114,7 @@ int main()
     // tiling and blending
     auto tnb = make_Tiling_n_Blending(img_ex, control_freq, control_or);
     tnb.Set_Frequency_max(2.);
+    tnb.Set_Lattice_resolution(2.); // attention : triangle petit = meilleur orientation mais pb avec les basse fréquences
     tnb.tile_img(img_out_tnb);
 
     img_out_tnb.save(img_to_gen_name+"_tnb.png");
