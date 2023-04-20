@@ -28,16 +28,30 @@ namespace ASTex
             return t*t*(3.-2.*t);
         }
 
+
+
         double argument(ImageRGBu8::DoublePixelEigen& vector_value)
         { // pour un uv donné, récupère les donnée du vector noise et retourn l'atan (dans -pi, pi)
             double x = vector_value(0,0)/255. - 0.5;
             double y = vector_value(1,0)/255. - 0.5;
-            return std::atan2(y,x);
+            Eigen::Vector2d XY{x, y};
+
+            // test perturbation radial
+            double rho = std::sqrt(x*x+y*y);
+            double perturbation = std::sin(48.*rho)/(48.*rho) + std::sin(95.*rho)/(95.*rho);
+            Eigen::Matrix2d Perturbation;
+            Perturbation << std::cos(perturbation), -std::sin(perturbation), std::sin(perturbation), std::cos(perturbation);
+//            XY = Perturbation*XY;
+
+            // phase
+            return std::atan2(XY[1],XY[0]);
         }
 
         double global_profile(double phase)
         { // T : valeur d'entrée dans -pi, pi; valeur de sortie dans 0, 1
-            double profile = std::abs(phase/M_PI);
+//            double profile = std::abs(phase/M_PI);
+            double k = 0.01;
+            double profile = std::sqrt((phase/M_PI)*(phase/M_PI) + k) + 1. - std::sqrt(1.+k);
             return profile;
         }
 
