@@ -28,7 +28,7 @@ int main()
      */
 
     std::string tnb_example_name = "/home/grenier/Documents/ASTex_fork/results/bi_chanel_noise.png";
-    std::string terrain_name = "/home/grenier/Documents/ASTex_fork/results/terrain_ubisoft_u8.png";
+    std::string terrain_name = "/home/grenier/Documents/ASTex_fork/results/terrains/Real/fuji_u8.png";
 
     std::string img_to_gen_name = "/home/grenier/Documents/ASTex_fork/results/test_result";
 
@@ -71,10 +71,10 @@ int main()
 
 
     // output image
-    int w_coarse = img_terrain.width()/64.;
-    int h_coarse = img_terrain.height()/64.;
-    int w_fine = img_terrain.width()*1.;
-    int h_fine = img_terrain.height()*1.;
+    int w_coarse = img_terrain.width()/32.;
+    int h_coarse = img_terrain.height()/32.;
+    int w_fine = img_terrain.width()*4.;
+    int h_fine = img_terrain.height()*4.;
 
     ImageGrayu8 img_out_terrain{w_coarse, h_coarse, false};
     ImageGrayu8 gradX_out{w_coarse, h_coarse, false};

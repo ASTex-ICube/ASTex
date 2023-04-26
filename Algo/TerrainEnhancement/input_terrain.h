@@ -16,19 +16,30 @@
 #include "itkDerivativeImageFilter.h"
 #include "itkRGBToLuminanceImageFilter.h"
 
+
 namespace ASTex{
 
+    template<typename ImgGray>
     class Input_Terrain{
 //        using PIXT = typename IMG::PixelType;
 //        using EPIXT = typename IMG::DoublePixelEigen;
 
-        const ImageGrayu8& img_input_; // terrain d'entrée
+        const ImgGray& img_input_; // terrain d'entrée
         int input_height_;
         int input_width_;
         int output_height_;
         int output_width_;
 
+        double max_value_;// = std::pow(2.,16.)-1.; // 8 ou 16
+
     private:
+        double Get_max(ImageGrayu16){
+            return std::pow(2.,16.)-1.;
+        }
+        double Get_max(ImageGrayu8){
+            return std::pow(2.,8.)-1.;
+        }
+
         double fetch_mean(const Eigen::Vector2i& pix_coord) // pix_coord dans l'image de sortie
         {
             double rapport_x = double(input_width_)/output_width_; // combien de pixel d'entrée pour un pixel de sortie
@@ -60,7 +71,7 @@ namespace ASTex{
             double diff = (F_xph-F_xmh)/delta_h;
 
             double saturation = 0.5;
-            diff = std::clamp(saturation*diff + 127.5, 0., 255.);
+            diff = std::clamp(saturation*diff + max_value_/2., 0., max_value_);
 //            std::cout<<diff<<std::endl;
 
             return diff;///255.;
@@ -77,7 +88,7 @@ namespace ASTex{
             double diff = (F_xph-F_xmh)/delta_h;
 
             double saturation = 0.5;
-            diff = std::clamp(saturation*diff + 127.5, 0., 255.);
+            diff = std::clamp(saturation*diff + max_value_/2., 0., max_value_);
 //            std::cout<<diff<<std::endl;
 
             return diff;///255.;
@@ -86,11 +97,12 @@ namespace ASTex{
 
 
     public:
-        Input_Terrain(const ImageGrayu8& input, int out_height, int out_width):
+        Input_Terrain(const ImgGray& input, int out_height, int out_width):
         img_input_(input), output_height_(out_height), output_width_(out_width)
         {
             input_height_ = input.height();
             input_width_ = input.width();
+            max_value_ = Get_max(input);
         }
 
 
@@ -115,19 +127,19 @@ namespace ASTex{
         }
 
 
-        void terrain_img(ImageGrayu8& img_out, ImageGrayu8& out_gradX, ImageGrayu8& out_gradY) // récupère le terrain pour chaque pixel de l'image de sortie
+        void terrain_img(ImgGray& img_out, ImgGray& out_gradX, ImgGray& out_gradY) // récupère le terrain pour chaque pixel de l'image de sortie
         {
-            img_out.parallel_for_all_pixels([&] (typename ImageGrayu8::PixelType& P, int x, int y)
+            img_out.parallel_for_all_pixels([&] (typename ImgGray::PixelType& P, int x, int y)
                                             {
                                                 Eigen::Vector2i pix_coord{x,y};//{ double(x) / (img_out.width()), double(y) / (img_out.height()) };
                                                 P = terrain_pixel(pix_coord);
                                             });
-            out_gradX.parallel_for_all_pixels([&] (typename ImageGrayu8::PixelType& P, int x, int y)
+            out_gradX.parallel_for_all_pixels([&] (typename ImgGray::PixelType& P, int x, int y)
                                             {
                                                 Eigen::Vector2i pix_coord{x,y};//{ double(x) / (img_out.width()), double(y) / (img_out.height()) };
                                                 P = gradx_pixel(pix_coord);
                                             });
-            out_gradY.parallel_for_all_pixels([&] (typename ImageGrayu8::PixelType& P, int x, int y)
+            out_gradY.parallel_for_all_pixels([&] (typename ImgGray::PixelType& P, int x, int y)
                                               {
                                                   Eigen::Vector2i pix_coord{x,y};//{ double(x) / (img_out.width()), double(y) / (img_out.height()) };
                                                   P = grady_pixel(pix_coord);
@@ -136,8 +148,8 @@ namespace ASTex{
     };
 
 
-
-    Input_Terrain grab_Input_terrain(const ImageGrayu8& input, int out_height, int out_width){
+    template<typename ImgGray>
+    Input_Terrain<ImgGray> grab_Input_terrain(const ImgGray& input, int out_height, int out_width){
         return Input_Terrain(input, out_height, out_width);
     }
 

@@ -10,18 +10,30 @@ namespace ASTex
  Need Gaussian imagea as input
  */
 //    template<typename IMG>
+    template<typename ImgGray>
     class Tiling_n_Blending
     {
 //        using PIXT = typename IMG::PixelType;
 //        using EPIXT = typename IMG::DoublePixelEigen;
 
         const ImageRGBu8& img_input_; // exemple d'entrée
-        const ImageGrayu8& frequency_input_; // carte de fréquence f
-        const ImageGrayu8& orientation_input_; // carte d'orientation theta
+        const ImgGray& frequency_input_; // carte de fréquence f
+        const ImgGray& orientation_input_; // carte d'orientation theta
+
+        double max_value_;
 
         ImageRGBu8::DoublePixelEigen img_average_;
         double freq_max_ = 2.;
+        double freq_min_;
         double lattice_resolution_ = 1.;
+
+    private:
+        double Get_max(ImageGrayu16){
+            return std::pow(2.,16.)-1.;
+        }
+        double Get_max(ImageGrayu8){
+            return std::pow(2.,8.)-1.;
+        }
 
     protected:
 
@@ -32,7 +44,7 @@ namespace ASTex
 
         inline void clamp_channel(double& c)
         {
-            c = std::max(0.0,std::min(255.0,c));
+            c = std::max(0.0,std::min(255.,c));
         }
 
         inline void clamp(Eigen::Vector3d& v)
@@ -91,14 +103,14 @@ namespace ASTex
             Eigen::Matrix2d Scale;
 
             // theta est sur -pi, pi; mappé sur 0, 255, on veut angle dans -pi,pi
-            double angle = (theta*2.*M_PI/255.) - M_PI;
+            double angle = (theta*2.*M_PI/max_value_) - M_PI;
 
             double cos = std::cos(angle);
             double sin = std::sin(angle);
 
             // sclae est mappé sur 0, 255; à valeur dans 1, frequ_max_
-            double frequence = std::max(scale, 1.); // pas de fréquence nulle
-            frequence = freq_max_*frequence/255.;
+            double frequence = std::max(scale, freq_min_); // pas de fréquence nulle
+            frequence = freq_max_*frequence/max_value_;
 
             Rotation << cos, sin, -sin, cos; // rotation autour de l'axe -z ( (0,0) en haut à gauche avec x vers la droite et y vers le bas)
             Scale << frequence, 0., 0., frequence;
@@ -152,7 +164,7 @@ namespace ASTex
         }
 
 
-        double fetch_map(const Eigen::Vector2d& uv, const ImageGrayu8& map)
+        double fetch_map(const Eigen::Vector2d& uv, const ImgGray& map)
         {
             // uv mult by map size
             Eigen::Vector2d pix_uv = Eigen::Vector2d{uv[0]*(map.width()-1), uv[1]*(map.height()-1)}; // uv in [0, 1], pix_uv in [0, 255]
@@ -181,7 +193,7 @@ namespace ASTex
 
 
     public:
-        Tiling_n_Blending(const ImageRGBu8& in, const ImageGrayu8& freq, const ImageGrayu8& theta): // constructeur : récupère l'image d'entrée et calcul la moyenne
+        Tiling_n_Blending(const ImageRGBu8& in, const ImgGray& freq, const ImgGray& theta): // constructeur : récupère l'image d'entrée et calcul la moyenne
                 img_input_(in), frequency_input_(freq), orientation_input_(theta)
         {
             // compute average img value
@@ -194,6 +206,8 @@ namespace ASTex
                                       });
 
             img_average_ = sum / double(img_input_.width()*img_input_.height());
+            max_value_ = Get_max(freq);
+            freq_min_ = 1.;//max_value_/256.;
 
         }
 
@@ -264,7 +278,8 @@ namespace ASTex
 
 
 //    template<typename IMG>
-    Tiling_n_Blending make_Tiling_n_Blending(const ImageRGBu8& img, const ImageGrayu8& freq, const ImageGrayu8& theta) // appel au constructeur
+    template<typename ImgGray>
+    Tiling_n_Blending<ImgGray> make_Tiling_n_Blending(const ImageRGBu8& img, const ImgGray& freq, const ImgGray& theta) // appel au constructeur
     {
         return Tiling_n_Blending(img, freq, theta);
     }

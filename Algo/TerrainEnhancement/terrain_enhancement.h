@@ -7,16 +7,26 @@
 
 namespace ASTex{
 
+    template<typename ImgGray>
     class Terrain_enhancement{
-        const ImageGrayu8& initial_terrain_; // terrain d'entrée
-        const ImageGrayu8& generated_details_; // détails générés
+        const ImgGray& initial_terrain_; // terrain d'entrée
+        const ImgGray& generated_details_; // détails générés
 
-        const ImageGrayu8& amplitude_input_; // carte d'amplitude a
+        const ImgGray& amplitude_input_; // carte d'amplitude a
         double ampl_max_ = 1.; // amplitude max des détails
+
+        double max_value_;
 
 
     private:
-        double fetch_map(const Eigen::Vector2d& uv, const ImageGrayu8& map)
+        double Get_max(ImageGrayu16){
+            return std::pow(2.,16.)-1.;
+        }
+        double Get_max(ImageGrayu8){
+            return std::pow(2.,8.)-1.;
+        }
+
+        double fetch_map(const Eigen::Vector2d& uv, const ImgGray& map)
         {
             // uv mult by map size
             Eigen::Vector2d pix_uv = Eigen::Vector2d{uv[0]*(map.width()-1), uv[1]*(map.height()-1)}; // uv in [0, 1], pix_uv in [0, 255]
@@ -46,9 +56,10 @@ namespace ASTex{
 
 
     public:
-        Terrain_enhancement(const ImageGrayu8& terrain, const ImageGrayu8& details, const ImageGrayu8& amplitude):
-        initial_terrain_(terrain), generated_details_(details), amplitude_input_(amplitude){
-
+        Terrain_enhancement(const ImgGray& terrain, const ImgGray& details, const ImgGray& amplitude):
+        initial_terrain_(terrain), generated_details_(details), amplitude_input_(amplitude)
+        {
+            max_value_ = Get_max(terrain);
         }
 
         void Set_Amplitude_max (double ampl_max)
@@ -60,7 +71,7 @@ namespace ASTex{
         {
             double terrain = fetch_map(uv, initial_terrain_); // fetch sur 0, 255.
             double detail = fetch_map(uv, generated_details_);
-            double ampl = ampl_max_*fetch_map(uv, amplitude_input_)/255.; // amplitude a, fetch sur 0, 255
+            double ampl = ampl_max_*fetch_map(uv, amplitude_input_)/max_value_; // amplitude a, fetch sur 0, 255
 
             double enhancement = terrain + ampl*detail; // ampl*detail sur 0, ampl_max_
 
@@ -68,9 +79,9 @@ namespace ASTex{
         }
 
 
-        void final_terrain_img(ImageGrayu8& img_out)
+        void final_terrain_img(ImgGray& img_out)
         {
-            img_out.parallel_for_all_pixels([&] (typename ImageGrayu8::PixelType& P, int x, int y)
+            img_out.parallel_for_all_pixels([&] (typename ImgGray::PixelType& P, int x, int y)
                                             {
                                                 Eigen::Vector2d uv{ double(x) / (img_out.width()), double(y) / (img_out.height()) };
                                                 P = terrain_pixel(uv);
@@ -79,7 +90,8 @@ namespace ASTex{
     };
 
 
-    Terrain_enhancement compute_final_terrain(const ImageGrayu8& terrain, const ImageGrayu8& details, const ImageGrayu8& amplitude)
+    template<typename ImgGray>
+    Terrain_enhancement<ImgGray> compute_final_terrain(const ImgGray& terrain, const ImgGray& details, const ImgGray& amplitude)
     {
         return Terrain_enhancement(terrain, details, amplitude);
     }

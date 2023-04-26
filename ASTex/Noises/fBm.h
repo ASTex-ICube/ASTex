@@ -8,13 +8,24 @@
 namespace ASTex
 {
 
+    template<typename ImgGray>
     class fBm_noise
     {
 //        int x_Resolution_;
 //        int y_Resolution_;
         int nb_octave_;
 
+        double max_value_;
+
     private:
+        double Get_max(ImageGrayu16){
+            return std::pow(2.,16.)-1.;
+        }
+        double Get_max(ImageGrayu8){
+            return std::pow(2.,8.)-1.;
+        }
+
+
         double fract(double p)
         {
             return p - std::floor(p);
@@ -65,9 +76,9 @@ namespace ASTex
         }
 
     public:
-        fBm_noise(const int octave):nb_octave_(octave)
+        fBm_noise(const ImgGray& output, const int octave):nb_octave_(octave)
         {
-
+            max_value_ = Get_max(output);
         }
 
 
@@ -87,13 +98,13 @@ namespace ASTex
                 freq *= 2.;
             }
 
-            return fbm_noise*128.;
+            return fbm_noise* max_value_/2.;
         }
 
 
-        void fBm_image(ImageGrayu8& img_out)
+        void fBm_image(ImgGray& img_out)
         {
-            img_out.parallel_for_all_pixels([&] (typename ImageGrayu8::PixelType& P, int x, int y)
+            img_out.parallel_for_all_pixels([&] (typename ImgGray::PixelType& P, int x, int y)
                                             {
                                                 Eigen::Vector2d uv{ double(x) / (img_out.width()), double(y) / (img_out.height()) };
                                                 P = fBm_pixel(uv);
@@ -103,9 +114,10 @@ namespace ASTex
 
 
 
-    fBm_noise compute_fBm(const int nb_octave)
+    template<typename ImgGray>
+    fBm_noise<ImgGray> compute_fBm(ImgGray& output, const int nb_octave)
     {
-        return fBm_noise(nb_octave);
+        return fBm_noise(output, nb_octave);
     }
 
 }

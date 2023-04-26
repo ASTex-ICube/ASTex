@@ -9,6 +9,7 @@
 namespace ASTex
 {
 //    template<typename IMG>
+    template<typename ImgGray>
     class Varying_Profile
     {
 //        using PIXT = typename IMG::PixelType;
@@ -16,12 +17,22 @@ namespace ASTex
 
         const ImageRGBu8& vector_noise_; // champ gaussien complexe G
 //        const ImageGrayu8& amplitude_input_; // carte d'amplitude a
-        const ImageGrayu8& modulation_input_; // modulation du profile N
+        const ImgGray& modulation_input_; // modulation du profile N
+
+        double max_value_;
 
 //        double ampl_max_ = 1.;
 
 
     private:
+        double Get_max(ImageGrayu16){
+            return std::pow(2.,16.)-1.;
+        }
+        double Get_max(ImageGrayu8){
+            return std::pow(2.,8.)-1.;
+        }
+
+
         double smoothstep(double edge0, double edge1, double x)
         {
             double t = std::min(std::max((x - edge0) / (edge1 - edge0), 0.), 1.); // clamp
@@ -37,14 +48,14 @@ namespace ASTex
             Eigen::Vector2d XY{x, y};
 
             // test perturbation radial
-            double rho = std::sqrt(x*x+y*y);
-            double perturbation = std::sin(48.*rho)/(48.*rho) + std::sin(95.*rho)/(95.*rho);
-            Eigen::Matrix2d Perturbation;
-            Perturbation << std::cos(perturbation), -std::sin(perturbation), std::sin(perturbation), std::cos(perturbation);
+//            double rho = std::sqrt(x*x+y*y);
+//            double perturbation = std::sin(48.*rho)/(48.*rho) + std::sin(95.*rho)/(95.*rho);
+//            Eigen::Matrix2d Perturbation;
+//            Perturbation << std::cos(perturbation), -std::sin(perturbation), std::sin(perturbation), std::cos(perturbation);
 //            XY = Perturbation*XY;
 
             // phase
-            return std::atan2(XY[1],XY[0]);
+            return std::atan2(y,x);
         }
 
         double global_profile(double phase)
@@ -91,7 +102,7 @@ namespace ASTex
         }
 
 
-        double fetch_map(const Eigen::Vector2d& uv, const ImageGrayu8& map)
+        double fetch_map(const Eigen::Vector2d& uv, const ImgGray& map)
         {
             // uv mult by map size
             Eigen::Vector2d pix_uv = Eigen::Vector2d{uv[0]*(map.width()-1), uv[1]*(map.height()-1)}; // uv in [0, 1], pix_uv in [0, 255]
@@ -120,10 +131,10 @@ namespace ASTex
 
 
     public:
-        Varying_Profile(const ImageRGBu8& input, const ImageGrayu8& modulation): // constructeur // const ImageGrayu8& amplitude,
+        Varying_Profile(const ImageRGBu8& input, const ImgGray& modulation): // constructeur // const ImageGrayu8& amplitude,
         vector_noise_(input), modulation_input_(modulation) // , amplitude_input_(amplitude)
         {
-
+            max_value_ = Get_max(modulation);
         }
 
 
@@ -132,7 +143,7 @@ namespace ASTex
             // = a * (T + M*N)(uv)
             ImageRGBu8::DoublePixelEigen G_field = fetch(uv, vector_noise_); // champ gaussien
 //            double ampl = ampl_max_*fetch_map(uv, amplitude_input_)/255.; // amplitude a, fetch sur 0, 255
-            double mod = fetch_map(uv, modulation_input_)/255.; // modulation de profile N, fetch sur 0, 255
+            double mod = fetch_map(uv, modulation_input_)/max_value_; // modulation de profile N, fetch sur 0, 255
 
             double arg_field = argument(G_field); // champ de phase
 //
@@ -141,13 +152,13 @@ namespace ASTex
 
             double blend = (profile_T + mod*profile_M)*0.5; // valeurs sur 0, 1
 
-            return blend *255.; // ampl*
+            return blend *max_value_; // ampl*
         }
 
 
-        void details_heighmap(ImageGrayu8& img_out) // récupère la hauteur des détails pour chaque pixel de l'image de sortie
+        void details_heighmap(ImgGray& img_out) // récupère la hauteur des détails pour chaque pixel de l'image de sortie
         {
-            img_out.parallel_for_all_pixels([&] (typename ImageGrayu8::PixelType& P, int x, int y)
+            img_out.parallel_for_all_pixels([&] (typename ImgGray::PixelType& P, int x, int y)
                                             {
                                                 Eigen::Vector2d uv{ double(x) / (img_out.width()), double(y) / (img_out.height()) };
                                                 P = create_varying_profile(uv);
@@ -159,8 +170,8 @@ namespace ASTex
 
 
 
-//    template<typename IMG>
-    Varying_Profile create_procedural_details(const ImageRGBu8& input, const ImageGrayu8& modulation) // appel au constructeur
+    template<typename ImgGray>
+    Varying_Profile<ImgGray> create_procedural_details(const ImageRGBu8& input, const ImgGray& modulation) // appel au constructeur
     {
         return Varying_Profile(input, modulation); // input = champ gaussien complexe, controlé en fréquence et en orientation
     }
