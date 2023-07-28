@@ -2,163 +2,46 @@
 // Created by grenier on 28/03/23.
 //
 #include <ASTex/image_gray.h>
-#include <ASTex/image_rgb.h>
-#include "ASTex/histogram.h"
-#include "ASTex/Noises/fBm.h"
-
-#include <Algo/TerrainEnhancement/input_terrain.h>
-#include <Algo/TerrainEnhancement/control_maps.h>
-#include <Algo/TerrainEnhancement/controlled_tnb.h>
-#include <Algo/TerrainEnhancement/transfer_functions.h>
-#include <Algo/TerrainEnhancement/terrain_enhancement.h>
+#include "ASTex/Noises/Gabor.h"
 
 using namespace ASTex;
 
-
+// Gabor.h est le code exemple du papier d'origine dont il est un peut touffu (aussi à cause des structure accélératrices)
+// les principales partie de l'algo sont :
+// fonction gabor : définition d'un noyaux de gabor (gaussienne * cosinus)
+// fonction cell : boucle pour placer et sommer les noyaux
 
 int main()
 {
-//    using IMGT = ImageRGBu8;
-//    using IMGG = ImageGrayu8;
+// ---------------------------------------------------------------------------
+    int resolution = 256;
+    int img_size = 512; // nombre de pixel dans l'image
 
-    /* principe :
-     * en entrée j'ai un terrain,
-     * je récupère le champ de hauteur et les gradients
-     * en sortie j'ai les carte de fréquence, orientation et amplitude
-     * que j'utilise pour générer des détails à ajouter au terrain
-     */
+    float F_0_ = 0.04; // fréquence
+    float omega_0_ = 0.; // orientation (seulement dans le cas anisotrope, cf code gabor ligne 160)
 
-    std::string tnb_example_name = "/home/grenier/Documents/ASTex_fork/results/bi_chanel_noise.png";
-    std::string terrain_name = "/home/grenier/Documents/ASTex_fork/results/terrains/swiss2_height.png";
+    float number_of_impulses_per_kernel = 64.0;
+    unsigned period = 128; // non utilisé
 
-    std::string img_to_gen_name = "/home/grenier/Documents/ASTex_fork/results/test_result";
+    float K_ = 1.0; //laisser à 1
+    float a_ = 0.02; // taille des noyaux (a*a = 1/variance)
 
-//    std::string ctrl_fr_name = "/home/grenier/Documents/ASTex_fork/results/un.png";
-//    std::string ctrl_or_name = "/home/grenier/Documents/ASTex_fork/results/grad_y.png";
-//    std::string ctrl_ampl_name = "/home/grenier/Documents/ASTex_fork/results/un.png";
-//    std::string ctrl_modulation_name = "/home/grenier/Documents/ASTex_fork/results/BF_HF.png";
-
-    // génération d'un gradient de test
-//    ImageGrayu8 img_grad{256, 256, false};
-//    img_grad.parallel_for_all_pixels([&] (typename ImageGrayu8::PixelType& P, int x, int y){P = ImageGrayu8::PixelType(std::clamp(x+y, 0, 255));});
-//    img_grad.save(img_to_gen_name+"_sample.png");
-
-    using IMGType = ImageGrayu16;
-
-    // input terrain
-    IMGType img_terrain; // TODO : u8 ou u16 ?
-    img_terrain.load(terrain_name);
-    img_terrain.save("/home/grenier/Documents/augmented_terrains/images/terrain_init.png");
+    unsigned random_offset_ = 954248632;
+    unsigned seed_ = 1;
 
 
-//    std::cout<< img_terrain.pixelAbsolute(0,0) <<std::endl;
-
-    // input example
-    ImageRGBu8 img_ex;
-    img_ex.load(tnb_example_name);
-
-
-
-    // control maps
-//    ImageGrayu8 control_freq;
-//    control_freq.load(ctrl_fr_name);
-
-//    ImageGrayu8 control_or;
-//    control_or.load(ctrl_or_name);
-
-//    ImageGrayu8 control_ampl;
-//    control_ampl.load(ctrl_ampl_name);
-
-//    ImageGrayu8 control_mod;
-//    control_mod.load(ctrl_modulation_name);
-
-
-
-
-
-    // output image
-    int w_coarse = img_terrain.width()/10.;
-    int h_coarse = img_terrain.height()/10.;
-    int w_fine = img_terrain.width()*10.;
-    int h_fine = img_terrain.height()*10.;
-
-    IMGType img_out_terrain{w_coarse, h_coarse, false};
-    IMGType gradX_out{w_coarse, h_coarse, false};
-    IMGType gradY_out{w_coarse, h_coarse, false};
-
-    IMGType control_freq{w_coarse, h_coarse, false};
-    IMGType control_or{w_coarse, h_coarse, false};
-    IMGType control_ampl{w_coarse, h_coarse, false};
-
-    IMGType control_mod{w_fine, h_fine, false};
-    ImageRGBu8 img_out_tnb{w_fine, h_fine, false};
-    IMGType img_out_details{w_fine, h_fine, false};
-    IMGType img_out_final{w_fine, h_fine, false};
-
-
-
-
-    // terrain information
-    auto terrain = grab_Input_terrain(img_terrain, h_coarse, w_coarse);
-    terrain.terrain_img(img_out_terrain, gradX_out, gradY_out);
-
-    img_out_terrain.save(img_to_gen_name+"_terrain.png");
-    gradX_out.save(img_to_gen_name+"_gradX.png");
-    gradY_out.save(img_to_gen_name+"_gradY.png");
-
-
-
-
-    // cartes de controle
-    auto control_maps = create_control_maps(img_out_terrain, gradX_out, gradY_out);
-    control_maps.Set_Frequency_param(2., 2.);
-    control_maps.Set_Amplitude_param(2., 6.);
-    control_maps.compute_control(control_freq, control_or, control_ampl);
-
-    control_freq.save(img_to_gen_name+"_frequ.png");
-    control_ampl.save(img_to_gen_name+"_ampl.png");
-    control_or.save(img_to_gen_name+"_or.png");
-
-
-
-    // tiling and blending
-    auto tnb = make_Tiling_n_Blending(img_ex, control_freq, control_or);
-    tnb.Set_Frequency_max(4.);
-    tnb.Set_Lattice_resolution(4.); // attention : triangle petit = meilleur orientation mais pb avec les basse fréquences
-    tnb.tile_img(img_out_tnb);
-
-    img_out_tnb.save(img_to_gen_name+"_tnb.png");
-
-
-    // generate fBm for profile modulation
-    auto fBm = compute_fBm(control_mod, 6);
-    fBm.fBm_image(control_mod);
-
-    control_mod.save(img_to_gen_name + "_fBm.png");
-
-
-    // transfer function
-    auto tr_func = create_procedural_details(img_out_tnb, control_mod);
-    tr_func.details_heighmap(img_out_details);
-
-    img_out_details.save(img_to_gen_name+"_details.png");
-
-
-    // terrain amplifié
-    auto final_terrain = compute_final_terrain(img_terrain, img_out_details, control_ampl);
-    final_terrain.Set_Amplitude_max(.02);
-    final_terrain.final_terrain_img(img_out_final);
-
-    img_out_final.save(img_to_gen_name+"_final.png");
-    img_out_final.save("/home/grenier/Documents/augmented_terrains/images/terrain_final.png");
-
-    /* détail d'implem :
-     * j'ai finalement mis l'utilisation de l'amplitude max au moment de l'application des détails
-     * la carte de contrôle est calculée avant mais ne donne que les variation spatiale de l'amplitude (valeurs normées)
-     * définir l'amplitude max à la fin permet de garder la séparation des étpaes dans des images séparées (y'a peut être mieux comme méthode mais c'ets la seule que j'ai vu)
-     */
-
-
+    // ---------------------------------------------------------------------------
+    noise noise_(K_,
+                 a_,
+                 F_0_,
+                 omega_0_,
+                 number_of_impulses_per_kernel,
+                 period,
+                 random_offset_,
+                 seed_);
+// la valeur du bruit noise_ en x,y peut être récupérée par noise_(x,y)
+    ImageGrayu8 image_ = storing_noise(resolution, img_size, noise_); // pour écrire le bruit dans une image
+    image_.save("/home/grenier/Documents/ASTex_fork/results/T_analysis/gabor.png");
 
     return EXIT_SUCCESS;
 }

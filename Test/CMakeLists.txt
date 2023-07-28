@@ -11,7 +11,8 @@ set(exec_list test_exr_io test_super_pixel test_saliency test_contentExchange te
     test_matchHistogram test_RPN test_terrainAmplification test_gradient test_multiTextureContentExchange
     test_heightToTexture test_PCTSResynthesis test_texton test_contentExchangeAmplification test_csn 
 	test_spectrum test_cyclostationaryPSD
-	test_simple_tiling_n_blending chgrenier_tests)
+	test_simple_tiling_n_blending
+	chgrenier_tests chgrenier_fourier chgrenier_cm2d chgrenier_ccvt chgrenier_Tcontent)
 
 
 #find_path(HeightFieldLib_path REQUIRED)

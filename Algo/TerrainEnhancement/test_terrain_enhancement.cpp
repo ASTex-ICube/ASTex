@@ -3,6 +3,7 @@
 //
 #include <ASTex/image_gray.h>
 #include <ASTex/image_rgb.h>
+#include "ASTex/histogram.h"
 #include "ASTex/Noises/fBm.h"
 
 #include <Algo/TerrainEnhancement/input_terrain.h>
@@ -28,7 +29,7 @@ int main()
      */
 
     std::string tnb_example_name = "/home/grenier/Documents/ASTex_fork/results/bi_chanel_noise.png";
-    std::string terrain_name = "/home/grenier/Documents/ASTex_fork/results/terrains/Real/fuji_u8.png";
+    std::string terrain_name = "/home/grenier/Documents/ASTex_fork/results/terrains/swiss2_height.png";
 
     std::string img_to_gen_name = "/home/grenier/Documents/ASTex_fork/results/test_result";
 
@@ -42,15 +43,20 @@ int main()
 //    img_grad.parallel_for_all_pixels([&] (typename ImageGrayu8::PixelType& P, int x, int y){P = ImageGrayu8::PixelType(std::clamp(x+y, 0, 255));});
 //    img_grad.save(img_to_gen_name+"_sample.png");
 
+    using IMGType = ImageGrayu16;
 
     // input terrain
-    ImageGrayu8 img_terrain; // TODO : u8 ou u16 ?
+    IMGType img_terrain; // TODO : u8 ou u16 ?
     img_terrain.load(terrain_name);
-//    img_terrain.save(img_to_gen_name+"_load_terrain.png");
+    img_terrain.save("/home/grenier/Documents/augmented_terrains/images/terrain_init.png");
+
+
+//    std::cout<< img_terrain.pixelAbsolute(0,0) <<std::endl;
 
     // input example
     ImageRGBu8 img_ex;
     img_ex.load(tnb_example_name);
+
 
 
     // control maps
@@ -71,23 +77,23 @@ int main()
 
 
     // output image
-    int w_coarse = img_terrain.width()/32.;
-    int h_coarse = img_terrain.height()/32.;
-    int w_fine = img_terrain.width()*4.;
-    int h_fine = img_terrain.height()*4.;
+    int w_coarse = img_terrain.width()/10.;
+    int h_coarse = img_terrain.height()/10.;
+    int w_fine = img_terrain.width()*10.;
+    int h_fine = img_terrain.height()*10.;
 
-    ImageGrayu8 img_out_terrain{w_coarse, h_coarse, false};
-    ImageGrayu8 gradX_out{w_coarse, h_coarse, false};
-    ImageGrayu8 gradY_out{w_coarse, h_coarse, false};
+    IMGType img_out_terrain{w_coarse, h_coarse, false};
+    IMGType gradX_out{w_coarse, h_coarse, false};
+    IMGType gradY_out{w_coarse, h_coarse, false};
 
-    ImageGrayu8 control_freq{w_coarse, h_coarse, false};
-    ImageGrayu8 control_or{w_coarse, h_coarse, false};
-    ImageGrayu8 control_ampl{w_coarse, h_coarse, false};
+    IMGType control_freq{w_coarse, h_coarse, false};
+    IMGType control_or{w_coarse, h_coarse, false};
+    IMGType control_ampl{w_coarse, h_coarse, false};
 
-    ImageGrayu8 control_mod{w_fine, h_fine, false};
+    IMGType control_mod{w_fine, h_fine, false};
     ImageRGBu8 img_out_tnb{w_fine, h_fine, false};
-    ImageGrayu8 img_out_details{w_fine, h_fine, false};
-    ImageGrayu8 img_out_final{w_fine, h_fine, false};
+    IMGType img_out_details{w_fine, h_fine, false};
+    IMGType img_out_final{w_fine, h_fine, false};
 
 
 
@@ -99,6 +105,8 @@ int main()
     img_out_terrain.save(img_to_gen_name+"_terrain.png");
     gradX_out.save(img_to_gen_name+"_gradX.png");
     gradY_out.save(img_to_gen_name+"_gradY.png");
+
+
 
 
     // cartes de controle
@@ -115,15 +123,15 @@ int main()
 
     // tiling and blending
     auto tnb = make_Tiling_n_Blending(img_ex, control_freq, control_or);
-    tnb.Set_Frequency_max(2.);
-    tnb.Set_Lattice_resolution(2.); // attention : triangle petit = meilleur orientation mais pb avec les basse fréquences
+    tnb.Set_Frequency_max(4.);
+    tnb.Set_Lattice_resolution(4.); // attention : triangle petit = meilleur orientation mais pb avec les basse fréquences
     tnb.tile_img(img_out_tnb);
 
     img_out_tnb.save(img_to_gen_name+"_tnb.png");
 
 
     // generate fBm for profile modulation
-    auto fBm = compute_fBm(6);
+    auto fBm = compute_fBm(control_mod, 6);
     fBm.fBm_image(control_mod);
 
     control_mod.save(img_to_gen_name + "_fBm.png");
@@ -138,10 +146,11 @@ int main()
 
     // terrain amplifié
     auto final_terrain = compute_final_terrain(img_terrain, img_out_details, control_ampl);
-    final_terrain.Set_Amplitude_max(.1);
+    final_terrain.Set_Amplitude_max(.02);
     final_terrain.final_terrain_img(img_out_final);
 
     img_out_final.save(img_to_gen_name+"_final.png");
+    img_out_final.save("/home/grenier/Documents/augmented_terrains/images/terrain_final.png");
 
     /* détail d'implem :
      * j'ai finalement mis l'utilisation de l'amplitude max au moment de l'application des détails
