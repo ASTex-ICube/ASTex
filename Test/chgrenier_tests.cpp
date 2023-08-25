@@ -14,10 +14,10 @@ using namespace ASTex;
 int main()
 {
 // ---------------------------------------------------------------------------
-    int resolution = 256;
+    int resolution = 128;
     int img_size = 512; // nombre de pixel dans l'image
 
-    float F_0_ = 0.04; // fréquence
+    float F_0_ = 0.1;//0.04; // fréquence
     float omega_0_ = 0.; // orientation (seulement dans le cas anisotrope, cf code gabor ligne 160)
 
     float number_of_impulses_per_kernel = 64.0;
@@ -41,7 +41,7 @@ int main()
                  seed_);
 // la valeur du bruit noise_ en x,y peut être récupérée par noise_(x,y)
     ImageGrayu8 image_ = storing_noise(resolution, img_size, noise_); // pour écrire le bruit dans une image
-    image_.save("/home/grenier/Documents/ASTex_fork/results/T_analysis/gabor.png");
+    image_.save("/home/grenier/Documents/ASTex_fork/results/T_analysis/gabor_test.png");
 
     return EXIT_SUCCESS;
 }

@@ -14,7 +14,19 @@ int main(){
 
     ImageRGBu8 cm_(cm_size, cm_size);
 //    cm_.load("/home/grenier/Documents/ASTex_fork/results/T_analysis/cm_in.png");
-    cm_.load("/home/grenier/Documents/ASTex_fork/results/T_analysis/cm_out.png");
+//    cm_.load("/home/grenier/Documents/ASTex_fork/results/T_analysis/cm_out.png");
+
+
+// ---------------------------------------------------------------------------
+// description cm maths
+    cm_.parallel_for_all_pixels([&] (typename ImageRGBu8::PixelType& P, int x, int y)
+                                   {
+                                       double res = 2.*std::abs(x - cm_size/2);
+                                       res = std::min(std::max(res, 0.), 255.);
+
+                                       P = ImageRGBu8::PixelType(res);
+                                   });
+    cm_.save("/home/grenier/Documents/ASTex_fork/results/T_analysis/composition_cm.png");
 
 // ---------------------------------------------------------------------------
 // génération noise
@@ -22,7 +34,7 @@ int main(){
     int resolution = 256;
     int img_size = 512;
 
-    float F_0_ = 0.04;
+    float F_0_ = 0.02;
     float omega_0_ = 0.;//M_PI;
 
     float number_of_impulses_per_kernel = 64.0;
@@ -76,8 +88,8 @@ int main(){
 
 // ---------------------------------------------------------------------------
 // result
-//    result.save("/home/grenier/Documents/ASTex_fork/results/T_analysis/composition_in.png");
-    result.save("/home/grenier/Documents/ASTex_fork/results/T_analysis/composition_out.png");
+    result.save("/home/grenier/Documents/ASTex_fork/results/T_analysis/composition_in.png");
+//    result.save("/home/grenier/Documents/ASTex_fork/results/T_analysis/composition_out.png");
 
     return 0;
 }

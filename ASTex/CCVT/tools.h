@@ -20,16 +20,23 @@ void nonconstant_density(std::list<Point>& points, const int numberOfPoints, con
     const double E = 2.718281828459;
     const double PI = 3.141592653590;
     while (points.size() < static_cast<unsigned int>(numberOfPoints)) {
-        double x = static_cast<double>(rand() % RAND_MAX) / RAND_MAX * 2 - 1;
-        double y = static_cast<double>(rand() % RAND_MAX) / RAND_MAX * 2 - 1;
+//        double x = static_cast<double>(rand() % RAND_MAX) / RAND_MAX * 2 - 1; // sur -1, 1
+//        double y = static_cast<double>(rand() % RAND_MAX) / RAND_MAX * 2 - 1;
+        double x = static_cast<double>(rand() % RAND_MAX) / RAND_MAX * 4 - 2; // sur -2, 2
+        double y = static_cast<double>(rand() % RAND_MAX) / RAND_MAX * 4 - 2;
 
 //    double p = pow(E, -20.0 * x * x - 20.0 * y * y) + 0.2 * sin(PI * x) * sin(PI * x) * sin(PI * y) * sin(PI * y);
 //        double p = pow(E, -4.0 * x * x - 4.0 * y * y);
         double p = std::exp(-0.5 * (x*x)/var1) * std::exp(-0.5 * (y*y)/var2);
 
-        double r = static_cast<double>(rand() % RAND_MAX) / RAND_MAX;
+        double r = static_cast<double>(rand() % RAND_MAX) / RAND_MAX; // sur 0, 1
         if (p >= r) {
-            points.push_back(Point((x + 1) / 2 * torusSize, (y + 1) / 2 * torusSize));
+            x = std::min(std::max(x, -1.), 1.);
+            y = std::min(std::max(y, -1.), 1.);
+            double X = (x + 1) / 2 * torusSize;
+            double Y = (y + 1) / 2 * torusSize;
+
+            points.push_back(Point(X, Y)); // re-mis sur 0, 1 puis 0, torusSize
         }
     }
 }
@@ -96,7 +103,7 @@ bool save_res_point(const std::vector<Site>& result, Metric metric, float radius
 }
 
 template<class Site, class Metric>
-bool save_res_zone(const std::vector<Site>& result, Metric metric, std::vector<ImageRGB8::PixelType> colors, int img_size, std::string img_name){
+bool save_res_zone(const std::vector<Site>& result, Metric metric, std::vector<double> colors, int img_size, std::string img_name){
     ImageGrayu8 image_(img_size, img_size);
 
     image_.parallel_for_all_pixels([&] (typename ImageGrayu8::PixelType& P, int x, int y)
@@ -108,12 +115,12 @@ bool save_res_zone(const std::vector<Site>& result, Metric metric, std::vector<I
                                            double new_dist = metric.distance(Point2(x,y), result[i].location);
                                            if(new_dist < dist){
                                                dist = new_dist;
-                                               color_id = i;
+                                               color_id = result[i].id;
                                            }
                                        }
 
 //                                       dist = std::clamp(255.*(dist/500.), 0., 255.) - radius;
-                                       double color = (color_id+1)*(255./4.);//colors.at(color_id);
+                                       double color = colors.at(color_id);//255.* color_id / result.size(); //
 
                                        P = ImageGrayu8::PixelType(color);
                                    });
