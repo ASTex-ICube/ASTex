@@ -58,7 +58,7 @@ int main()
     // création des bruits d'entrée
     // ---------------------------------------------------------------------------
     int resolution = 128; // pour le stockage
-    int img_size = 512; // nombre de pixel dans l'image
+    int img_size = 1024; // nombre de pixel dans l'image
 
     float F_0_ = 0.1;//0.04; // fréquence
     float omega_0_ = 0.; // orientation (seulement dans le cas anisotrope, cf code gabor ligne 160)
@@ -86,7 +86,7 @@ int main()
     noise noise_y(K_,
                   a_,
                   F_0_,
-                  omega_0_,
+                  0.57,
                   number_of_impulses_per_kernel,
                   period,
                   random_offset_,
@@ -185,12 +185,17 @@ int main()
                    float X = x * (float(resolution)/img_size);
                    float Y = y * (float(resolution)/img_size);
 
-                   // on les force à valeur dans -1, 1
-                   float intensity_Nx =  noise_x(X, Y) / scale_Nx;
-                   float intensity_Ny =  noise_y(X, Y) / scale_Ny;
+                   // valeurs d'intensité sur 0, 1
+                   float intensity_Nx = 0.5 + (0.5 * noise_x(X, Y) / scale_Nx);
+                   float intensity_Ny = 0.5 + (0.5 * noise_y(X, Y) / scale_Ny);
 
-                   double new_dist = metric.distance(Point2(0.5*(TORUS_SIZE*intensity_Nx + TORUS_SIZE),
-                                                                0.5*(TORUS_SIZE*intensity_Ny + TORUS_SIZE)),
+                   // clamp
+//                   intensity_Nx = std::min(std::max(intensity_Nx, 0.f), 1.f);
+//                   intensity_Ny = std::min(std::max(intensity_Ny, 0.f), 1.f);
+
+                   // distance
+                   double new_dist = metric.distance(Point2(TORUS_SIZE*intensity_Nx,
+                                                                TORUS_SIZE*intensity_Ny),
                                                      Input_CM[i].location);
                    if(new_dist < dist){
                        dist = new_dist;

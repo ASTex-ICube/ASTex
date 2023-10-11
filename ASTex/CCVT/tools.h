@@ -20,19 +20,20 @@ void nonconstant_density(std::list<Point>& points, const int numberOfPoints, con
     const double E = 2.718281828459;
     const double PI = 3.141592653590;
     while (points.size() < static_cast<unsigned int>(numberOfPoints)) {
-//        double x = static_cast<double>(rand() % RAND_MAX) / RAND_MAX * 2 - 1; // sur -1, 1
-//        double y = static_cast<double>(rand() % RAND_MAX) / RAND_MAX * 2 - 1;
-        double x = static_cast<double>(rand() % RAND_MAX) / RAND_MAX * 4 - 2; // sur -2, 2
-        double y = static_cast<double>(rand() % RAND_MAX) / RAND_MAX * 4 - 2;
+        double x = static_cast<double>(rand() % RAND_MAX) / RAND_MAX * 2 - 1; // sur -1, 1
+        double y = static_cast<double>(rand() % RAND_MAX) / RAND_MAX * 2 - 1;
+//        double x = static_cast<double>(rand() % RAND_MAX) / RAND_MAX * 6 - 3; // sur -2, 2
+//        double y = static_cast<double>(rand() % RAND_MAX) / RAND_MAX * 6 - 3;
 
 //    double p = pow(E, -20.0 * x * x - 20.0 * y * y) + 0.2 * sin(PI * x) * sin(PI * x) * sin(PI * y) * sin(PI * y);
 //        double p = pow(E, -4.0 * x * x - 4.0 * y * y);
         double p = std::exp(-0.5 * (x*x)/var1) * std::exp(-0.5 * (y*y)/var2);
 
-        double r = static_cast<double>(rand() % RAND_MAX) / RAND_MAX; // sur 0, 1
+        double r = static_cast<double>(rand() % RAND_MAX) / RAND_MAX; // sur 0, 1; pourquoi ????
         if (p >= r) {
-            x = std::min(std::max(x, -1.), 1.);
+            x = std::min(std::max(x, -1.), 1.); // on ramène les valeurs entre -1 et 1
             y = std::min(std::max(y, -1.), 1.);
+
             double X = (x + 1) / 2 * torusSize;
             double Y = (y + 1) / 2 * torusSize;
 

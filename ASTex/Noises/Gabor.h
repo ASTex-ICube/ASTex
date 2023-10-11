@@ -208,6 +208,23 @@ ImageGrayu8 storing_noise(int resolution, int img_size, noise noise_){
     return image_;
 }
 
+ImageGrayd storing_noise_d(int resolution, int img_size, noise noise_){
+    ImageGrayd image_(img_size, img_size);
+    double scale_1 = 3.4 * std::sqrt(noise_.variance());
+
+    image_.parallel_for_all_pixels([&] (typename ImageGrayd::PixelType& P, int x, int y)
+                                   {
+                                       float X = x * (float(resolution)/img_size);
+                                       float Y = y * (float(resolution)/img_size);
+                                       double intensity = 0.5 + (0.5 * (noise_(X, Y) / scale_1));
+
+                                       double color = std::min(std::max(intensity, 0.), 1.); // clamping
+
+                                       P = ImageGrayd::PixelType(color);
+                                   });
+    return image_;
+}
+
 
 
 #endif //CPP_NOISE_H
