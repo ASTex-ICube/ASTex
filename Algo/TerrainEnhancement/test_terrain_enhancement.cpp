@@ -29,7 +29,7 @@ int main()
      */
 
     std::string tnb_example_name = "/home/grenier/Documents/ASTex_fork/results/bi_chanel_noise.png";
-    std::string terrain_name = "/home/grenier/Documents/ASTex_fork/results/terrains/swiss2_height.png";
+    std::string terrain_name = "/home/grenier/Documents/ASTex_fork/results/terrains/terrain_test_HR.png";
 
     std::string img_to_gen_name = "/home/grenier/Documents/ASTex_fork/results/test_result";
 
@@ -43,7 +43,7 @@ int main()
 //    img_grad.parallel_for_all_pixels([&] (typename ImageGrayu8::PixelType& P, int x, int y){P = ImageGrayu8::PixelType(std::clamp(x+y, 0, 255));});
 //    img_grad.save(img_to_gen_name+"_sample.png");
 
-    using IMGType = ImageGrayu16;
+    using IMGType = ImageGrayu8;
 
     // input terrain
     IMGType img_terrain; // TODO : u8 ou u16 ?
@@ -77,8 +77,8 @@ int main()
 
 
     // output image
-    int w_coarse = img_terrain.width()/10.;
-    int h_coarse = img_terrain.height()/10.;
+    int w_coarse = img_terrain.width();///10.;
+    int h_coarse = img_terrain.height();///10.;
     int w_fine = img_terrain.width()*10.;
     int h_fine = img_terrain.height()*10.;
 
@@ -128,35 +128,35 @@ int main()
     tnb.tile_img(img_out_tnb);
 
     img_out_tnb.save(img_to_gen_name+"_tnb.png");
-
-
-    // generate fBm for profile modulation
-    auto fBm = compute_fBm(control_mod, 6);
-    fBm.fBm_image(control_mod);
-
-    control_mod.save(img_to_gen_name + "_fBm.png");
-
-
-    // transfer function
-    auto tr_func = create_procedural_details(img_out_tnb, control_mod);
-    tr_func.details_heighmap(img_out_details);
-
-    img_out_details.save(img_to_gen_name+"_details.png");
-
-
-    // terrain amplifié
-    auto final_terrain = compute_final_terrain(img_terrain, img_out_details, control_ampl);
-    final_terrain.Set_Amplitude_max(.02);
-    final_terrain.final_terrain_img(img_out_final);
-
-    img_out_final.save(img_to_gen_name+"_final.png");
-    img_out_final.save("/home/grenier/Documents/augmented_terrains/images/terrain_final.png");
-
-    /* détail d'implem :
-     * j'ai finalement mis l'utilisation de l'amplitude max au moment de l'application des détails
-     * la carte de contrôle est calculée avant mais ne donne que les variation spatiale de l'amplitude (valeurs normées)
-     * définir l'amplitude max à la fin permet de garder la séparation des étpaes dans des images séparées (y'a peut être mieux comme méthode mais c'ets la seule que j'ai vu)
-     */
+//
+//
+//    // generate fBm for profile modulation
+//    auto fBm = compute_fBm(control_mod, 6);
+//    fBm.fBm_image(control_mod);
+//
+//    control_mod.save(img_to_gen_name + "_fBm.png");
+//
+//
+//    // transfer function
+//    auto tr_func = create_procedural_details(img_out_tnb, control_mod);
+//    tr_func.details_heighmap(img_out_details);
+//
+//    img_out_details.save(img_to_gen_name+"_details.png");
+//
+//
+//    // terrain amplifié
+//    auto final_terrain = compute_final_terrain(img_terrain, img_out_details, control_ampl);
+//    final_terrain.Set_Amplitude_max(.02);
+//    final_terrain.final_terrain_img(img_out_final);
+//
+//    img_out_final.save(img_to_gen_name+"_final.png");
+//    img_out_final.save("/home/grenier/Documents/augmented_terrains/images/terrain_final.png");
+//
+//    /* détail d'implem :
+//     * j'ai finalement mis l'utilisation de l'amplitude max au moment de l'application des détails
+//     * la carte de contrôle est calculée avant mais ne donne que les variation spatiale de l'amplitude (valeurs normées)
+//     * définir l'amplitude max à la fin permet de garder la séparation des étpaes dans des images séparées (y'a peut être mieux comme méthode mais c'ets la seule que j'ai vu)
+//     */
 
 
 

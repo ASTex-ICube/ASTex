@@ -203,9 +203,6 @@ double gaussAC_2D(double moy, double var, double AC, double x, double y)
      */
     double det = (var*var)-(AC*AC); // déterminant de la matrice de covariance
 
-    double X = x-moy;
-    double Y = y-moy;
-
     /* matrice précision (inverse matrice covariance) :
      * var/det -AC/det
      * -AC/det  var/det
@@ -213,10 +210,14 @@ double gaussAC_2D(double moy, double var, double AC, double x, double y)
     double var_inv = var/det;
     double AC_inv = -AC/det;
 
-    double produit = X*(X*var_inv + Y*AC_inv) + Y*(Y*var_inv + X*AC_inv);
-    double norm = 1.;// 2.*M_PI*std::sqrt(det);
 
-    double G = (1./norm)*std::exp(-0.5*produit);
+    double X = x-moy;
+    double Y = y-moy;
+
+    double produit = X*(X*var_inv + Y*AC_inv) + Y*(X*AC_inv + Y*var_inv);
+    double norm = 2.*M_PI*std::sqrt(det);
+
+    double G = std::exp(-0.5*produit)/norm;
 
     return G;
 }
@@ -227,22 +228,22 @@ double gaussAC_2D(double moy, double var, double AC, double x, double y)
 
 
 
-double quantified_gaussAC_2D(int x1, int x2, int y1, int y2, int cm_size, double moy1, double moy2, double var1, double var2, double AC1, double AC2)
-{
-    // x1 ~ Nu, y1 ~ N'u, x2 ~ Nv, y2 ~ N'v
-    double X1 = x1/double(cm_size);
-    double Y1 = y1/double(cm_size);
-
-    double X2 = x2/double(cm_size);
-    double Y2 = y2/double(cm_size);
-
-    double gaussian1 = gaussAC_2D(moy1, var1, AC1, X1, X2);
-    double gaussian2 = gaussAC_2D(moy2, var2, AC2, Y1, Y2);
-
-    double Gaussian = gaussian1*gaussian2;//*100;//img_size*img_size;
-
-    return Gaussian;
-}
+//double quantified_gaussAC_2D(int x1, int x2, int y1, int y2, int cm_size, double moy1, double moy2, double var1, double var2, double AC1, double AC2)
+//{
+//    // x1 ~ Nu, y1 ~ N'u, x2 ~ Nv, y2 ~ N'v
+//    double X1 = x1/double(cm_size);
+//    double Y1 = y1/double(cm_size);
+//
+//    double X2 = x2/double(cm_size);
+//    double Y2 = y2/double(cm_size);
+//
+//    double gaussian1 = gaussAC_2D(moy1, var1, AC1, X1, X2);
+//    double gaussian2 = gaussAC_2D(moy2, var2, AC2, Y1, Y2);
+//
+//    double Gaussian = gaussian1*gaussian2;//*100;//img_size*img_size;
+//
+//    return Gaussian;
+//}
 
 
 
@@ -270,29 +271,100 @@ std::vector<color_vois> capacityH_vois(ImageGrayd cm, double moy1, double moy2, 
 
     // listage des couleur et compte de leur apparition
     // x1 ~ Nu, y1 ~ N'u, x2 ~ Nv, y2 ~ N'v
-    cm.for_all_pixels([&] (typename ImageGrayd::PixelType& P1, int x1, int y1) // parallel_for_all_pixels, for_all_pixels
+    cm.for_all_pixels([&] (typename ImageGrayd::PixelType& P1, int x1, int y1)
                       {
                           cm.for_all_pixels([&] (typename ImageGrayd::PixelType& P2, int x2, int y2)
                                             {
                                                 int id;
-//                                                int qtt = quantified_gaussAC(x1, x2, y1, y2, cm.height(), moy1, moy2, var1, var2, AC1, AC2); // gaussienne 4D quantifiée
-                                                double qtt = quantified_gaussAC_2D(x1, x2, y1, y2, cm.height(), moy1, moy2, var1, var2, AC1, AC2);
+                                                double X1 = x1/double(cm.height()-1); // x1 ~ Nu
+                                                double Y1 = y1/double(cm.width()-1); // y1 ~ N'u
+                                                double X2 = x2/double(cm.height()-1); // x2 ~ Nv
+                                                double Y2 = y2/double(cm.width()-1); // y2 ~ N'v
 
-                                                if(couleurs.empty())
+                                                double qtt = gaussAC_2D(moy1, var1, AC1, X1, X2) * gaussAC_2D(moy2, var2, AC2, Y1, Y2);
+
+                                                bool presence = is_in(couleurs, P1, P2, id);
+                                                if(not presence)
                                                 {
                                                     couleurs.push_back(color_vois{P1, P2, qtt});
                                                 }
                                                 else
                                                 {
-                                                    bool presence = is_in(couleurs, P1, P2, id);
-                                                    if(not presence)
-                                                    {
-                                                        couleurs.push_back(color_vois{P1, P2, qtt});
-                                                    }
-                                                    else
-                                                    {
-                                                        couleurs.at(id).incr(qtt);
-                                                    }
+                                                    couleurs.at(id).incr(qtt);
+                                                }
+
+                                            });
+//                          if(x1==0){std::cout<<y1<<" ";}
+                      });
+    return couleurs;
+}
+
+
+
+
+
+
+
+std::vector<color_vois> capacityH_vois_histo_reel(ImageGrayd cm, ImageGrayd histo_1, ImageGrayd histo_2)
+{
+    std::vector<color_vois> couleurs = {};
+
+    // listage des couleur et compte de leur apparition
+    // x1 ~ Nu, y1 ~ N'u, x2 ~ Nv, y2 ~ N'v
+    cm.for_all_pixels([&] (typename ImageGrayd::PixelType& P1, int x1, int y1)
+                      {
+                          cm.for_all_pixels([&] (typename ImageGrayd::PixelType& P2, int x2, int y2)
+                                            {
+                                                int id;
+                                                // histo_1 : densité couple (Nu,Nv), histo_2 : densité couple (N'u, N'v)
+                                                double qtt = histo_1.pixelAbsolute(x1,x2)*histo_2.pixelAbsolute(y1,y2);
+
+                                                bool presence = is_in(couleurs, P1, P2, id);
+                                                if(not presence)
+                                                {
+                                                    couleurs.push_back(color_vois{P1, P2, qtt});
+                                                }
+                                                else
+                                                {
+                                                    couleurs.at(id).incr(qtt);
+                                                }
+
+                                            });
+                      });
+    return couleurs;
+}
+
+
+
+std::vector<color_vois>  capacityH_vois_histo_dist(ImageGrayd cm, ImageGrayd histo_dist_N1, ImageGrayd histo_dist_N2, double moy1, double moy2, double var1, double var2, double AC1, double AC2)
+{
+    std::vector<color_vois>  couleurs = {};
+
+    // listage des couleur et compte de leur apparition
+    // x1 ~ Nu, y1 ~ N'u, x2 ~ Nv, y2 ~ N'v
+    cm.for_all_pixels([&] (typename ImageGrayd::PixelType& P1, int x1, int y1)
+                      {
+                          cm.for_all_pixels([&] (typename ImageGrayd::PixelType& P2, int x2, int y2)
+                                            {
+                                                int id;
+                                                double qtt_eps = histo_dist_N1.pixelAbsolute(x1,x2)*histo_dist_N2.pixelAbsolute(y1,y2);
+
+                                                double X1 = x1/double(cm.height()-1); // x1 ~ Nu
+                                                double Y1 = y1/double(cm.width()-1); // y1 ~ N'u
+                                                double X2 = x2/double(cm.height()-1); // x2 ~ Nv
+                                                double Y2 = y2/double(cm.width()-1); // y2 ~ N'v
+
+                                                double qtt_t = gaussAC_2D(moy1, var1, AC1, X1, X2) * gaussAC_2D(moy2, var2, AC2, Y1, Y2);
+
+
+                                                bool presence = is_in(couleurs, P1, P2, id);
+                                                if(not presence)
+                                                {
+                                                    couleurs.push_back(color_vois{P1, P2, qtt_t-qtt_eps});
+                                                }
+                                                else
+                                                {
+                                                    couleurs.at(id).incr(qtt_t-qtt_eps);
                                                 }
 
                                             });
@@ -308,94 +380,75 @@ std::vector<color_vois> capacityH_vois(ImageGrayd cm, double moy1, double moy2, 
 
 
 
-//void autocovariance_iFT(ImageGrayd inputNoise)
-//{
-//    ImageSpectrald module;
-//    ImageSpectrald phase;
-//    ImageGrayd autocovariance;
-//
-//    Fourier::fftForwardModulusAndPhase(inputNoise, module, phase, true); // transformée de fourier du bruit
-//
-//    IO::save_spectrum(module, "/home/grenier/Documents/ASTex_fork/results/equ_CCVT/gabor_module.png"); // module
-//    IO::save_phase(phase, "/home/grenier/Documents/ASTex_fork/results/equ_CCVT/gabor_phase.png"); // phase
-//
-//    module.for_all_pixels([&] (typename ImageGrayd::PixelType& P, int x, int y) // carré du module divisé par la surface d'intégration
-//                          {
-//                              P = (P*P);///(inputNoise.width()*inputNoise.height());
-//                          });
-//    IO::save_spectrum(module, "/home/grenier/Documents/ASTex_fork/results/equ_CCVT/gabor_PSD.png"); // PSD
-//
-//    phase.zero();
-//    Fourier::fftInverseModulusAndPhase(module, phase, autocovariance, false); // fourier inverse sur la PSD = AC
-//    IO::save(autocovariance, "/home/grenier/Documents/ASTex_fork/results/equ_CCVT/gabor_AC_Fourier.png");
-//
-//    std::cout<<autocovariance.pixelAbsolute(1,0)<<std::endl;
-//
-//
-////    Fourier::fftForwardModulusAndPhase(autocovariance, module, phase, false); // transformée de fourier de l'AC
-////    IO::save_spectrum(module, "/home/grenier/Documents/ASTex_fork/results/equ_CCVT/gabor_PSD_test.png"); // PSD
-//}
 
 
-
-
-
-
+// ---------------------------------------------------------------------------
 ImageGrayd histo_2D_AC(ImageGrayd noise1, int tauX, int tauY, int name)
 {
-    ImageGrayd histo(256, 256, true);
-    int max = 0;
+    int histo_size = 256;
+    double norme = 0;
+    ImageGrayd histo(histo_size, histo_size, true);
 
+    // énumération des paire de valeur de bruits
     for(int x=0; x<noise1.width()-tauX; x++)
     {
         for(int y=0; y<noise1.height()-tauY; y++)
         {
-            double nx = noise1.pixelAbsolute(x, y)*255;
-            double ny = noise1.pixelAbsolute(x+tauX, y+tauY)*255;
+            double nx = noise1.pixelAbsolute(x, y)*(histo_size-1);
+            double ny = noise1.pixelAbsolute(x+tauX, y+tauY)*(histo_size-1);
 
-            if(int(std::round(nx))==127 and int(std::round(ny))==127){max += 1;}
-
-            histo.pixelAbsolute(std::round(nx), std::round(ny)) += 1; // approx à cause de la quantification
+            histo.pixelAbsolute(int(std::round(nx)), int(std::round(ny))) += 1.;
+            histo.pixelAbsolute(int(std::round(ny)), int(std::round(nx))) += 1.; // symétrie
         }
     }
-//    IO::save(histo, "/home/grenier/Documents/ASTex_fork/results/equ_CCVT/histo_noise_AC_0.png");
+
+    // calcul de l'aire sous la courbe
+    histo.for_all_pixels([&] (typename ImageGrayd::PixelType& P, int x, int y)
+                         {
+                             norme += P / (histo_size * histo_size);
+                         });
 
 
+    // estimation des moyennes
     double mX = 0.;
     double mY = 0.;
     double tot = 0.;
     histo.for_all_pixels([&] (typename ImageGrayd::PixelType& P, int x, int y)
                          {
-                             mX += P*(x/255.); // x/255. : valeur sur 0, 1
-//                             mX += P*x;
+                             double X = x/double(histo_size-1);
+                             double Y = y/double(histo_size-1);
 
-                             mY += P*(y/255.);
-//                             mY += P*y;
+                             mX += P*X; // x/255. : valeur sur 0, 1
+                             mY += P*Y;
 
                              tot += P;
                          });
     mX = mX/tot;
     mY = mY/tot;
-//    std::cout<<"moyenne histo x : "<<mX<<", moyenne histo y : "<<mY<<std::endl;
+    std::cout<<"moyenne histo x : "<<mX<<", moyenne histo y : "<<mY<<std::endl;
 
 
 
 
+    // estimation de l'auto-covariance
     double AC = 0.;
     histo.for_all_pixels([&] (typename ImageGrayd::PixelType& P, int x, int y)
                          {
-                             AC += P*((x/255.)-mX)*((y/255.)-mY); // x/255. : valeur sur 0, 1
+                             double X = x/double(histo_size-1);
+                             double Y = y/double(histo_size-1);
+
+                             AC += P*(X-mX)*(Y-mY); // x/255. : valeur sur 0, 1
 //                             AC += P*(x-mX)*(y-mY); // x : valeur sur 0, 255
                          });
     AC = AC/tot;
-//    std::cout<<"auto-covariance histo : "<<AC<<std::endl;
+    std::cout<<"auto-covariance histo : "<<AC<<std::endl;
 
 
 
-
+    // normalisation pour une aire sous la courbe égale à 1
     histo.for_all_pixels([&] (typename ImageGrayd::PixelType& P, int x, int y)
                          {
-                             P *= 1./double(max);
+                             P *= 1./double(norme);
                          });
     IO::save(histo, "/home/grenier/Documents/ASTex_fork/results/equ_CCVT/histo_noise_AC_" + std::to_string(name) + ".png");
     return histo;
@@ -404,29 +457,55 @@ ImageGrayd histo_2D_AC(ImageGrayd noise1, int tauX, int tauY, int name)
 
 
 
-
-
-void histo_2D_theo_vois(double moy, double var, double AC, int name)
+ImageGrayd histo_2D_theo_vois(double moy, double var, double AC, int name)
 {
-    ImageGrayd histo(256, 256, true);
+    int histo_size = 256;
+    ImageGrayd histo(histo_size, histo_size, true);
 
-    for(int x=0; x<256; x++)
-    {
-        for(int y=0; y<256; y++)
-        {
-            double X = x/256.;
-            double Y = y/256.;
+    histo.for_all_pixels([&] (typename ImageGrayd::PixelType& P, int x, int y)
+                         {
+                             double X = x/double(histo_size-1);
+                             double Y = y/double(histo_size-1);
 
-            double gaussian = gaussAC_2D(moy, var, AC, X, Y);
-
-            histo.pixelAbsolute(x, y) = gaussian;
-        }
-    }
+                             P = gaussAC_2D(moy, var, AC, X, Y);
+                         });
 
 
     IO::save(histo, "/home/grenier/Documents/ASTex_fork/results/equ_CCVT/histo_noise_theo_vois_" + std::to_string(name) + ".png");
+    return histo;
 }
 
+
+
+ImageGrayd histo_2D_dist_vois(ImageGrayd histo_reel, double moy, double var, double AC, int name)
+{
+    int histo_size = 256;
+    ImageGrayd histo(histo_size, histo_size, true);
+
+    double max_theo = -1.;
+    double max_reel = -1.;
+    double max_dist = -1.;
+
+    histo.for_all_pixels([&] (typename ImageGrayd::PixelType& P, int x, int y)
+                         {
+                             double X = x/double(histo_size-1);
+                             double Y = y/double(histo_size-1);
+
+                             double val_theo = gaussAC_2D(moy, var, AC, X, Y) ;
+                             double val_reel = histo_reel.pixelAbsolute(x,y);
+                             double val_dist = val_theo - val_reel;
+
+                             max_theo = std::max(max_theo,val_theo);
+                             max_reel = std::max(max_reel,val_reel);
+                             max_dist = std::max(max_dist,std::abs(val_dist));
+
+                             P = val_dist;
+                         });
+
+    std::cout<<"bruit "<<std::to_string(name)<<" - val max histo réel : "<<max_reel<<", val max histo théo : "<<max_theo<<", val max distance : "<<max_dist<<std::endl;
+    IO::save(histo, "/home/grenier/Documents/ASTex_fork/results/equ_CCVT/histo_noise_dist_vois_" + std::to_string(name) + ".png");
+    return histo;
+}
 
 
 

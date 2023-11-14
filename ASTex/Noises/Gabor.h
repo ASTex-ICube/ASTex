@@ -163,8 +163,8 @@ public:
             float y_i_y = y - y_i;
             if (((x_i_x * x_i_x) + (y_i_y * y_i_y)) < 1.0) {
                 // décommenter la ligne souhaitée (isotrope / anisotrope)
-//                noise += w_i * gabor(K_, a_, F_0_, omega_0_, x_i_x * kernel_radius_, y_i_y * kernel_radius_); // anisotropic
-                noise += w_i * gabor(K_, a_, F_0_, omega_0_i, x_i_x * kernel_radius_, y_i_y * kernel_radius_); // isotropic
+                noise += w_i * gabor(K_, a_, F_0_, omega_0_, x_i_x * kernel_radius_, y_i_y * kernel_radius_); // anisotropic
+//                noise += w_i * gabor(K_, a_, F_0_, omega_0_i, x_i_x * kernel_radius_, y_i_y * kernel_radius_); // isotropic
 //                noise += w_i * gabor(K_, a_, F_0_, omega_0_c, x_i_x * kernel_radius_, y_i_y * kernel_radius_); // test carte de controle
             }
         }
@@ -210,7 +210,7 @@ ImageGrayu8 storing_noise(int resolution, int img_size, noise noise_){
 
 ImageGrayd storing_noise_d(int resolution, int img_size, noise noise_){
     ImageGrayd image_(img_size, img_size);
-    double scale_1 = 3.4 * std::sqrt(noise_.variance());
+    double scale_1 = 3.6 * std::sqrt(noise_.variance());
 
     image_.parallel_for_all_pixels([&] (typename ImageGrayd::PixelType& P, int x, int y)
                                    {

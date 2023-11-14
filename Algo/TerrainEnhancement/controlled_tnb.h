@@ -110,7 +110,7 @@ namespace ASTex
 
             // sclae est mappé sur 0, 255; à valeur dans 1, frequ_max_
             double frequence = std::max(scale, freq_min_); // pas de fréquence nulle
-            frequence = freq_max_*frequence/max_value_;
+            frequence = 4.;// freq_max_*frequence/max_value_;
 
             Rotation << cos, sin, -sin, cos; // rotation autour de l'axe -z ( (0,0) en haut à gauche avec x vers la droite et y vers le bas)
             Scale << frequence, 0., 0., frequence;

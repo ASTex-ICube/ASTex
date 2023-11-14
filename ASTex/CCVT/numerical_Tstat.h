@@ -10,7 +10,7 @@
 
 double moyenne(ImageGrayd inputNoise)
 {
-    double sum = 0;
+    double sum = 0.;
     inputNoise.for_all_pixels([&] (typename ImageGrayd::PixelType& P, int x, int y) // cm
                               {
                                   sum += P;
@@ -18,9 +18,33 @@ double moyenne(ImageGrayd inputNoise)
     return sum/(inputNoise.width()*inputNoise.height());
 }
 
+
+double moyenne(noise inputNoise, int img_size, int resolution)
+{
+    double sum = 0.;
+    double scale_1 = 3.6 * std::sqrt(inputNoise.variance());
+
+    for(int x=0; x<img_size; x++){
+        for(int y=0; y<img_size; y++){
+            float X = x * (float(resolution)/float(img_size));
+            float Y = y * (float(resolution)/float(img_size));
+
+            double intensity = inputNoise(X, Y);// 0.5 + (0.5 * (inputNoise(X, Y) / scale_1));
+//            double color = std::min(std::max(intensity, 0.), 1.); // clamping
+
+            sum += intensity;
+        }
+    }
+    return sum/double(img_size*img_size);
+}
+
+
+
+
+
 double moyenne_carre(ImageGrayd inputNoise)
 {
-    double sum = 0;
+    double sum = 0.;
     inputNoise.for_all_pixels([&] (typename ImageGrayd::PixelType& P, int x, int y) // cm
                               {
                                   sum += P*P;
