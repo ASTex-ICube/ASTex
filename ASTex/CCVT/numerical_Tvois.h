@@ -52,6 +52,17 @@ struct color_vois{
     {
         return (couleur1_ == couleur2.couleur1_) and (couleur2_ == couleur2.couleur2_);
     }
+
+    bool operator<(const color_vois& couleur2)
+    {
+        if(couleur1_ == couleur2.couleur1_){
+            return (couleur2_ < couleur2.couleur2_);
+        }
+        else{
+            return (couleur1_ < couleur2.couleur1_);
+        }
+//        return (couleur1_ < couleur2.couleur1_);// and (couleur2_ < couleur2.couleur2_);
+    }
 };
 
 
@@ -85,29 +96,6 @@ std::vector<color_vois> Tcontent_vois(ImageGrayd image_, int tauX, int tauY)
     {
         for(int y=0; y<image_.height()-tauY; y++)
         {
-//            int id;
-//            if(couleurs.empty())
-//            {
-//                couleurs.push_back(color_vois{image_.pixelAbsolute(x,y), image_.pixelAbsolute(x+1, y)});
-//            }
-//            else
-//            {
-//                bool presence = is_in(couleurs, image_.pixelAbsolute(x,y), image_.pixelAbsolute(x+1, y), id);
-//                if(not presence)
-//                {
-//                    couleurs.push_back(color_vois{image_.pixelAbsolute(x,y), image_.pixelAbsolute(x+1, y)});
-//                }
-//                else
-//                {
-//                    couleurs.at(id).incr();
-//                }
-//            }
-//            if(couleurs.empty())
-//            {
-//                couleurs.push_back(color_vois{image_.pixelAbsolute(x,y), image_.pixelAbsolute(x+1, y)});
-//            }
-//            else
-//            {
             presence = is_in(couleurs, image_.pixelAbsolute(x,y), image_.pixelAbsolute(x+tauX, y+tauY), id);
             if(not presence)
             {
@@ -118,7 +106,7 @@ std::vector<color_vois> Tcontent_vois(ImageGrayd image_, int tauX, int tauY)
                 couleurs.at(id).incr();
             }
 
-            // symétrie
+            // symétrie ?
             presence = is_in(couleurs, image_.pixelAbsolute(x+tauX, y+tauY), image_.pixelAbsolute(x,y), id);
             if(not presence)
             {
@@ -129,13 +117,14 @@ std::vector<color_vois> Tcontent_vois(ImageGrayd image_, int tauX, int tauY)
                 couleurs.at(id).incr();
             }
 
-//            }
-
         }
     }
 
     return couleurs;
 }
+
+
+
 
 
 

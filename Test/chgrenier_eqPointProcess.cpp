@@ -156,7 +156,7 @@ int main()
 {
 // ---------------------------------------------------------------------------
     int resolution = 512;
-    int img_size = 512; // nombre de pixel dans l'image
+    int img_size = 2408; // nombre de pixel dans l'image
     double scale = double(resolution)/double(img_size);
 
     float F_0_ = 0.06;//0.04; // fréquence

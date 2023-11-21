@@ -55,6 +55,11 @@ struct color_info{
     {
         return couleur_ == couleur2.couleur_;
     }
+
+    bool operator<(const color_info& couleur2)
+    {
+        return couleur_ < couleur2.couleur_;
+    }
 };
 
 
@@ -139,14 +144,15 @@ double gauss(double moy1, double moy2, double var1, double var2, double x, doubl
 std::vector<color_info> cell_capacity(ImageGrayd cm, double moy1, double moy2, double var1, double var2)
 {
     std::vector<color_info> couleurs = {};
+    int cm_size = cm.height();
 
     // listage des couleur et compte de leur apparition
     cm.for_all_pixels([&] (typename ImageGrayd::PixelType& P, int x, int y)
                       {
                           int id;
 
-                          double X = x/double(cm.height()-1);
-                          double Y = y/double(cm.width()-1);
+                          double X = (x+0.5)/double(cm_size-1); // évaluation au centre des pixels
+                          double Y = (y+0.5)/double(cm_size-1);
                           double qtt =  gauss(moy1, moy2, var1, var2, X, Y);
 
                           bool presence = is_in(couleurs, P, id);
@@ -220,9 +226,9 @@ std::vector<color_info> cell_dist_real_histo(ImageGrayd cm, ImageGrayd histo_dis
 
 
 // ---------------------------------------------------------------------------
-ImageGrayd histo_2D(ImageGrayd noise1, ImageGrayd noise2)
+ImageGrayd histo_2D(ImageGrayd noise1, ImageGrayd noise2, int histo_size)
 {
-    int histo_size = 256;
+//    int histo_size = 256;
     double norme = 0.;
     ImageGrayd histo(histo_size, histo_size, true);
 
@@ -235,6 +241,7 @@ ImageGrayd histo_2D(ImageGrayd noise1, ImageGrayd noise2)
             double ny = noise2.pixelAbsolute(x, y)*(histo_size-1);
 
             histo.pixelAbsolute(int(std::round(nx)), int(std::round(ny))) += 1.;
+//            histo.pixelAbsolute(int(std::floor(nx)), int(std::floor(ny))) += 1.;
 //            histo.pixelAbsolute(int(std::round(nx)), int(std::round(ny))) += 1./(histo_size * histo_size);
         }
     }
@@ -259,9 +266,9 @@ ImageGrayd histo_2D(ImageGrayd noise1, ImageGrayd noise2)
 
 
 
-ImageGrayd histo_2D_theo(double moy1, double moy2, double var1, double var2)
+ImageGrayd histo_2D_theo(double moy1, double moy2, double var1, double var2, int histo_size)
 {
-    int histo_size = 256;
+//    int histo_size = 256;
     ImageGrayd histo(histo_size, histo_size, true);
 
     histo.for_all_pixels([&] (typename ImageGrayd::PixelType& P, int x, int y)
@@ -279,9 +286,9 @@ ImageGrayd histo_2D_theo(double moy1, double moy2, double var1, double var2)
 
 
 
-ImageGrayd histo_2D_dist(ImageGrayd histo_reel, double moy1, double moy2, double var1, double var2)
+ImageGrayd histo_2D_dist(ImageGrayd histo_reel, double moy1, double moy2, double var1, double var2, int histo_size)
 {
-    int histo_size = 256;
+//    int histo_size = 256;
     ImageGrayd histo(histo_size, histo_size, true);
 
     double max_theo = -1.;
