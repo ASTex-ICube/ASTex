@@ -11,11 +11,11 @@ int main() {
     ImageRGBd T1, T2;
     ImageGrayd S1, S2, V;
 
-    IO::loadu8_in_01(T1, "/home/romimap/Git/ASTex/Data/RockColor.png");
-    IO::loadu8_in_01(T2, "/home/romimap/Git/ASTex/Data/SandColor.png");
-    IO::loadu8_in_01(S1, "/home/romimap/Git/ASTex/Data/RockHeight.png");
-    IO::loadu8_in_01(S2, "/home/romimap/Git/ASTex/Data/SandHeight.png");
-    IO::loadu8_in_01(V, "/home/romimap/Git/ASTex/Data/Mask2.png");
+    IO::loadu8_in_01(T1, TEMPO_PATH+"/PBRMaterials/grass_color.png");
+    IO::loadu8_in_01(T2, TEMPO_PATH+"/PBRMaterials/rock_color.png");
+    IO::loadu8_in_01(S1, TEMPO_PATH+"/PBRMaterials/grass_height.png");
+    IO::loadu8_in_01(S2, TEMPO_PATH+"/PBRMaterials/rock_height.png");
+    IO::loadu8_in_01(V, TEMPO_PATH+"/Mask2.png");
 
     std::cout << S1.pixelAbsolute(0,0) << std::endl;
     std::cout << S1.pixelAbsolute(484,658) << std::endl;
@@ -23,7 +23,7 @@ int main() {
 
     ImageRGBd *OUT = mixmax.blend(&T1, &T2, &S1, &S2, &V, 0.01, 0.4);
 
-    IO::save01_in_u8(*OUT, "/home/romimap/Git/ASTex/Data/test_mixmax.png");
+    IO::save01_in_u8(*OUT, TEMPO_PATH+"test_mixmax.png");
 
     return 0;
 }
