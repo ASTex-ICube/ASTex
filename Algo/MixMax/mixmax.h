@@ -8,7 +8,7 @@ using namespace ASTex;
 
 namespace MixMax {
 /*
-* PRIVATE FUNCTIONS
+* HELPER FUNCTIONS
 */
 namespace {
 double phi (double x) {
@@ -76,6 +76,17 @@ void center (ImageGrayd& T, ImageGrayd& out_texture) {
 /*
 * MIXMAX IMPLEMENTATION
 */
+
+
+/// Blends T1 and T2 into out_texture.
+/// out_texture - Output texture
+/// T1, T2 - Textures
+/// S1, S2 - Priority maps
+/// V - Interpolation field
+/// mip_level - Filters the result at the specified mip map level
+/// lambda Base variance - Used to control the fuzziness of the blend
+/// interpolation_field_multiplier - Scales the interpolation, used to control the width of the transition
+/// symetrize - Symetrizes S2 to preserve stationnarity
 void blend (ImageRGBd& out_texture, ImageRGBd& T1, ImageRGBd& T2, ImageGrayd& S1, ImageGrayd& S2, ImageGrayd& V, int mip_level = 0, double lambda = 0, double interpolation_field_multiplier = 1.0, bool symetrize = false) {
     if (T1.width() != T2.width() || T1.width() != S1.width() || T1.width() != S2.width() || T1.width() != V.width()
         || T1.height() != T2.height() || T1.height() != S1.height() || T1.height() != S2.height() || T1.height() != V.height()) {
@@ -104,9 +115,12 @@ void blend (ImageRGBd& out_texture, ImageRGBd& T1, ImageRGBd& T2, ImageGrayd& S1
         v2_mean *= interpolation_field_multiplier;
         double mean = (s2_mean + v2_mean) - (s1_mean + v1_mean);
         double std_dev = sqrt(s1_variance + s2_variance + 2.0 * pow(lambda, 2));
-        double w1 = 0;
+        
+        //To avoid a division by zero, we catch small values of std_dev and set w1 to the limit of the bypassed equation.
+        double w1;
         if (std_dev < 0.001) {
             if (mean < 0) w1 = 1;
+            else w1 = 0;
         } else {
             w1 = 1.0 - phi(mean / std_dev);
         }
@@ -116,6 +130,8 @@ void blend (ImageRGBd& out_texture, ImageRGBd& T1, ImageRGBd& T2, ImageGrayd& S1
     });
 }
 
+/// Ground truth for the mixmax filtering.
+/// See blend()
 void ground_truth (ImageRGBd& out_texture, ImageRGBd& T1, ImageRGBd& T2, ImageGrayd& S1, ImageGrayd& S2, ImageGrayd& V, int mip_level = 0, double lambda = 0, double interpolation_field_multiplier = 1.0, bool symetrize = false) {
     if (T1.width() != T2.width() || T1.width() != S1.width() || T1.width() != S2.width() || T1.width() != V.width()
      || T1.height() != T2.height() || T1.height() != S1.height() || T1.height() != S2.height() || T1.height() != V.height()) {
