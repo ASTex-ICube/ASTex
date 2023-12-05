@@ -257,34 +257,44 @@ double gaussAC_2D(double moy, double var, double AC, double x, double y)
 std::vector<color_vois> capacityH_vois(ImageGrayd cm, double moy1, double moy2, double var1, double var2, double AC1, double AC2)
 {
     std::vector<color_vois> couleurs = {};
+    int cm_size = cm.height();
 
     // listage des couleur et compte de leur apparition
     // x1 ~ Nu, y1 ~ N'u, x2 ~ Nv, y2 ~ N'v
-    cm.for_all_pixels([&] (typename ImageGrayd::PixelType& P1, int x1, int y1)
+    cm.for_all_pixels([&] (typename ImageGrayd::PixelType& P1, int x1, int y1) // for_all_pixels // parallel_for_all_pixels
                       {
+//                          if(x1==0){std::cout<<y1<<" ";}
+//                          std::cout<<x1<<" ";
                           cm.for_all_pixels([&] (typename ImageGrayd::PixelType& P2, int x2, int y2)
                                             {
-                                                int id;
-                                                double X1 = x1/double(cm.height()-1); // x1 ~ Nu
-                                                double Y1 = y1/double(cm.width()-1); // y1 ~ N'u
-                                                double X2 = x2/double(cm.height()-1); // x2 ~ Nv
-                                                double Y2 = y2/double(cm.width()-1); // y2 ~ N'v
+//                                                if(x2==0){std::cout<<y2<<" ";}
+//                                                if(P1 != P2){
+                                                    int id;
 
-                                                double qtt = gaussAC_2D(moy1, var1, AC1, X1, X2) * gaussAC_2D(moy2, var2, AC2, Y1, Y2);
+                                                    // évaluation au centre des pixels
+                                                    double X1 = (x1+0.5)/double(cm_size-1); // x1 ~ Nu
+                                                    double Y1 = (y1+0.5)/double(cm_size-1); // y1 ~ N'u
+                                                    double X2 = (x2+0.5)/double(cm_size-1); // x2 ~ Nv
+                                                    double Y2 = (y2+0.5)/double(cm_size-1); // y2 ~ N'v
 
-                                                bool presence = is_in(couleurs, P1, P2, id);
-                                                if(not presence)
-                                                {
-                                                    couleurs.push_back(color_vois{P1, P2, qtt});
-                                                }
-                                                else
-                                                {
-                                                    couleurs.at(id).incr(qtt);
-                                                }
+                                                    double qtt = gaussAC_2D(moy1, var1, AC1, X1, X2) * gaussAC_2D(moy2, var2, AC2, Y1, Y2);
+
+                                                    bool presence = is_in(couleurs, P1, P2, id);
+                                                    if(not presence)
+                                                    {
+                                                        couleurs.push_back(color_vois{P1, P2, qtt});
+                                                    }
+                                                    else
+                                                    {
+                                                        couleurs.at(id).incr(qtt);
+                                                    }
+//                                                }
+
 
                                             });
-//                          if(x1==0){std::cout<<y1<<" ";}
+
                       });
+//    std::cout<<std::endl;
     return couleurs;
 }
 

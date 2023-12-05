@@ -69,40 +69,40 @@ std::vector<color_vois> Tcontent_vois_test(ImageGrayd image_)
                                       }
                                   }
 
-                                  if(y+1 < image_.height()){
-                                      P2 = image_.pixelAbsolute(x+1, y+1);
+//                                  if(y+1 < image_.height()){
+//                                      P2 = image_.pixelAbsolute(x+1, y+1);
+//
+//                                      if(P != P2){
+//                                          presence = is_in(couleurs, P, P2, id);
+//                                          if(not presence)
+//                                          {
+//                                              couleurs.push_back(color_vois{P, P2});
+//                                          }
+//                                          else
+//                                          {
+//                                              couleurs.at(id).incr();
+//                                          }
+//                                      }
+//                                  }
 
-                                      if(P != P2){
-                                          presence = is_in(couleurs, P, P2, id);
-                                          if(not presence)
-                                          {
-                                              couleurs.push_back(color_vois{P, P2});
-                                          }
-                                          else
-                                          {
-                                              couleurs.at(id).incr();
-                                          }
-                                      }
-                                  }
-
-                                  if(y-1 > 0){
-                                      P2 = image_.pixelAbsolute(x+1, y-1);
-
-                                      if(P != P2){
-                                          presence = is_in(couleurs, P, P2, id);
-                                          if(not presence)
-                                          {
-                                              couleurs.push_back(color_vois{P, P2});
-                                          }
-                                          else
-                                          {
-                                              couleurs.at(id).incr();
-                                          }
-                                      }
-                                  }
+//                                  if(y-1 >= 0){
+//                                      P2 = image_.pixelAbsolute(x+1, y-1);
+//
+//                                      if(P != P2){
+//                                          presence = is_in(couleurs, P, P2, id);
+//                                          if(not presence)
+//                                          {
+//                                              couleurs.push_back(color_vois{P, P2});
+//                                          }
+//                                          else
+//                                          {
+//                                              couleurs.at(id).incr();
+//                                          }
+//                                      }
+//                                  }
                               }
 
-                              if(x-1 > 0){
+                              if(x-1 >= 0){
                                   ImageGrayd::PixelType P2 = image_.pixelAbsolute(x-1, y);
 
                                   if(P != P2){
@@ -117,71 +117,71 @@ std::vector<color_vois> Tcontent_vois_test(ImageGrayd image_)
                                       }
                                   }
 
-                                  if(y+1 < image_.height()){
-                                      P2 = image_.pixelAbsolute(x-1, y+1);
+//                                  if(y+1 < image_.height()){
+//                                      P2 = image_.pixelAbsolute(x-1, y+1);
+//
+//                                      if(P != P2){
+//                                          presence = is_in(couleurs, P, P2, id);
+//                                          if(not presence)
+//                                          {
+//                                              couleurs.push_back(color_vois{P, P2});
+//                                          }
+//                                          else
+//                                          {
+//                                              couleurs.at(id).incr();
+//                                          }
+//                                      }
+//                                  }
 
-                                      if(P != P2){
-                                          presence = is_in(couleurs, P, P2, id);
-                                          if(not presence)
-                                          {
-                                              couleurs.push_back(color_vois{P, P2});
-                                          }
-                                          else
-                                          {
-                                              couleurs.at(id).incr();
-                                          }
-                                      }
-                                  }
-
-                                  if(y-1 > 0){
-                                      P2 = image_.pixelAbsolute(x-1, y-1);
-
-                                      if(P != P2){
-                                          presence = is_in(couleurs, P, P2, id);
-                                          if(not presence)
-                                          {
-                                              couleurs.push_back(color_vois{P, P2});
-                                          }
-                                          else
-                                          {
-                                              couleurs.at(id).incr();
-                                          }
-                                      }
-                                  }
+//                                  if(y-1 >= 0){
+//                                      P2 = image_.pixelAbsolute(x-1, y-1);
+//
+//                                      if(P != P2){
+//                                          presence = is_in(couleurs, P, P2, id);
+//                                          if(not presence)
+//                                          {
+//                                              couleurs.push_back(color_vois{P, P2});
+//                                          }
+//                                          else
+//                                          {
+//                                              couleurs.at(id).incr();
+//                                          }
+//                                      }
+//                                  }
                               }
 
 
-                              if(y+1 < image_.height()){
-                                  ImageGrayd::PixelType P2 = image_.pixelAbsolute(x, y+1);
+//                              if(y+1 < image_.height()){
+//                                  ImageGrayd::PixelType P2 = image_.pixelAbsolute(x, y+1);
+//
+//                                  if(P != P2){
+//                                      presence = is_in(couleurs, P, P2, id);
+//                                      if(not presence)
+//                                      {
+//                                          couleurs.push_back(color_vois{P, P2});
+//                                      }
+//                                      else
+//                                      {
+//                                          couleurs.at(id).incr();
+//                                      }
+//                                  }
+//                              }
 
-                                  if(P != P2){
-                                      presence = is_in(couleurs, P, P2, id);
-                                      if(not presence)
-                                      {
-                                          couleurs.push_back(color_vois{P, P2});
-                                      }
-                                      else
-                                      {
-                                          couleurs.at(id).incr();
-                                      }
-                                  }
-                              }
-
-                              if(y-1 > 0){
-                                  ImageGrayd::PixelType P2 = image_.pixelAbsolute(x, y-1);
-
-                                  if(P != P2){
-                                      presence = is_in(couleurs, P, P2, id);
-                                      if(not presence)
-                                      {
-                                          couleurs.push_back(color_vois{P, P2});
-                                      }
-                                      else
-                                      {
-                                          couleurs.at(id).incr();
-                                      }
-                                  }
-                              }
+//                              if(y-1 >= 0){
+//                                  ImageGrayd::PixelType P2 = image_.pixelAbsolute(x, y-1);
+//
+//                                  if(P != P2){
+//                                      presence = is_in(couleurs, P, P2, id);
+//                                      if(not presence)
+//                                      {
+//                                          couleurs.push_back(color_vois{P, P2});
+//                                      }
+//                                      else
+//                                      {
+//                                          couleurs.at(id).incr();
+//                                      }
+//                                  }
+//                              }
 
 
                           });
@@ -199,12 +199,13 @@ std::vector<color_vois> Hcontent_vois_test(ImageGrayd cm_, double moy1, double m
     int id;
     bool presence;
     ImageGrayd::PixelType P2;
+    int cm_size = cm_.height();
 
     cm_.for_all_pixels([&] (typename ImageGrayd::PixelType& P, int x, int y)
                           {
-                              double X = x/double(cm_.height()-1);
-                              double Y = y/double(cm_.width()-1);
-                              double qtt = gauss(moy1, moy2, var1, var2, X, Y);
+                              double X;// = (x+0.5)/double(cm_size-1); // évaluation au centre des pixels
+                              double Y;// = (y+0.5)/double(cm_size-1);
+                              double qtt;// = gauss(moy1, moy2, var1, var2, X, Y);
 //                              double qtt = histo_.pixelAbsolute(x,y);
 
                               if(x+1 < cm_.width()){
@@ -212,6 +213,10 @@ std::vector<color_vois> Hcontent_vois_test(ImageGrayd cm_, double moy1, double m
 
                                   if(P != P2){
                                       presence = is_in(couleurs, P, P2, id);
+                                      X = (x+1.0)/double(cm_size-1); // évaluation au centre des bord des pixels
+                                      Y = (y+0.5)/double(cm_size-1);
+                                      qtt = gauss(moy1, moy2, var1, var2, X, Y);
+
                                       if(not presence)
                                       {
                                           couleurs.push_back(color_vois{P, P2, qtt});
@@ -227,6 +232,9 @@ std::vector<color_vois> Hcontent_vois_test(ImageGrayd cm_, double moy1, double m
 
                                       if(P != P2){
                                           presence = is_in(couleurs, P, P2, id);
+                                          X = (x+1.0)/double(cm_size-1); // évaluation au centre des bord des pixels
+                                          Y = (y+1.0)/double(cm_size-1);
+                                          qtt = gauss(moy1, moy2, var1, var2, X, Y);
                                           if(not presence)
                                           {
                                               couleurs.push_back(color_vois{P, P2, qtt});
@@ -238,11 +246,14 @@ std::vector<color_vois> Hcontent_vois_test(ImageGrayd cm_, double moy1, double m
                                       }
                                   }
 
-                                  if(y-1 > 0){
+                                  if(y-1 >= 0){
                                       P2 = cm_.pixelAbsolute(x+1, y-1);
 
                                       if(P != P2){
                                           presence = is_in(couleurs, P, P2, id);
+                                          X = (x+1.0)/double(cm_size-1); // évaluation au centre des bord des pixels
+                                          Y = (y+0.0)/double(cm_size-1);
+                                          qtt = gauss(moy1, moy2, var1, var2, X, Y);
                                           if(not presence)
                                           {
                                               couleurs.push_back(color_vois{P, P2, qtt});
@@ -255,11 +266,14 @@ std::vector<color_vois> Hcontent_vois_test(ImageGrayd cm_, double moy1, double m
                                   }
                               }
 
-                              if(x-1 > 0){
+                              if(x-1 >= 0){
                                   ImageGrayd::PixelType P2 = cm_.pixelAbsolute(x-1, y);
 
                                   if(P != P2){
                                       presence = is_in(couleurs, P, P2, id);
+                                      X = (x+0.0)/double(cm_size-1); // évaluation au centre des bord des pixels
+                                      Y = (y+0.5)/double(cm_size-1);
+                                      qtt = gauss(moy1, moy2, var1, var2, X, Y);
                                       if(not presence)
                                       {
                                           couleurs.push_back(color_vois{P, P2, qtt});
@@ -275,6 +289,9 @@ std::vector<color_vois> Hcontent_vois_test(ImageGrayd cm_, double moy1, double m
 
                                       if(P != P2){
                                           presence = is_in(couleurs, P, P2, id);
+                                          X = (x+0.0)/double(cm_size-1); // évaluation au centre des bord des pixels
+                                          Y = (y+1.0)/double(cm_size-1);
+                                          qtt = gauss(moy1, moy2, var1, var2, X, Y);
                                           if(not presence)
                                           {
                                               couleurs.push_back(color_vois{P, P2, qtt});
@@ -286,11 +303,14 @@ std::vector<color_vois> Hcontent_vois_test(ImageGrayd cm_, double moy1, double m
                                       }
                                   }
 
-                                  if(y-1 > 0){
+                                  if(y-1 >= 0){
                                       P2 = cm_.pixelAbsolute(x-1, y-1);
 
                                       if(P != P2){
                                           presence = is_in(couleurs, P, P2, id);
+                                          X = (x+0.0)/double(cm_size-1); // évaluation au centre des bord des pixels
+                                          Y = (y+0.0)/double(cm_size-1);
+                                          qtt = gauss(moy1, moy2, var1, var2, X, Y);
                                           if(not presence)
                                           {
                                               couleurs.push_back(color_vois{P, P2, qtt});
@@ -309,6 +329,9 @@ std::vector<color_vois> Hcontent_vois_test(ImageGrayd cm_, double moy1, double m
 
                                   if(P != P2){
                                       presence = is_in(couleurs, P, P2, id);
+                                      X = (x+0.5)/double(cm_size-1); // évaluation au centre des bord des pixels
+                                      Y = (y+1.0)/double(cm_size-1);
+                                      qtt = gauss(moy1, moy2, var1, var2, X, Y);
                                       if(not presence)
                                       {
                                           couleurs.push_back(color_vois{P, P2, qtt});
@@ -320,11 +343,14 @@ std::vector<color_vois> Hcontent_vois_test(ImageGrayd cm_, double moy1, double m
                                   }
                               }
 
-                              if(y-1 > 0){
+                              if(y-1 >= 0){
                                   P2 = cm_.pixelAbsolute(x, y-1);
 
                                   if(P != P2){
                                       presence = is_in(couleurs, P, P2, id);
+                                      X = (x+0.5)/double(cm_size-1); // évaluation au centre des bord des pixels
+                                      Y = (y+0.0)/double(cm_size-1);
+                                      qtt = gauss(moy1, moy2, var1, var2, X, Y);
                                       if(not presence)
                                       {
                                           couleurs.push_back(color_vois{P, P2, qtt});
@@ -343,6 +369,41 @@ std::vector<color_vois> Hcontent_vois_test(ImageGrayd cm_, double moy1, double m
 
 
 
+
+
+
+
+//    // total par couleur1_
+//    double last_col = couleur_vois_E.at(0).couleur1_;
+//    std::vector<std::array<double, 2>> tot_vois_E{std::array{last_col, 0.}}; // couleur, total
+//
+//    for(auto it = couleur_vois_E.begin(); it != couleur_vois_E.end(); it++)
+//    {
+//        if((*it).couleur1_ == last_col){
+//            tot_vois_E.at(tot_vois_E.size()-1)[1] += (*it).compteur_;
+//        }
+//        else{
+//            tot_vois_E.push_back(std::array{(*it).couleur1_, double((*it).compteur_)});
+//            last_col = (*it).couleur1_;
+//        }
+//    }
+//
+////    for(auto it = tot_vois_E.begin(); it != tot_vois_E.end(); it++)
+////    {
+////        std::cout<<(*it)[0]<<" "<<(*it)[1]<<std::endl;
+////    }
+//
+//    int last_col_id = 0;
+//    for(auto it = couleur_vois_E.begin(); it != couleur_vois_E.end(); it++)
+//    {
+//        if((*it).couleur1_ == tot_vois_E.at(last_col_id)[0]){
+//            std::cout<<"("<<(*it).couleur1_<<", "<<(*it).couleur2_<<") : "<<(*it).compteur_/tot_vois_E.at(last_col_id)[1]<<std::endl;
+//        }
+//        else{
+//            last_col_id += 1;
+//            std::cout<<"("<<(*it).couleur1_<<", "<<(*it).couleur2_<<") : "<<(*it).compteur_/tot_vois_E.at(last_col_id)[1]<<std::endl;
+//        }
+//    }
 
 
 

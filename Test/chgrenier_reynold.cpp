@@ -37,7 +37,8 @@ int main()
 {
 // ---------------------------------------------------------------------------
     int resolution = 512;
-    int img_size = 2048; // nombre de pixel dans l'image
+    int img_size = 1024;//2048; // nombre de pixel dans l'image
+    int cm_size = 128;//512;
     double scale = double(resolution)/double(img_size);
 
     float F_0_ = 0.06;//0.04; // fréquence
@@ -80,7 +81,8 @@ int main()
     IO::save(image_2, "/home/grenier/Documents/ASTex_fork/results/equ_CCVT/gabor_2.png");
 
 
-
+    // histogrammes
+    ImageGrayd histo_N1_N2 = histo_2D(image_1, image_2, cm_size); // réel
 
 
 
@@ -98,7 +100,7 @@ int main()
                                 Graine(0.45, 0.48, 0.)};
     std::vector<double> H_color{0.2, 0.6, 0.0, 0.4, 0.8, 1.0};
 
-    int cm_size = 512;
+
     ImageGrayd cm_(cm_size, cm_size);
 
     cm_.parallel_for_all_pixels([&] (typename ImageGrayd::PixelType& P, int x, int y)
@@ -158,129 +160,148 @@ int main()
     double mu_1 = moyenne(image_1); // mu
     double mu_2 = moyenne(image_2); // mu'
 
-    double mu_1_carre = moyenne_carre(image_1);
-    double mu_2_carre = moyenne_carre(image_2);
-
-    double var_1 = mu_1_carre - mu_1*mu_1; // sigma
-    double var_2 = mu_2_carre - mu_2*mu_2; // sigma'
-
+//    double mu_1_carre = moyenne_carre(image_1);
+//    double mu_2_carre = moyenne_carre(image_2);
+//
+//    double var_1 = mu_1_carre - mu_1*mu_1; // sigma
+//    double var_2 = mu_2_carre - mu_2*mu_2; // sigma'
+//
 //    double AC1 = covariance(image_1, 1, 0); // sigma_uv
 //    double AC2 = covariance(image_2, 1, 0); // sigma_uv'
 
+    ImageGrayd Fourier_1 = covariance_Fourier(image_1);
+    ImageGrayd Fourier_2 = covariance_Fourier(image_2);
+
+    double var_1 = Fourier_1.pixelAbsolute(0, 0); // sigma
+    double var_2 = Fourier_2.pixelAbsolute(0, 0); // sigma'
+
+    double AC1 = Fourier_1.pixelAbsolute(1, 0); // sigma_uv
+    double AC2 = Fourier_2.pixelAbsolute(1, 0); // sigma_uv'
+
+
+    // affichage
     std::cout<<"statistiques bruits"<<std::endl;
-    std::cout<<"bruit N  : moyenne = "<<mu_1<<", variance = "<<var_1<<std::endl;
-    std::cout<<"bruit N' : moyenne = "<<mu_2<<", variance = "<<var_2<<std::endl;
+
+    std::cout<<"bruit N  : "<<std::endl;
+    std::cout<<"moyenne = "<<mu_1<<std::endl;
+    std::cout<<"variance = "<<var_1<<std::endl;
+//    std::cout<<"variance sans biais = "<<var_1*(double(img_size)*double(img_size))/(double(img_size)*double(img_size)-1.)<<std::endl;
+    std::cout<<"autocovariance = "<<AC1<<std::endl;
+//    std::cout<<"variance Fourier = "<<Fourier_1.pixelAbsolute(0, 0)<<std::endl;
+//    std::cout<<"autocovariance Fourier = "<<Fourier_1.pixelAbsolute(1, 0)<<std::endl;
+
+    std::cout<<std::endl;
+
+    std::cout<<"bruit N'  : "<<std::endl;
+    std::cout<<"moyenne = "<<mu_2<<std::endl;
+    std::cout<<"variance = "<<var_2<<std::endl;
+//    std::cout<<"variance sans biais = "<<var_2*(double(img_size)*double(img_size))/(double(img_size)*double(img_size)-1.)<<std::endl;
+    std::cout<<"autocovariance = "<<AC2<<std::endl;
+//    std::cout<<"variance Fourier = "<<Fourier_2.pixelAbsolute(0, 0)<<std::endl;
+//    std::cout<<"autocovariance Fourier = "<<Fourier_2.pixelAbsolute(1, 0)<<std::endl;
+
     std::cout<<std::endl;
 
 
 // histogrammes
     // présences
-    ImageGrayd histo_N1_N2 = histo_2D(image_1, image_2, cm_size); // réel
     ImageGrayd histo_theo = histo_2D_theo(mu_1, mu_2, var_1, var_2, cm_size); // théorique
 
-
-
-    // ---------------------------------------------------------------------------
-
-    // proportion présence dans E
-    std::cout<<"mesure présence dans E"<<std::endl;
-    std::vector<color_info> couleurs_E = Tcontent(res_composition);
-    std::sort(couleurs_E.begin(), couleurs_E.end());
-
-    double tot_pixel_E = 0.;
-    for(auto it = couleurs_E.begin(); it != couleurs_E.end(); it++)
-    {
-        tot_pixel_E += (*it).compteur_;
-    }
-
-    for(auto it = couleurs_E.begin(); it != couleurs_E.end(); it++)
-    {
-        std::cout<<"("<<(*it).couleur_<<") : "<<(*it).compteur_/tot_pixel_E<<std::endl;
-//        std::cout<<"("<<(*it).couleur_<<") : "<<(*it).compteur_<<std::endl;
-    }
-    std::cout<<std::endl;
-
-
-
-    // capacité présence dans H
-    std::cout<<"estimation présence dans H"<<std::endl;
-//    std::vector<color_info> couleurs_H = cell_capacity_real_histo(cm_, histo_N1_N2);
-    std::vector<color_info> couleurs_H = cell_capacity(cm_, mu_1, mu_2, var_1, var_2);
-    std::sort(couleurs_H.begin(), couleurs_H.end());
-
-    double tot_pixel_H = 0.;
-    for(auto it = couleurs_H.begin(); it != couleurs_H.end(); it++)
-    {
-        tot_pixel_H += (*it).compteurD_;
-    }
-
-    for(auto it = couleurs_H.begin(); it != couleurs_H.end(); it++)
-    {
-        std::cout<<"("<<(*it).couleur_<<") : "<<(*it).compteurD_/tot_pixel_H<<std::endl;
-    }
-    std::cout<<std::endl;
-
-
+        // voisinages
+//    std::cout<<"histogramme voisinage"<<std::endl;
+//    ImageGrayd histo_AC_N1 = histo_2D_AC(image_1, 1, 0, 1); // réel
+//    ImageGrayd histo_AC_N2 = histo_2D_AC(image_2, 1, 0, 2);
 
 
 
     // ---------------------------------------------------------------------------
 
-
-    // proportion voisinage dans E
-    std::cout<<"mesure voisinage dans E"<<std::endl;
-    std::vector<color_vois> couleur_vois_E = Tcontent_vois_test(res_composition);
-    std::sort(couleur_vois_E.begin(), couleur_vois_E.end());
-
-
-    // total par couleur1_
-    double last_col = couleur_vois_E.at(0).couleur1_;
-    std::vector<std::array<double, 2>> tot_vois_E{std::array{last_col, 0.}}; // couleur, total
-
-    for(auto it = couleur_vois_E.begin(); it != couleur_vois_E.end(); it++)
-    {
-        if((*it).couleur1_ == last_col){
-            tot_vois_E.at(tot_vois_E.size()-1)[1] += (*it).compteur_;
-        }
-        else{
-            tot_vois_E.push_back(std::array{(*it).couleur1_, double((*it).compteur_)});
-            last_col = (*it).couleur1_;
-        }
-    }
-
-//    for(auto it = tot_vois_E.begin(); it != tot_vois_E.end(); it++)
+//    // proportion présence dans E
+//    std::cout<<"mesure présence dans E"<<std::endl;
+//    std::vector<color_info> couleurs_E = Tcontent(res_composition);
+//    std::sort(couleurs_E.begin(), couleurs_E.end());
+//
+//    double tot_pixel_E = 0.;
+//    for(auto it = couleurs_E.begin(); it != couleurs_E.end(); it++)
 //    {
-//        std::cout<<(*it)[0]<<" "<<(*it)[1]<<std::endl;
+//        tot_pixel_E += (*it).compteur_;
 //    }
+//
+////    for(auto it = couleurs_E.begin(); it != couleurs_E.end(); it++)
+////    {
+////        std::cout<<"("<<(*it).couleur_<<") : "<<(*it).compteur_/tot_pixel_E<<std::endl;
+//////        std::cout<<"("<<(*it).couleur_<<") : "<<(*it).compteur_<<std::endl;
+////    }
+////    std::cout<<std::endl;
+//
+//
+//
+//
+//    // capacité présence dans H
+//    std::cout<<"estimation présence dans H"<<std::endl;
+////    std::vector<color_info> couleurs_H = cell_capacity_real_histo(cm_, histo_N1_N2);
+//    std::vector<color_info> couleurs_H = cell_capacity(cm_, mu_1, mu_2, var_1, var_2);
+//    std::sort(couleurs_H.begin(), couleurs_H.end());
+//
+//    double tot_pixel_H = 0.;
+//    for(auto it = couleurs_H.begin(); it != couleurs_H.end(); it++)
+//    {
+//        tot_pixel_H += (*it).compteurD_;
+//    }
+//
+////    for(auto it = couleurs_H.begin(); it != couleurs_H.end(); it++)
+////    {
+////        std::cout<<"("<<(*it).couleur_<<") : "<<(*it).compteurD_/tot_pixel_H<<std::endl;
+//////        std::cout<<"("<<(*it).couleur_<<") : "<<(*it).compteurD_<<std::endl;
+////    }
+////    std::cout<<std::endl;
+//
+//
+//
+//
+//
+//    // affichage
+//    std::cout<<"erreurs présence (%)"<<std::endl;
+//    std::cout<<"couleurs & mesure E & estiamtion H & erreures"<<std::endl;
+//    for(int i=0; i<couleurs_E.size(); i++){
+//        double couleur = couleurs_E.at(i).couleur_;
+//        double proportion_E = couleurs_E.at(i).compteur_/tot_pixel_E;
+//        double proportion_H = couleurs_H.at(i).compteurD_/tot_pixel_H;
+//        double err = std::abs(proportion_E - proportion_H)/proportion_E;
+//
+//        std::cout<<couleur<<" & "<< proportion_E<<" & "<< proportion_H<<" & "<< 100.*err<<" \\"<<std::endl;
+//    }
+//    std::cout<<std::endl;
 
-    int last_col_id = 0;
-    for(auto it = couleur_vois_E.begin(); it != couleur_vois_E.end(); it++)
-    {
-        if((*it).couleur1_ == tot_vois_E.at(last_col_id)[0]){
-            std::cout<<"("<<(*it).couleur1_<<", "<<(*it).couleur2_<<") : "<<(*it).compteur_/tot_vois_E.at(last_col_id)[1]<<std::endl;
-        }
-        else{
-            last_col_id += 1;
-            std::cout<<"("<<(*it).couleur1_<<", "<<(*it).couleur2_<<") : "<<(*it).compteur_/tot_vois_E.at(last_col_id)[1]<<std::endl;
-        }
-    }
 
 
+
+
+
+    // ---------------------------------------------------------------------------
+
+
+//    // proportion voisinage dans E
+//    std::cout<<"mesure voisinage dans E"<<std::endl;
+//    std::vector<color_vois> couleur_vois_E = Tcontent_vois_test(res_composition);
+//    std::sort(couleur_vois_E.begin(), couleur_vois_E.end());
+//
+//
 //    // total tous voisinage
-//    double tot = 0.;
+//    double tot_E = 0.;
 //    for(auto it = couleur_vois_E.begin(); it != couleur_vois_E.end(); it++)
 //    {
-//        tot += (*it).compteur_;
+//        tot_E += (*it).compteur_;
 //    }
 //
 //    for(auto it = couleur_vois_E.begin(); it != couleur_vois_E.end(); it++)
 //    {
-////        std::cout<<"("<<(*it).couleur1_<<", "<<(*it).couleur2_<<") : "<<(*it).compteur_/tot<<std::endl;
-//        std::cout<<"("<<(*it).couleur1_<<", "<<(*it).couleur2_<<") : "<<(*it).compteur_<<std::endl;
+//        std::cout<<"("<<(*it).couleur1_<<", "<<(*it).couleur2_<<") : "<<(*it).compteur_/tot_E<<std::endl;
+////        std::cout<<"("<<(*it).couleur1_<<", "<<(*it).couleur2_<<") : "<<(*it).compteur_<<std::endl;
 //
 //
 //    }
-    std::cout<<std::endl;
+//    std::cout<<std::endl;
 
 
 
@@ -292,46 +313,12 @@ int main()
 
 
 
-    // capacité voisinage dans H
-    std::cout<<"estimation voisinage dans H"<<std::endl;
-    std::vector<color_vois> couleur_vois_H = Hcontent_vois_test(cm_, mu_1, mu_2, var_1, var_2, histo_N1_N2);
-    std::sort(couleur_vois_H.begin(), couleur_vois_H.end());
-
-
-    // total par couleur1_
-    last_col = couleur_vois_H.at(0).couleur1_;
-    std::vector<std::array<double, 2>> tot_vois_H{std::array{last_col, 0.}}; // couleur, total
-
-    for(auto it = couleur_vois_H.begin(); it != couleur_vois_H.end(); it++)
-    {
-        if((*it).couleur1_ == last_col){
-            tot_vois_H.at(tot_vois_H.size()-1)[1] += (*it).compteurD_;
-        }
-        else{
-            tot_vois_H.push_back(std::array{(*it).couleur1_, double((*it).compteurD_)});
-            last_col = (*it).couleur1_;
-        }
-    }
-
-//    for(auto it = tot_vois_E.begin(); it != tot_vois_E.end(); it++)
-//    {
-//        std::cout<<(*it)[0]<<" "<<(*it)[1]<<std::endl;
-//    }
-
-    last_col_id = 0;
-    for(auto it = couleur_vois_H.begin(); it != couleur_vois_H.end(); it++)
-    {
-        if((*it).couleur1_ == tot_vois_H.at(last_col_id)[0]){
-            std::cout<<"("<<(*it).couleur1_<<", "<<(*it).couleur2_<<") : "<<(*it).compteurD_/tot_vois_H.at(last_col_id)[1]<<std::endl;
-        }
-        else{
-            last_col_id += 1;
-            std::cout<<"("<<(*it).couleur1_<<", "<<(*it).couleur2_<<") : "<<(*it).compteurD_/tot_vois_H.at(last_col_id)[1]<<std::endl;
-        }
-    }
-
-
-
+//    // capacité voisinage dans H
+//    std::cout<<"estimation voisinage dans H"<<std::endl;
+//    std::vector<color_vois> couleur_vois_H = Hcontent_vois_test(cm_, mu_1, mu_2, var_1, var_2, histo_N1_N2);
+//    std::sort(couleur_vois_H.begin(), couleur_vois_H.end());
+//
+//
 //    // total tous voisinage
 //    double tot_H = 0.;
 //    for(auto it = couleur_vois_H.begin(); it != couleur_vois_H.end(); it++)
@@ -348,10 +335,53 @@ int main()
 ////        std::cout<<2.*dist*cm_size<<std::endl;
 ////        std::cout<<"("<<(*it).couleur1_<<", "<<(*it).couleur2_<<") : "<<(*it).compteurD_/(2.*dist*cm_size)<<std::endl;
 //    }
+//    std::cout<<std::endl;
 
 
 
 
+//    // affichage
+//    std::cout<<"erreurs voisinages (%)"<<std::endl;
+//    for(int i=0; i<couleur_vois_E.size(); i++){
+//        double couleur_1 = couleur_vois_E.at(i).couleur1_;
+//        double couleur_2 = couleur_vois_E.at(i).couleur2_;
+//        double proportion_E = couleur_vois_E.at(i).compteur_/tot_E;
+//        double proportion_H = couleur_vois_H.at(i).compteurD_/tot_H;
+//        double err = std::abs(proportion_E - proportion_H)/proportion_E;
+//
+//        std::cout<<"("<<couleur_1<<", "<<couleur_2<<") & "<<100.*err<<std::endl;
+//
+//    }
+//    std::cout<<std::endl;
+
+
+
+
+
+
+
+
+
+
+//    // capacité conjointe dans H
+//    std::cout<<"estimation voisinage dans H intégrale 4D"<<std::endl;
+////    std::vector<color_vois> couleur_vois_H_int = capacityH_vois_histo_reel(cm_, histo_AC_N1, histo_AC_N2);
+//    std::vector<color_vois> couleur_vois_H_int = capacityH_vois(cm_, mu_1, mu_2, var_1, var_2, AC1, AC2);
+//    std::sort(couleur_vois_H_int.begin(), couleur_vois_H_int.end());
+//
+//    double tot_H_int = 0.;
+//    for(auto it = couleur_vois_H_int.begin(); it != couleur_vois_H_int.end(); it++)
+//    {
+//        if((*it).couleur1_ != (*it).couleur2_){
+//            tot_H_int += (*it).compteurD_;
+//        }
+//    }
+//
+//    for(auto it = couleur_vois_H_int.begin(); it != couleur_vois_H_int.end(); it++)
+//    {
+//        std::cout<<"("<<(*it).couleur1_<<", "<<(*it).couleur2_<<") : "<<(*it).compteurD_/tot_H_int<<std::endl;
+////        std::cout<<"("<<(*it).couleur1_<<", "<<(*it).couleur2_<<") : "<<(*it).compteurD_<<std::endl;
+//    }
 
 
     return EXIT_SUCCESS;
