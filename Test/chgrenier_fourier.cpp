@@ -38,22 +38,22 @@ int main(){
 // load d'une image
 
     ImageGrayd image_(1024, 1024);
-    IO::loadu8_in_01(image_, "/home/grenier/Documents/ASTex_fork/results/fourier/result.png");
+    IO::loadu8_in_01(image_, "/home/grenier/Documents/ASTex_fork/results/fourier/cm_complexe_2.png");
 
 // ---------------------------------------------------------------------------
-// test
-    image_.parallel_for_all_pixels([&] (typename ImageGrayd::PixelType& P, int x, int y) // cm
-                                     {
-                                         double lvl = 0.12;
-                                         double pix = image_.pixelAbsolute(x,y);
-
-                                         if(pix < lvl){
-                                             P = ImageGrayd::PixelType(0.);
-                                         }
-                                         else{
-                                             P = ImageGrayd::PixelType(1.);
-                                         }
-                                     });
+//// test
+//    image_.parallel_for_all_pixels([&] (typename ImageGrayd::PixelType& P, int x, int y) // cm
+//                                     {
+//                                         double lvl = 0.12;
+//                                         double pix = image_.pixelAbsolute(x,y);
+//
+//                                         if(pix < lvl){
+//                                             P = ImageGrayd::PixelType(0.);
+//                                         }
+//                                         else{
+//                                             P = ImageGrayd::PixelType(1.);
+//                                         }
+//                                     });
 
 
 // ---------------------------------------------------------------------------

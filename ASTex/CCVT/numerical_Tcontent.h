@@ -128,11 +128,11 @@ double gauss(double moy1, double moy2, double var1, double var2, double x, doubl
 {
     // gaussienne en x
     double X = x-moy1;
-    double G1 = std::exp(-(X*X)/(2.*var1))/(std::sqrt(2.*M_PI*var1));
+    double G1 = std::exp(-(X*X)/(2.*var1));///(std::sqrt(2.*M_PI*var1));
 
     // gaussienne en y
     double Y = y-moy2;
-    double G2 = std::exp(-(Y*Y)/(2.*var2))/(std::sqrt(2.*M_PI*var2));
+    double G2 = std::exp(-(Y*Y)/(2.*var2));///(std::sqrt(2.*M_PI*var2));
 
     return G1*G2;
 }
@@ -242,24 +242,17 @@ ImageGrayd histo_2D(ImageGrayd noise1, ImageGrayd noise2, int histo_size)
 
             histo.pixelAbsolute(int(std::round(nx)), int(std::round(ny))) += 1.;
 //            histo.pixelAbsolute(int(std::floor(nx)), int(std::floor(ny))) += 1.;
-//            histo.pixelAbsolute(int(std::round(nx)), int(std::round(ny))) += 1./(histo_size * histo_size);
         }
     }
 
-    // calcul de l'aire sous la courbe
-    histo.for_all_pixels([&] (typename ImageGrayd::PixelType& P, int x, int y)
-                         {
-                             norme += P / (histo_size * histo_size);
-                         });
-
-
-    // normalisation pour une aire sous la courbe égale à 1
-    histo.for_all_pixels([&] (typename ImageGrayd::PixelType& P, int x, int y)
-                         {
-                             P *= 1./double(norme);
-                         });
-
     IO::save(histo, "/home/grenier/Documents/ASTex_fork/results/equ_CCVT/histo_noise_reel.png");
+
+    // normalisation
+//    histo.for_all_pixels([&] (typename ImageGrayd::PixelType& P, int x, int y)
+//                         {
+//                             P *= 1./(noise1.height()*noise1.width());  // pour une aire sous la courbe égale à 1
+//                         });
+
     return histo;
 }
 
@@ -278,6 +271,14 @@ ImageGrayd histo_2D_theo(double moy1, double moy2, double var1, double var2, int
 
                           P = gauss(moy1, moy2, var1, var2, X, Y);
                       });
+
+//    double histo_test = 0.;
+//    histo.for_all_pixels([&] (typename ImageGrayd::PixelType& P, int x, int y)
+//                         {
+//                             histo_test += P;
+////                             if (P>histo_test){histo_test=P;}
+//                         });
+//    std::cout<<"histo test  theo : "<<histo_test<<std::endl;
 
 
     IO::save(histo, "/home/grenier/Documents/ASTex_fork/results/equ_CCVT/histo_noise_theo.png");

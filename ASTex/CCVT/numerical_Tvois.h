@@ -270,6 +270,7 @@ std::vector<color_vois> capacityH_vois(ImageGrayd cm, double moy1, double moy2, 
 //                                                if(x2==0){std::cout<<y2<<" ";}
 //                                                if(P1 != P2){
                                                     int id;
+                                                    bool presence;
 
                                                     // évaluation au centre des pixels
                                                     double X1 = (x1+0.5)/double(cm_size-1); // x1 ~ Nu
@@ -279,15 +280,28 @@ std::vector<color_vois> capacityH_vois(ImageGrayd cm, double moy1, double moy2, 
 
                                                     double qtt = gaussAC_2D(moy1, var1, AC1, X1, X2) * gaussAC_2D(moy2, var2, AC2, Y1, Y2);
 
-                                                    bool presence = is_in(couleurs, P1, P2, id);
-                                                    if(not presence)
-                                                    {
-                                                        couleurs.push_back(color_vois{P1, P2, qtt});
-                                                    }
-                                                    else
-                                                    {
-                                                        couleurs.at(id).incr(qtt);
-                                                    }
+//                                                    if(P1 != P2){
+                                                        presence = is_in(couleurs, P1, P2, id);
+                                                        if(not presence)
+                                                        {
+                                                            presence = is_in(couleurs, P2, P1, id);
+                                                            if (not presence)
+                                                            {
+                                                                ImageGrayd::PixelType Pi = std::min(P1,P2);
+                                                                ImageGrayd::PixelType Pj = std::max(P1,P2);
+                                                                couleurs.push_back(color_vois{Pi, Pj, qtt});
+                                                            }
+                                                            else
+                                                            {
+                                                                couleurs.at(id).incr(qtt);
+                                                            }
+                                                        }
+                                                        else
+                                                        {
+                                                            couleurs.at(id).incr(qtt);
+                                                        }
+
+//                                                    }
 //                                                }
 
 
@@ -297,6 +311,7 @@ std::vector<color_vois> capacityH_vois(ImageGrayd cm, double moy1, double moy2, 
 //    std::cout<<std::endl;
     return couleurs;
 }
+
 
 
 
