@@ -66,6 +66,24 @@ struct color_vois{
 };
 
 
+struct color_voisinage_large{
+    ImageGrayd::PixelType couleur_1;
+    ImageGrayd::PixelType couleur_2;
+    std::vector<double> proportion_E;
+    std::vector<double> proportion_H_t;
+    std::vector<double> proportion_H_r;
+    std::vector<double> error_t;
+    std::vector<double> error_r;
+    std::vector<double> distance_t;
+    std::vector<double> distance_r;
+
+    color_voisinage_large(ImageGrayd::PixelType couleur1, ImageGrayd::PixelType couleur2){
+        couleur_1 = couleur1;
+        couleur_2 = couleur2;
+    }
+};
+
+
 
 bool is_in(std::vector<color_vois>& vecteur, ImageGrayd::PixelType& couleur1, ImageGrayd::PixelType& couleur2, int& id)
 {
@@ -182,34 +200,6 @@ std::vector<color_vois> Tcontent_vois(ImageGrayd image_, int tauX, int tauY)
 //    return G;
 //}
 
-
-double gaussAC_2D(double moy, double var, double AC, double x, double y)
-{
-    double ecart_type = std::sqrt(var);
-    /* matrice covariance :
-     * var AC
-     * AC  var
-     */
-    double det = (var*var)-(AC*AC); // déterminant de la matrice de covariance
-
-    /* matrice précision (inverse matrice covariance) :
-     * var/det -AC/det
-     * -AC/det  var/det
-     */
-    double var_inv = var/det;
-    double AC_inv = -AC/det;
-
-
-    double X = x-moy;
-    double Y = y-moy;
-
-    double produit = X*(X*var_inv + Y*AC_inv) + Y*(X*AC_inv + Y*var_inv);
-    double norm = 2.*M_PI*std::sqrt(det);
-
-    double G = std::exp(-0.5*produit)/norm;
-
-    return G;
-}
 
 
 
@@ -396,130 +386,6 @@ std::vector<color_vois>  capacityH_vois_histo_dist(ImageGrayd cm, ImageGrayd his
 
 
 
-// ---------------------------------------------------------------------------
-ImageGrayd histo_2D_AC(ImageGrayd noise1, int tauX, int tauY, int name)
-{
-    int histo_size = 256;
-    double norme = 0;
-    ImageGrayd histo(histo_size, histo_size, true);
-
-    // énumération des paire de valeur de bruits
-    for(int x=0; x<noise1.width()-tauX; x++)
-    {
-        for(int y=0; y<noise1.height()-tauY; y++)
-        {
-            double nx = noise1.pixelAbsolute(x, y)*(histo_size-1);
-            double ny = noise1.pixelAbsolute(x+tauX, y+tauY)*(histo_size-1);
-
-            histo.pixelAbsolute(int(std::round(nx)), int(std::round(ny))) += 1.;
-            histo.pixelAbsolute(int(std::round(ny)), int(std::round(nx))) += 1.; // symétrie
-        }
-    }
-
-    // calcul de l'aire sous la courbe
-    histo.for_all_pixels([&] (typename ImageGrayd::PixelType& P, int x, int y)
-                         {
-                             norme += P / (histo_size * histo_size);
-                         });
-
-
-    // estimation des moyennes
-    double mX = 0.;
-    double mY = 0.;
-    double tot = 0.;
-    histo.for_all_pixels([&] (typename ImageGrayd::PixelType& P, int x, int y)
-                         {
-                             double X = x/double(histo_size-1);
-                             double Y = y/double(histo_size-1);
-
-                             mX += P*X; // x/255. : valeur sur 0, 1
-                             mY += P*Y;
-
-                             tot += P;
-                         });
-    mX = mX/tot;
-    mY = mY/tot;
-    std::cout<<"moyenne histo x : "<<mX<<", moyenne histo y : "<<mY<<std::endl;
-
-
-
-
-    // estimation de l'auto-covariance
-    double AC = 0.;
-    histo.for_all_pixels([&] (typename ImageGrayd::PixelType& P, int x, int y)
-                         {
-                             double X = x/double(histo_size-1);
-                             double Y = y/double(histo_size-1);
-
-                             AC += P*(X-mX)*(Y-mY); // x/255. : valeur sur 0, 1
-//                             AC += P*(x-mX)*(y-mY); // x : valeur sur 0, 255
-                         });
-    AC = AC/tot;
-    std::cout<<"auto-covariance histo : "<<AC<<std::endl;
-
-
-
-    // normalisation pour une aire sous la courbe égale à 1
-    histo.for_all_pixels([&] (typename ImageGrayd::PixelType& P, int x, int y)
-                         {
-                             P *= 1./double(norme);
-                         });
-    IO::save(histo, "/home/grenier/Documents/ASTex_fork/results/equ_CCVT/histo_noise_AC_" + std::to_string(name) + ".png");
-    return histo;
-}
-
-
-
-
-ImageGrayd histo_2D_theo_vois(double moy, double var, double AC, int name)
-{
-    int histo_size = 256;
-    ImageGrayd histo(histo_size, histo_size, true);
-
-    histo.for_all_pixels([&] (typename ImageGrayd::PixelType& P, int x, int y)
-                         {
-                             double X = x/double(histo_size-1);
-                             double Y = y/double(histo_size-1);
-
-                             P = gaussAC_2D(moy, var, AC, X, Y);
-                         });
-
-
-    IO::save(histo, "/home/grenier/Documents/ASTex_fork/results/equ_CCVT/histo_noise_theo_vois_" + std::to_string(name) + ".png");
-    return histo;
-}
-
-
-
-ImageGrayd histo_2D_dist_vois(ImageGrayd histo_reel, double moy, double var, double AC, int name)
-{
-    int histo_size = 256;
-    ImageGrayd histo(histo_size, histo_size, true);
-
-    double max_theo = -1.;
-    double max_reel = -1.;
-    double max_dist = -1.;
-
-    histo.for_all_pixels([&] (typename ImageGrayd::PixelType& P, int x, int y)
-                         {
-                             double X = x/double(histo_size-1);
-                             double Y = y/double(histo_size-1);
-
-                             double val_theo = gaussAC_2D(moy, var, AC, X, Y) ;
-                             double val_reel = histo_reel.pixelAbsolute(x,y);
-                             double val_dist = val_theo - val_reel;
-
-                             max_theo = std::max(max_theo,val_theo);
-                             max_reel = std::max(max_reel,val_reel);
-                             max_dist = std::max(max_dist,std::abs(val_dist));
-
-                             P = val_dist;
-                         });
-
-    std::cout<<"bruit "<<std::to_string(name)<<" - val max histo réel : "<<max_reel<<", val max histo théo : "<<max_theo<<", val max distance : "<<max_dist<<std::endl;
-    IO::save(histo, "/home/grenier/Documents/ASTex_fork/results/equ_CCVT/histo_noise_dist_vois_" + std::to_string(name) + ".png");
-    return histo;
-}
 
 
 

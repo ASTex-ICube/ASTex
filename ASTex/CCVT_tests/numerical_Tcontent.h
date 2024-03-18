@@ -7,7 +7,7 @@
 
 
 
-
+#include "tools.h"
 
 //-----------------------------------------------------------------------------
 struct color_info{
@@ -61,6 +61,24 @@ struct color_info{
         return couleur_ < couleur2.couleur_;
     }
 };
+
+
+
+struct color_info_large{
+    ImageGrayd::PixelType couleur_;
+    std::vector<double> proportion_E;
+    std::vector<double> proportion_H_t;
+    std::vector<double> proportion_H_r;
+    std::vector<double> error_t;
+    std::vector<double> error_r;
+    std::vector<double> distance_t;
+    std::vector<double> distance_r;
+
+    color_info_large(ImageGrayd::PixelType couleur){
+        couleur_ = couleur;
+    }
+};
+
 
 
 struct comput_mean{
@@ -123,19 +141,6 @@ std::vector<color_info> Tcontent(ImageGrayd image_)
 
 
 
-// ---------------------------------------------------------------------------
-double gauss(double moy1, double moy2, double var1, double var2, double x, double y)
-{
-    // gaussienne en x
-    double X = x-moy1;
-    double G1 = std::exp(-(X*X)/(2.*var1));///(std::sqrt(2.*M_PI*var1));
-
-    // gaussienne en y
-    double Y = y-moy2;
-    double G2 = std::exp(-(Y*Y)/(2.*var2));///(std::sqrt(2.*M_PI*var2));
-
-    return G1*G2;
-}
 
 
 
@@ -225,97 +230,6 @@ std::vector<color_info> cell_dist_real_histo(ImageGrayd cm, ImageGrayd histo_dis
 }
 
 
-// ---------------------------------------------------------------------------
-ImageGrayd histo_2D(ImageGrayd noise1, ImageGrayd noise2, int histo_size)
-{
-//    int histo_size = 256;
-    double norme = 0.;
-    ImageGrayd histo(histo_size, histo_size, true);
-
-    // énumération des paire de valeur de bruits
-    for(int x=0; x<noise1.width(); x++)
-    {
-        for(int y=0; y<noise1.height(); y++)
-        {
-            double nx = noise1.pixelAbsolute(x, y)*(histo_size-1);
-            double ny = noise2.pixelAbsolute(x, y)*(histo_size-1);
-
-            histo.pixelAbsolute(int(std::round(nx)), int(std::round(ny))) += 1.;
-//            histo.pixelAbsolute(int(std::floor(nx)), int(std::floor(ny))) += 1.;
-        }
-    }
-
-    IO::save(histo, "/home/grenier/Documents/ASTex_fork/results/equ_CCVT/histo_noise_reel.png");
-
-    // normalisation
-//    histo.for_all_pixels([&] (typename ImageGrayd::PixelType& P, int x, int y)
-//                         {
-//                             P *= 1./(noise1.height()*noise1.width());  // pour une aire sous la courbe égale à 1
-//                         });
-
-    return histo;
-}
-
-
-
-
-ImageGrayd histo_2D_theo(double moy1, double moy2, double var1, double var2, int histo_size)
-{
-//    int histo_size = 256;
-    ImageGrayd histo(histo_size, histo_size, true);
-
-    histo.for_all_pixels([&] (typename ImageGrayd::PixelType& P, int x, int y)
-                      {
-                          double X = x/double(histo_size-1);
-                          double Y = y/double(histo_size-1);
-
-                          P = gauss(moy1, moy2, var1, var2, X, Y);
-                      });
-
-//    double histo_test = 0.;
-//    histo.for_all_pixels([&] (typename ImageGrayd::PixelType& P, int x, int y)
-//                         {
-//                             histo_test += P;
-////                             if (P>histo_test){histo_test=P;}
-//                         });
-//    std::cout<<"histo test  theo : "<<histo_test<<std::endl;
-
-
-    IO::save(histo, "/home/grenier/Documents/ASTex_fork/results/equ_CCVT/histo_noise_theo.png");
-    return histo;
-}
-
-
-
-ImageGrayd histo_2D_dist(ImageGrayd histo_reel, double moy1, double moy2, double var1, double var2, int histo_size)
-{
-//    int histo_size = 256;
-    ImageGrayd histo(histo_size, histo_size, true);
-
-    double max_theo = -1.;
-    double max_reel = -1.;
-    double max_dist = -1.;
-
-    histo.for_all_pixels([&] (typename ImageGrayd::PixelType& P, int x, int y)
-                         {
-                             double X = x/double(histo_size-1);
-                             double Y = y/double(histo_size-1);
-
-                             double val_theo = gauss(moy1, moy2, var1, var2, X, Y);
-                             double val_reel = histo_reel.pixelAbsolute(x,y);
-                             double val_dist = val_theo - val_reel;
-
-                             max_theo = std::max(max_theo,val_theo);
-                             max_reel = std::max(max_reel,val_reel);
-                             max_dist = std::max(max_dist,std::abs(val_dist));
-
-                             P = val_dist;
-                         });
-
-    std::cout<<"val max histo réel : "<<max_reel<<", val max histo théo : "<<max_theo<<", val max distance : "<<max_dist<<std::endl;
-    IO::save(histo, "/home/grenier/Documents/ASTex_fork/results/equ_CCVT/histo_noise_dist.png");
-    return histo;
-}
 
 
 

@@ -94,10 +94,10 @@ private:
     unsigned x_;
 };
 
-float gabor(float K, float a, float F_0, float omega_0, float x, float y)
+double gabor(float K, float a, float F_0, float omega_0, float x, float y)
 {
-    float gaussian_envelop = K * std::exp(-M_PI * (a * a) * ((x * x) + (y * y)));
-    float sinusoidal_carrier = std::cos(2.0 * M_PI * F_0 * ((x * std::cos(omega_0)) + (y * std::sin(omega_0))));
+    double gaussian_envelop = K * std::exp(-M_PI * (a * a) * ((x * x) + (y * y)));
+    double sinusoidal_carrier = std::cos(2.0 * M_PI * F_0 * ((x * std::cos(omega_0)) + (y * std::sin(omega_0))));
     return gaussian_envelop * sinusoidal_carrier;
 }
 
@@ -121,13 +121,14 @@ public:
     }
 
 
-    float operator()(float x, float y) const
+    double operator()(float x, float y) const
     {
         x /= kernel_radius_, y /= kernel_radius_;
         float int_x = std::floor(x), int_y = std::floor(y);
         float frac_x = x - int_x, frac_y = y - int_y;
         int i = int(int_x), j = int(int_y);
-        float noise = 0.0;
+
+        double noise = 0.0;
         for (int di = -1; di <= +1; ++di) {
             for (int dj = -1; dj <= +1; ++dj) {
                 noise += cell(i + di, j + dj, frac_x - di, frac_y - dj);
@@ -137,7 +138,7 @@ public:
     }
 
 
-    float cell(int i, int j, float x, float y) const
+    double cell(int i, int j, float x, float y) const
     {
 //        unsigned s = (((unsigned(j) % period_) * period_) + (unsigned(i) % period_)) + random_offset_; // periodic noise
         unsigned s = morton(i, j) + random_offset_; // nonperiodic noise
@@ -145,9 +146,9 @@ public:
         pseudo_random_number_generator prng;
         prng.seed(s + seed_);
 
-        double number_of_impulses_per_cell = impulse_density_ * kernel_radius_ * kernel_radius_;
+        float number_of_impulses_per_cell = impulse_density_ * kernel_radius_ * kernel_radius_;
         unsigned number_of_impulses = prng.poisson(number_of_impulses_per_cell);
-        float noise = 0.0;
+        double noise = 0.0;
 
         for (unsigned i = 0; i < number_of_impulses; ++i) {
             float x_i = prng.uniform_0_1();
@@ -174,9 +175,9 @@ public:
     }
 
 
-    float variance() const
+    double variance() const
     {
-        float integral_gabor_filter_squared = ((K_ * K_) / (4.0 * a_ * a_)) * (1.0 + std::exp(-(2.0 * M_PI * F_0_ * F_0_) / (a_ * a_)));
+        double integral_gabor_filter_squared = ((K_ * K_) / (4.0 * a_ * a_)) * (1.0 + std::exp(-(2.0 * M_PI * F_0_ * F_0_) / (a_ * a_)));
         return impulse_density_ * (1.0 / 3.0) * integral_gabor_filter_squared;
     }
 private:
