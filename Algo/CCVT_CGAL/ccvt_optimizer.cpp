@@ -194,7 +194,7 @@ void CCVT::build_laplacian(const FT scale, // build matrix Delta^{w,rho}
             unsigned j = vj->get_index();
             j = indices.find(j)->second;
 
-            double coef = scale * get_ratio(edge); // get_ratio = rho*|e*ij|/|eij|, scale = 0.5
+            double coef = scale * get_ratio(edge); // get_ratio = rho*|e*ij|/|eij|, scale = 0.5 // TODO : calcul de int de rho
             if (std::abs(coef) < EPS) continue;
 
             rowi.setValue(j, -coef);
@@ -364,7 +364,7 @@ unsigned CCVT::optimize_H(FT& wstep, FT& xstep, unsigned max_newton_iters, FT ep
         if (nb1 != nb0) reset_weights();
 
         // on ajuste les poids pour coller au capacités (Newton method for W)
-        nb_assign += optimize_weights_via_newton_until_converge(wstep, wthreshold, 0, max_newton_iters);
+//        nb_assign += optimize_weights_via_newton_until_converge(wstep, wthreshold, 0, max_newton_iters);
 
         // on ajuste les positions pour coller au voisinages
         FT norm = optimize_neightbour_via_gradient_descent(xstep, true); // TODO

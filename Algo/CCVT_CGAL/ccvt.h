@@ -33,6 +33,8 @@ private:
     // pour chaque Vertex_handle on a
     // m_ptr : informations sur la graine
     //     _f : face ?
+    //          V : vertex
+    //          N : neighbors
     //     _p : position ?
     //     m_dual : les extrémité des arrêtes de la cellule ?
     //     m_pixels : les valeurs des pixel de la densité couvert par la cellule ?

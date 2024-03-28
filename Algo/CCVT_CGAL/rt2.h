@@ -79,12 +79,12 @@ public:
         return edge.first->vertex( Rt::cw(edge.second) );
     }
 
-    Vertex_handle get_opposite(const Edge& edge) const
+    Vertex_handle get_opposite(const Edge& edge) const // eij -> xj
     {
         return edge.first->vertex( edge.second );
     }
 
-    Edge get_twin(const Edge& edge) const
+    Edge get_twin(const Edge& edge) const // eij -> eji
     {
         Face_handle f = edge.first;
         Vertex_handle v = get_source(edge);
@@ -119,13 +119,13 @@ public:
         return Segment(ps, pt);
     }
 
-    FT get_area(Face_handle face) const
+    FT get_area(const Face_handle& face) const
     {
         Triangle triangle = get_triangle(face);
         return triangle.area();
     }
 
-    Triangle get_triangle(Face_handle face) const
+    Triangle get_triangle(const Face_handle& face) const
     {
         Vertex_handle v0 = face->vertex(0);
         Vertex_handle v1 = face->vertex(1);
@@ -265,7 +265,7 @@ public:
         return Segment(cw, ray.point(100));
     }
 
-    Point get_edge_cw(const Edge& edge) const
+    Point get_edge_cw(const Edge& edge) const // cij
     {
         Vertex_handle vi = get_source(edge);
         Vertex_handle vj = get_target(edge);
