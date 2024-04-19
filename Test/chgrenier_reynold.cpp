@@ -106,13 +106,13 @@ int main()
 
 
     // ---------------------------------------------------------------------------
-//    std::vector<Graine> H_seeds{Graine(0.15, 0.25, 0.1),
-//                                Graine(0.65, 0.28, 0.),
-//                                Graine(0.81, 0.65, 0.),
-//                                Graine(0.52, 0.91 ,0.),
-//                                Graine(0.12, 0.72, 0.1),
-//                                Graine(0.45, 0.48, 0.)};
-//    std::vector<double> H_color{0.2, 0.6, 0.0, 0.4, 0.8, 1.0};
+    std::vector<Graine> H_seeds{Graine(0.15, 0.25, 0.1),
+                                Graine(0.65, 0.28, 0.),
+                                Graine(0.81, 0.65, 0.),
+                                Graine(0.52, 0.91 ,0.),
+                                Graine(0.12, 0.72, 0.1),
+                                Graine(0.45, 0.48, 0.)};
+    std::vector<double> H_color{0.2, 0.6, 0.0, 0.4, 0.8, 1.0};
 
 
 //    std::vector<Graine> H_seeds{Graine(0.15, 0.25, 0.1),
@@ -125,10 +125,18 @@ int main()
 //                                Graine(0.9, 0.5, 0.1)};
 //    std::vector<double> H_color{0.2, 0.6, 0.0};
 
-    std::vector<Graine> H_seeds{Graine(0.9, 0.1, 0.1),
-                                Graine(0.9, 0.9, 0.1),
-                                Graine(0.1, 0.5, 0.1)};
-    std::vector<double> H_color{0.2, 0.6, 0.0};
+//    std::vector<Graine> H_seeds{Graine(0.9, 0.1, 0.1),
+//                                Graine(0.9, 0.9, 0.1),
+//                                Graine(0.1, 0.5, 0.1)};
+//    std::vector<double> H_color{0.2, 0.6, 0.0};
+
+//    std::vector<Graine> H_seeds{Graine(0.81, 0.65, 0.),
+//                                Graine(0.15, 0.25, 0.1),
+//                                Graine(0.52, 0.91 ,0.),
+//                                Graine(0.65, 0.28, 0.),
+//                                Graine(0.12, 0.72, 0.1),
+//                                Graine(0.45, 0.48, 0.)};
+//    std::vector<double> H_color{0.0, 0.2, 0.4, 0.6, 0.8, 1.0};
 
 
     ImgType cm_(cm_size, cm_size);
@@ -265,10 +273,82 @@ int main()
 
     // ---------------------------------------------------------------------------
 
-    // proportion présence dans E
-    std::cout<<"mesure présence dans E"<<std::endl;
-    std::vector<color_info> couleurs_E = Tcontent(res_composition);
+//    // proportion présence dans E
+//    std::cout<<"mesure présence dans E"<<std::endl;
+//    std::vector<color_info> couleurs_E = Tcontent(res_composition);
+//    std::sort(couleurs_E.begin(), couleurs_E.end());
+//
+//    double tot_pixel_E = 0.;
+//    for(auto it = couleurs_E.begin(); it != couleurs_E.end(); it++)
+//    {
+//        tot_pixel_E += (*it).compteur_;
+//    }
+//
+//
+////    for(auto it = couleurs_E.begin(); it != couleurs_E.end(); it++)
+////    {
+////        std::cout<<"("<<(*it).couleur_<<") : "<<(*it).compteur_/tot_pixel_E<<std::endl;
+//////        std::cout<<"("<<(*it).couleur_<<") : "<<(*it).compteur_<<std::endl;
+////    }
+////    std::cout<<std::endl;
+//
+//
+//
+//
+//    // capacité présence dans H
+//    std::cout<<"estimation présence dans H"<<std::endl;
+//    std::vector<color_info> couleurs_H = cell_capacity_real_histo(cm_, histo_N1_N2);
+////    std::vector<color_info> couleurs_H = cell_capacity(cm_, mu_1, mu_2, var_1, var_2);
+//    std::sort(couleurs_H.begin(), couleurs_H.end());
+//
+//    double tot_pixel_H = 0.;
+//    for(auto it = couleurs_H.begin(); it != couleurs_H.end(); it++)
+//    {
+//        tot_pixel_H += (*it).compteurD_;
+//    }
+//
+//
+////    for(auto it = couleurs_H.begin(); it != couleurs_H.end(); it++)
+////    {
+////        std::cout<<"("<<(*it).couleur_<<") : "<<(*it).compteurD_/tot_pixel_H<<std::endl;
+//////        std::cout<<"("<<(*it).couleur_<<") : "<<(*it).compteurD_<<std::endl;
+////    }
+////    std::cout<<std::endl;
+//
+//
+//
+//
+//
+//    // affichage
+//    std::cout<<"erreurs présence (%)"<<std::endl;
+//    std::cout<<"couleurs & mesure E & estimation H & erreurs \\\\"<<std::endl;
+//    std::cout<<"\\hline"<<std::endl;
+//    for(int i=0; i<couleurs_E.size(); i++){
+//        double couleur = couleurs_E.at(i).couleur_;
+//        double proportion_E = couleurs_E.at(i).compteur_/tot_pixel_E;
+//        double proportion_H = couleurs_H.at(i).compteurD_/tot_pixel_H;
+//        double err = std::abs(proportion_E - proportion_H)/proportion_E;
+//
+//        std::cout<<couleur<<" & "<< proportion_E<<" & "<< proportion_H<<" & "<< 100.*err<<" \\\\"<<std::endl;
+//    }
+//    std::cout<<std::endl;
+
+
+
+
+
+
+
+
+    std::vector<color_info> couleurs_E;
+    std::vector<color_vois> couleur_vois_E;
+    int nb_voisinage = 0;
+    int nb_voisinage_diff = 0;
+
+    mesure_E(res_composition, couleurs_E, couleur_vois_E, true, nb_voisinage, nb_voisinage_diff);
+
     std::sort(couleurs_E.begin(), couleurs_E.end());
+    std::sort(couleur_vois_E.begin(), couleur_vois_E.end());
 
     double tot_pixel_E = 0.;
     for(auto it = couleurs_E.begin(); it != couleurs_E.end(); it++)
@@ -277,54 +357,34 @@ int main()
     }
 
 
-//    for(auto it = couleurs_E.begin(); it != couleurs_E.end(); it++)
-//    {
-//        std::cout<<"("<<(*it).couleur_<<") : "<<(*it).compteur_/tot_pixel_E<<std::endl;
-////        std::cout<<"("<<(*it).couleur_<<") : "<<(*it).compteur_<<std::endl;
-//    }
-//    std::cout<<std::endl;
-
-
-
-
-    // capacité présence dans H
-    std::cout<<"estimation présence dans H"<<std::endl;
-    std::vector<color_info> couleurs_H = cell_capacity_real_histo(cm_, histo_N1_N2);
-//    std::vector<color_info> couleurs_H = cell_capacity(cm_, mu_1, mu_2, var_1, var_2);
-    std::sort(couleurs_H.begin(), couleurs_H.end());
-
-    double tot_pixel_H = 0.;
-    for(auto it = couleurs_H.begin(); it != couleurs_H.end(); it++)
-    {
-        tot_pixel_H += (*it).compteurD_;
-    }
-
-
-//    for(auto it = couleurs_H.begin(); it != couleurs_H.end(); it++)
-//    {
-//        std::cout<<"("<<(*it).couleur_<<") : "<<(*it).compteurD_/tot_pixel_H<<std::endl;
-////        std::cout<<"("<<(*it).couleur_<<") : "<<(*it).compteurD_<<std::endl;
-//    }
-//    std::cout<<std::endl;
-
-
-
-
-
     // affichage
-    std::cout<<"erreurs présence (%)"<<std::endl;
-    std::cout<<"couleurs & mesure E & estimation H & erreurs \\\\"<<std::endl;
-    std::cout<<"\\hline"<<std::endl;
+    std::cout<<"présence"<<std::endl;
     for(int i=0; i<couleurs_E.size(); i++){
         double couleur = couleurs_E.at(i).couleur_;
         double proportion_E = couleurs_E.at(i).compteur_/tot_pixel_E;
-        double proportion_H = couleurs_H.at(i).compteurD_/tot_pixel_H;
-        double err = std::abs(proportion_E - proportion_H)/proportion_E;
 
-        std::cout<<couleur<<" & "<< proportion_E<<" & "<< proportion_H<<" & "<< 100.*err<<" \\\\"<<std::endl;
+        std::cout<<couleur<<" & "<< proportion_E<<std::endl;
     }
     std::cout<<std::endl;
 
+
+
+    for(int i=0; i<couleur_vois_E.size(); i++){
+        double couleur1 = couleur_vois_E.at(i).couleur1_;
+        double couleur2 = couleur_vois_E.at(i).couleur2_;
+        double proportion_E;
+
+
+        if(couleur1 == couleur2){
+            proportion_E = couleur_vois_E.at(i).compteur_/double(nb_voisinage);
+        }
+        else{
+            proportion_E = couleur_vois_E.at(i).compteur_/(2.*double(nb_voisinage));
+        }
+
+        std::cout<<couleur1<<", "<<couleur2<<" & "<< proportion_E<<std::endl;
+    }
+    std::cout<<std::endl;
 
 
 

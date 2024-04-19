@@ -68,6 +68,10 @@ public:
 private:
     double m_dx;
     double m_dy;
+    double m_mu_x;
+    double m_mu_y;
+    double m_var_x;
+    double m_var_y;
     PGMImage m_image;
 //    DomainImage m_image;
     bool m_invert;
@@ -92,6 +96,16 @@ public:
     double get_px() const { return 2.0*get_dx()/get_width(); } // pixel width
 
     double get_py() const { return 2.0*get_dy()/get_height(); } // pixel height
+
+    double get_mu_x() const { return m_mu_x; }
+
+    double get_mu_y() const { return m_mu_y; }
+
+    double get_var_x() const { return m_var_x; } // variance
+    double get_sig_x() const { return sqrt(m_var_x); }  // écart type
+
+    double get_var_y() const { return m_var_y; }
+    double get_sig_y() const { return sqrt(m_var_y); }
 
     void tonemap(double /*key*/) { /*m_image.tonemap(key);*/ }
 
@@ -187,6 +201,10 @@ public:
 
     bool set(double moy_x, double moy_y, double variance_x, double variance_y){
         m_image.set_data(moy_x, moy_y, variance_x, variance_y);
+        m_mu_x = moy_x;
+        m_mu_y = moy_y;
+        m_var_x = variance_x;
+        m_var_y = variance_y;
 
         unsigned w = get_width();
         unsigned h = get_height();

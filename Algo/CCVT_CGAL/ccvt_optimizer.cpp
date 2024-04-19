@@ -184,7 +184,7 @@ void CCVT::build_laplacian(const FT scale, // build matrix Delta^{w,rho}
         Edge_circulator eend  = ecirc;
         CGAL_For_all(ecirc, eend)
         {
-            Edge edge = *ecirc;
+            Edge edge = *ecirc; // e_ij
             if (!m_rt.is_inside(edge)) continue;
 
             // position graine vj
@@ -364,7 +364,7 @@ unsigned CCVT::optimize_H(FT& wstep, FT& xstep, unsigned max_newton_iters, FT ep
         if (nb1 != nb0) reset_weights();
 
         // on ajuste les poids pour coller au capacités (Newton method for W)
-//        nb_assign += optimize_weights_via_newton_until_converge(wstep, wthreshold, 0, max_newton_iters);
+        nb_assign += optimize_weights_via_newton_until_converge(wstep, wthreshold, 0, max_newton_iters);
 
         // on ajuste les positions pour coller au voisinages
         FT norm = optimize_neightbour_via_gradient_descent(xstep, true); // TODO
@@ -373,6 +373,8 @@ unsigned CCVT::optimize_H(FT& wstep, FT& xstep, unsigned max_newton_iters, FT ep
 //        out << "(Fine) Norm: " << norm << std::endl;
         if (norm <= xthreshold) break;
     }
+
+    optimize_weights_via_newton_until_converge(wstep, wthreshold, 0, max_newton_iters);
 
 
     m_fixed_connectivity = global_connectivity;

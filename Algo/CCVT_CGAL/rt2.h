@@ -112,6 +112,11 @@ public:
         return std::sqrt(segment.squared_length());
     }
 
+    FT get_length(const Segment& segment) const
+    {
+        return std::sqrt(segment.squared_length());
+    }
+
     Segment get_segment(const Edge& edge) const
     {
         const Point& ps = get_source(edge)->get_position();

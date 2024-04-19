@@ -9,6 +9,8 @@
 
 #include "ASTex/CCVT_tests/numerical_Tstat.h"
 #include "ASTex/CCVT_tests/numerical_Tcontent.h"
+#include "ASTex/CCVT_tests/numerical_Tvois.h"
+#include "ASTex/CCVT_tests/large_numerical_test.h"
 #include "ASTex/CCVT_tests/tools.h"
 //#include "CCVT_CGAL/ccvt.h"
 //#include "CCVT_CGAL/types.h"
@@ -141,10 +143,64 @@ int main(){
 
     // ---------------------------------------------------------------------------
 
-    // proportion présence dans E
-    std::cout<<"mesure présence dans E"<<std::endl;
-    std::vector<color_info> couleurs_E = Tcontent(res_composition);
+//    // proportion présence dans E
+//    std::cout<<"mesure présence dans E"<<std::endl;
+//    std::vector<color_info> couleurs_E = Tcontent(res_composition);
+//    std::sort(couleurs_E.begin(), couleurs_E.end());
+//
+//    double tot_pixel_E = 0.;
+//    for(auto it = couleurs_E.begin(); it != couleurs_E.end(); it++)
+//    {
+//        tot_pixel_E += (*it).compteur_;
+//    }
+//
+//
+////
+////    // capacité présence dans H
+////    std::cout<<"estimation présence dans H"<<std::endl;
+//////    std::vector<color_info> couleurs_H = cell_capacity_real_histo(cm_, histo_N1_N2);
+////    std::vector<color_info> couleurs_H = cell_capacity(cm_, mu_1, mu_2, var_1, var_2);
+////    std::sort(couleurs_H.begin(), couleurs_H.end());
+////
+////    double tot_pixel_H = 0.;
+////    for(auto it = couleurs_H.begin(); it != couleurs_H.end(); it++)
+////    {
+////        tot_pixel_H += (*it).compteurD_;
+////    }
+//
+//
+//
+//
+//    // affichage
+//    std::cout<<"erreurs présence référence (%)"<<std::endl;
+////    std::cout<<"couleurs & mesure E & estimation H & erreurs \\\\"<<std::endl;
+////    std::cout<<"\\hline"<<std::endl;
+//    for(int i=0; i<couleurs_E.size(); i++){
+////        double couleur = couleurs_E.at(i).couleur_;
+//        double proportion_E = couleurs_E.at(i).compteur_/tot_pixel_E;
+////        double proportion_H = couleurs_H.at(i).compteurD_/tot_pixel_H;
+////        double err = std::abs(proportion_E - proportion_H)/proportion_E;
+//
+////        std::cout<<couleur<<" & "<< proportion_E<<" & "<< proportion_H<<" & "<< 100.*err<<" \\\\"<<std::endl;
+//        std::cout<<proportion_E<<", ";
+//    }
+//    std::cout<<std::endl;
+
+
+
+
+
+
+
+    std::vector<color_info> couleurs_E;
+    std::vector<color_vois> couleur_vois_E;
+    int nb_voisinage = 0;
+    int nb_voisinage_diff = 0;
+
+    mesure_E(res_composition, couleurs_E, couleur_vois_E, true, nb_voisinage, nb_voisinage_diff);
+
     std::sort(couleurs_E.begin(), couleurs_E.end());
+    std::sort(couleur_vois_E.begin(), couleur_vois_E.end());
 
     double tot_pixel_E = 0.;
     for(auto it = couleurs_E.begin(); it != couleurs_E.end(); it++)
@@ -153,35 +209,38 @@ int main(){
     }
 
 
-//
-//    // capacité présence dans H
-//    std::cout<<"estimation présence dans H"<<std::endl;
-////    std::vector<color_info> couleurs_H = cell_capacity_real_histo(cm_, histo_N1_N2);
-//    std::vector<color_info> couleurs_H = cell_capacity(cm_, mu_1, mu_2, var_1, var_2);
-//    std::sort(couleurs_H.begin(), couleurs_H.end());
-//
-//    double tot_pixel_H = 0.;
-//    for(auto it = couleurs_H.begin(); it != couleurs_H.end(); it++)
-//    {
-//        tot_pixel_H += (*it).compteurD_;
-//    }
-
-
-
-
     // affichage
-    std::cout<<"erreurs présence référence (%)"<<std::endl;
-//    std::cout<<"couleurs & mesure E & estimation H & erreurs \\\\"<<std::endl;
-//    std::cout<<"\\hline"<<std::endl;
+    std::cout<<"présence"<<std::endl;
     for(int i=0; i<couleurs_E.size(); i++){
-//        double couleur = couleurs_E.at(i).couleur_;
+        double couleur = couleurs_E.at(i).couleur_;
         double proportion_E = couleurs_E.at(i).compteur_/tot_pixel_E;
-//        double proportion_H = couleurs_H.at(i).compteurD_/tot_pixel_H;
-//        double err = std::abs(proportion_E - proportion_H)/proportion_E;
 
-//        std::cout<<couleur<<" & "<< proportion_E<<" & "<< proportion_H<<" & "<< 100.*err<<" \\\\"<<std::endl;
-        std::cout<<proportion_E<<", ";
+        std::cout<<couleur<<" & "<< proportion_E<<std::endl;
     }
     std::cout<<std::endl;
+
+
+    std::cout<<"voisinages"<<std::endl;
+    for(int i=0; i<couleur_vois_E.size(); i++){
+        double couleur1 = couleur_vois_E.at(i).couleur1_;
+        double couleur2 = couleur_vois_E.at(i).couleur2_;
+        double proportion_vois_E;
+
+
+        if(couleur1 == couleur2){
+            proportion_vois_E = couleur_vois_E.at(i).compteur_/double(nb_voisinage);
+        }
+        else{
+            proportion_vois_E = couleur_vois_E.at(i).compteur_/(2.*double(nb_voisinage));
+        }
+
+        std::cout<<couleur1<<", "<<couleur2<<" & "<< proportion_vois_E<<std::endl;
+    }
+    std::cout<<std::endl;
+
+
+
+
+
 
 }

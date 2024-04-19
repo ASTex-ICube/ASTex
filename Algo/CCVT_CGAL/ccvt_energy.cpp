@@ -141,7 +141,7 @@ void CCVT::compute_neightbour_gradient(std::vector<Vector>& gradient, FT coef)
 
             if (left_inside) // si x_l existe
             {
-                Vertex_handle vl = left_face->vertex(1); // x_l
+                Vertex_handle vl = left_face->vertex(edge.second); // x_l
                 double rho_cijl = m_domain.get_value(left_cw); // rho(c_ijl)
 
                 double T = m_rt.get_area(left_face); // aire du triangle ijl
@@ -153,8 +153,8 @@ void CCVT::compute_neightbour_gradient(std::vector<Vector>& gradient, FT coef)
                 double n_eij = m_rt.get_length(edge); // |e_ij|
                 double n_ejl = m_rt.get_length(ejl);  // |e_jl|
 
-                double theta_j; // TODO
-                double theta_l;
+                double theta_j = std::acos((n_eij*n_eij + n_ejl*n_ejl - n_eil*n_eil)/(2.*n_ejl*n_eij)); // par Al-Kashi
+                double theta_l = std::acos((n_ejl*n_ejl + n_eil*n_eil - n_eij*n_eij)/(2.*n_ejl*n_eil));
 
                 Vector grad_hi = (- n_eil*n_eil*(cos(theta_j)/ sin(theta_j))*Vector{vi->get_position(),vj->get_position()}
                                   - n_eij*n_eij*(cos(theta_l)/ sin(theta_l))*Vector{vi->get_position(),vl->get_position()}
@@ -173,7 +173,7 @@ void CCVT::compute_neightbour_gradient(std::vector<Vector>& gradient, FT coef)
 
             if (right_inside) // si x_k existe
             {
-                Vertex_handle vk = right_face->vertex(1); // x_k
+                Vertex_handle vk = right_face->vertex(twin.second); // x_k
                 double rho_cijk = m_domain.get_value(right_cw); // rho(c_ijk)
 
                 double T = m_rt.get_area(right_face); // aire du triangle ijk
@@ -185,8 +185,8 @@ void CCVT::compute_neightbour_gradient(std::vector<Vector>& gradient, FT coef)
                 double n_eij = m_rt.get_length(edge); // |e_ij|
                 double n_ejk = m_rt.get_length(ejk);  // |e_jk|
 
-                double theta_j; // TODO
-                double theta_k;
+                double theta_j = std::acos((n_eij*n_eij + n_ejk*n_ejk - n_eik*n_eik)/(2.*n_ejk*n_eij)); // par Al-Kashi
+                double theta_k = std::acos((n_ejk*n_ejk + n_eik*n_eik - n_eij*n_eij)/(2.*n_ejk*n_eik));
 
                 Vector grad_hi = (- n_eik*n_eik*(cos(theta_j)/ sin(theta_j))*Vector{vi->get_position(),vj->get_position()}
                                   - n_eij*n_eij*(cos(theta_k)/ sin(theta_k))*Vector{vi->get_position(),vk->get_position()}
@@ -202,10 +202,41 @@ void CCVT::compute_neightbour_gradient(std::vector<Vector>& gradient, FT coef)
                 rho_grad_cijk = rho_cijk*grad_cijk;
             }
 
-            // TODO : calculer int_grad_rho
+            // calculer int_grad_rho
+            double n_eij_star = m_rt.get_length(dual); // |e*_ij|
+
+            // constantes du produit des gaussiennes
+            double a = left_cw.x()-right_cw.x();
+            double b = left_cw.y()-right_cw.y();
+            double mu_1 = m_domain.get_mu_x()-m_domain.get_dx() - right_cw.x();
+            double mu_2 = m_domain.get_mu_y()-m_domain.get_dy() - right_cw.y();
+
+            double A = product_gaussian_amplitude(a, b, mu_1, mu_2, m_domain.get_sig_x(), m_domain.get_sig_y());
+            double mu = product_gaussian_mean(a, b, mu_1, mu_2, m_domain.get_sig_x(), m_domain.get_sig_y());
+            double var = product_gaussian_variance(a, b, mu_1, mu_2, m_domain.get_sig_x(), m_domain.get_sig_y());
+
+            // intégralles produit
+            double int01_rho = compute_int01_gauss_t(mu, sqrt(var));
+            double int01_t_rho = compute_int01_t_gauss_t(mu, sqrt(var));
+
+            //  constante des dérivations partielles
+            double a_x = m_domain.get_mu_x() - right_cw.x();
+            double b_x = left_cw.x()-right_cw.x();
+            double a_y = m_domain.get_mu_y() - right_cw.y();
+            double b_y = left_cw.y()-right_cw.y();
+
+            // intégralles dérivées
+            double int_grad_rho_dx = (A*n_eij_star/m_domain.get_var_x())*(a_x*int01_rho - b_x*int01_t_rho);
+            double int_grad_rho_dy = (A*n_eij_star/m_domain.get_var_y())*(a_y*int01_rho - b_y*int01_t_rho);
+
+            int_grad_rho = Vector{int_grad_rho_dx, int_grad_rho_dy};
 
 
-            grad_mij += int_grad_rho + rho_grad_cijl - rho_grad_cijk;
+            // somme des gradient des m_ij // TODO : pb  au calcul des m_ij et obj
+            double m_ij = n_eij_star*A*int01_rho; // m_ij actuel
+            double m_ij_obj = compute_value_integral()*m_neightbour_proportions.at(i).at(j);// vi->compute_area() * m_neightbour_proportions.at(i).at(j)/m_proportions.at(i);//m_i * p_ij/p_i
+
+            grad_mij += (m_ij - m_ij_obj) * (int_grad_rho + rho_grad_cijl - rho_grad_cijk);
 
         }
 

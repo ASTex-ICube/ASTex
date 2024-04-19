@@ -29,12 +29,37 @@ void CCVT::set_ratio(Edge edge, FT value)
 
 FT CCVT::get_ratio(Edge edge) const
 {
-    Vertex_handle vs = m_rt.get_source(edge);
-    Vertex_handle vt = m_rt.get_target(edge);
-    if (vs->get_index() > vt->get_index()) edge = m_rt.get_twin(edge);
-    std::map<Edge, FT>::const_iterator it = m_ratio.find(edge);
-    if (it == m_ratio.end()) return 0.0;
-    return it->second;
+//    Vertex_handle vs = m_rt.get_source(edge);
+//    Vertex_handle vt = m_rt.get_target(edge);
+//    if (vs->get_index() > vt->get_index()) edge = m_rt.get_twin(edge);
+//    std::map<Edge, FT>::const_iterator it = m_ratio.find(edge);
+//    if (it == m_ratio.end()) return 0.0;
+//    return it->second;
+
+    // edge  =  e_ij
+    Segment edge_star = m_rt.build_bounded_dual_edge(edge); // e*_ij
+    double n_eij = m_rt.get_length(edge);
+    double n_eij_star = m_rt.get_length(edge_star);
+    if(n_eij <= 0 or n_eij_star <= 0){ return 0.; }
+    double ratio = n_eij_star / n_eij; // |e*ij|/|eij|
+
+    // intégral de rho sur un segment de 0 à 1 couvrant e*ij (produit des gaussiennes marginales)
+    Point c_ijl = edge_star.target();
+    Point c_ijk = edge_star.source();
+
+    double a = c_ijl.x()-c_ijk.x();
+    double b = c_ijl.y()-c_ijk.y();
+    double mu_1 = m_domain.get_mu_x()-m_domain.get_dx() - c_ijk.x();
+    double mu_2 = m_domain.get_mu_y()-m_domain.get_dy() - c_ijk.y();
+
+    // constantes du produit des gaussiennes
+    double A = product_gaussian_amplitude(a, b, mu_1, mu_2, m_domain.get_sig_x(), m_domain.get_sig_y());
+    double mu = product_gaussian_mean(a, b, mu_1, mu_2, m_domain.get_sig_x(), m_domain.get_sig_y());
+    double var = product_gaussian_variance(a, b, mu_1, mu_2, m_domain.get_sig_x(), m_domain.get_sig_y());
+
+    double int_rho = A * compute_int01_gauss_t(mu, sqrt(var));
+//    std::cout<<ratio*int_rho<<" "<<it->second<<std::endl;
+    return ratio*int_rho*m_domain.get_max_value();
 }
 
 void CCVT::clean_pixels()
@@ -79,7 +104,7 @@ void CCVT::assign_pixels()
         FT ratio = value;
         FT len = m_rt.get_length(edge);
         if (len == 0.0) ratio = 0.0;
-        else            ratio /= len;
+        else            ratio /= len; // len = |e_ij|
         set_ratio(edge, ratio);
     }
 

@@ -9,6 +9,7 @@
 #define MINN -1e100
 #define MAXN  1e100
 #define EPS   1e-12
+#define M_PI 3.14159265358979323846
 
 #include <cmath>
 #include <vector>
@@ -57,6 +58,46 @@ void generate_regular_polygon(unsigned nb,
                 radius*sin(angle) + center.y());
         *out++ = q;
     }
+}
+
+inline double compute_int01_gauss_t(double mu, double sigma){
+    return sqrt(M_PI*sigma*sigma/2.) *
+            (
+                std::erf(mu/sqrt(2.*sigma*sigma)) -
+                std::erf(-(1-mu)/sqrt(2.*sigma*sigma))
+            );
+}
+
+inline double compute_int01_t_gauss_t(double mu, double sigma){
+    return mu*sqrt(M_PI*sigma*sigma/2.) *
+           (
+                   std::erf(mu/sqrt(2.*sigma*sigma)) -
+                   std::erf(-(1-mu)/sqrt(2.*sigma*sigma))
+           ) +
+           sigma*sigma*
+           (
+                   exp(-mu*mu/(2.*sigma*sigma))-
+                   exp(-(1-mu)*(1-mu)/(2.*sigma*sigma))
+           );
+}
+
+/* produit de deux fonctions gaussienne définie selon la même variable t
+ * exp(-(a*t-mu_1)^2 / (2*sig_1^2)) *  exp(-(b*t-mu_2)^2 / (2*sig_2^2)) = A exp(-(t-mu)^2 / (2*sig^2))
+ * product_gaussian_amplitude : calcul de A
+ * product_gaussian_mean : calcul de mu
+ * product_gaussian_variance : calcul de sig^2
+ */
+
+inline double product_gaussian_amplitude(double a, double b, double mu_1, double mu_2, double sig_1, double sig_2){
+    return exp(-(b*mu_1 - a*mu_2)*(b*mu_1 - a*mu_2)/(2.*(b*b*sig_1*sig_1 + a*a*sig_2*sig_2)));
+}
+
+inline double product_gaussian_mean(double a, double b, double mu_1, double mu_2, double sig_1, double sig_2){
+    return (a*sig_2*sig_2*mu_1 + b*sig_1*sig_1*mu_2)/(b*b*sig_1*sig_1 + a*a*sig_2*sig_2);
+}
+
+inline double product_gaussian_variance(double a, double b, double mu_1, double mu_2, double sig_1, double sig_2){
+    return (sig_1*sig_1 * sig_2*sig_2)/(b*b*sig_1*sig_1 + a*a*sig_2*sig_2);
 }
 
 #endif //CCVT_TEST_CHARLINE_UTIL_H
