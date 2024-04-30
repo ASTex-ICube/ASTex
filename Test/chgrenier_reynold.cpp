@@ -51,7 +51,7 @@ int main()
 {
 // ---------------------------------------------------------------------------
     int resolution = 256;
-    int img_size = 4096;//4096;//2048; // nombre de pixel dans l'image
+    int img_size = 256;//4096;//2048; // nombre de pixel dans l'image
     int cm_size = 256;//256;//512;
     double scale = double(resolution)/double(img_size);
 
@@ -72,7 +72,7 @@ int main()
     noise noise_1(K_, // isotrope
                   a_,
                   0.06,//0.012, //F_0_,
-                  0.785, //omega_0_,
+                  4.7, //omega_0_,
                   number_of_impulses_per_kernel,
                   period,
                   random_offset_,
@@ -85,7 +85,7 @@ int main()
     noise noise_2(K_, // anisotrope
                   a_,
                   0.06,//0.02, //F_0_,
-                  3., //omega_0_,
+                  3.8, //omega_0_,
                   number_of_impulses_per_kernel,
                   period,
                   random_offset_-4,
@@ -113,6 +113,15 @@ int main()
                                 Graine(0.12, 0.72, 0.1),
                                 Graine(0.45, 0.48, 0.)};
     std::vector<double> H_color{0.2, 0.6, 0.0, 0.4, 0.8, 1.0};
+
+
+//    std::vector<Graine> H_seeds{Graine(0.14, 0.69, 0.),
+//                                Graine(0.43, 0.83, 0.),
+//                                Graine(0.81, 0.72, 0.),
+//                                Graine(0.12, 0.24 ,0.),
+//                                Graine(0.46, 0.36, 0.),
+//                                Graine(0.80, 0.20, 0.)};
+//    std::vector<double> H_color{0.2, 0.6, 0.0, 0.4, 0.8, 1.0};
 
 
 //    std::vector<Graine> H_seeds{Graine(0.15, 0.25, 0.1),

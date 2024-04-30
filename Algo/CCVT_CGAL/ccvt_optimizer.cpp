@@ -71,6 +71,7 @@ FT CCVT::optimize_positions_via_gradient_ascent(FT& timestep, bool update)
 // pas utilisé
 FT CCVT::optimize_neightbour_via_gradient_descent(FT& timestep, bool update) // TODO
 {
+    if(m_verbose){std::cout<<"optimizing positions..."<<std::endl;}
     std::vector<Point> points;
     collect_visible_points(points);
 
@@ -94,6 +95,7 @@ FT CCVT::optimize_neightbour_via_gradient_descent(FT& timestep, bool update) // 
         update_positions(points);
         if (update) update_triangulation();
     }
+
 
     compute_neightbour_gradient(gradient);
     return compute_norm(gradient);
@@ -238,6 +240,7 @@ unsigned CCVT::optimize_weights_via_newton_until_converge(FT& timestep,
                                                            unsigned update,
                                                            unsigned max_iters)
 {
+    if(m_verbose){std::cout<<"optimizing weights..."<<std::endl;}
     for (unsigned i = 0; i < max_iters; ++i) // boucle 28 à 33
     {
         bool flag = (update == 0 || (i+1) % update == 0);
@@ -328,7 +331,7 @@ unsigned CCVT::optimize_all(FT& wstep, FT& xstep, unsigned max_newton_iters,
 
 
 
-    // ??
+    // dernière optimisation des volumes
     optimize_weights_via_newton_until_converge(wstep, 0.1*fine_wthreshold, 0, max_newton_iters);
 
 //    std::cout << "NbAssign: " << nb_assign << std::endl;
@@ -365,15 +368,18 @@ unsigned CCVT::optimize_H(FT& wstep, FT& xstep, unsigned max_newton_iters, FT ep
 
         // on ajuste les poids pour coller au capacités (Newton method for W)
         nb_assign += optimize_weights_via_newton_until_converge(wstep, wthreshold, 0, max_newton_iters);
+        verbose();
 
         // on ajuste les positions pour coller au voisinages
         FT norm = optimize_neightbour_via_gradient_descent(xstep, true); // TODO
+        verbose();
 
         nb_assign++;
 //        out << "(Fine) Norm: " << norm << std::endl;
         if (norm <= xthreshold) break;
     }
 
+    // dernière optimisation des volumes
     optimize_weights_via_newton_until_converge(wstep, wthreshold, 0, max_newton_iters);
 
 

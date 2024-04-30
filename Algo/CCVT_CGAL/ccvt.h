@@ -46,6 +46,9 @@ private:
     std::vector<double> m_timer;
     bool m_fixed_connectivity;
 
+    bool m_verbose = false;
+    bool m_step_by_step =  false;
+
 
 
 public:
@@ -84,9 +87,9 @@ public:
         m_neightbour_proportions = proportions;
     }
 
-    std::vector<FT> get_capacities(){ return m_capacities; } // TODO : à retirer
+    std::vector<FT> get_capacities() const { return m_capacities; } // TODO : à retirer
 
-    std::vector<FT> get_area(){
+    std::vector<FT> get_area() const {
         std::vector<FT> areas;
         for(auto vi=m_vertices.begin(); vi<m_vertices.end(); vi++){
             areas.push_back((*vi)->compute_area());
@@ -94,7 +97,7 @@ public:
         return areas;
     }
 
-    std::vector<std::vector<FT>> get_neightbour_proportion(){
+    std::vector<std::vector<FT>> get_neightbour_proportion() const {
         std::vector<std::vector<FT>> proportions;
 
         for (unsigned i = 0; i < m_vertices.size(); ++i){
@@ -147,6 +150,9 @@ public:
 
     void toggle_timer() { m_timer_on = !m_timer_on; }
 
+    void toggle_verbose() {m_verbose = !m_verbose; }
+    void toggle_step_by_step() {m_step_by_step = !m_step_by_step; }
+
     void toggle_connectivity() { m_fixed_connectivity = !m_fixed_connectivity; }
 
     bool connectivity_fixed() const { return m_fixed_connectivity; }
@@ -183,7 +189,11 @@ public:
 //
 //    void save_txt(const QString& filename, const std::vector<Point>& points) const;
 //
-    void save_eps(const std::string& filename) const;
+    void save_point_eps(const std::string& filename) const;
+
+    void save_cell_eps(const std::string& filename) const;
+
+    void verbose() const;
 
 
 

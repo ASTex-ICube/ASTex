@@ -37,8 +37,8 @@ int main(){
 // ---------------------------------------------------------------------------
 // load d'une image
 
-    ImageGrayd image_(1024, 1024);
-    IO::loadu8_in_01(image_, "/home/grenier/Documents/ASTex_fork/results/fourier/cm_complexe_2.png");
+    ImageGrayd image_(256, 256);
+    IO::loadu8_in_01(image_, "/home/grenier/Documents/ASTex_fork/results/fourier/cm3.png");
 
 // ---------------------------------------------------------------------------
 //// test
@@ -59,7 +59,7 @@ int main(){
 // ---------------------------------------------------------------------------
 // fourier
 
-    fourier_analysis(image_, "res_t");
+    fourier_analysis(image_, "cm3");
 
     return 0;
 }
