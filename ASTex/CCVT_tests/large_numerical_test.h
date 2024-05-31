@@ -7,7 +7,7 @@
 
 #include "ASTex/CCVT_tests/numerical_Tcontent.h"
 #include "ASTex/CCVT_tests/numerical_Tvois.h"
-#include "ASTex/CCVT_tests/numerical_Tstat.h"
+#include "ASTex/CCVT_tests/mesure_statistiques.h"
 #include "ASTex/CCVT_tests/numerical_Treynold.h"
 
 void mesure_E(ImageGrayd image_, std::vector<color_info>& presences, std::vector<color_vois>& voisinages, bool i_isEqual_j,

@@ -38,7 +38,7 @@ int main(){
 // load d'une image
 
     ImageGrayd image_(256, 256);
-    IO::loadu8_in_01(image_, "/home/grenier/Documents/ASTex_fork/results/fourier/cm3.png");
+    IO::loadu8_in_01(image_, "/home/grenier/Documents/ASTex_fork/results/fourier/S_test_2_grey.png");
 
 // ---------------------------------------------------------------------------
 //// test
@@ -59,7 +59,7 @@ int main(){
 // ---------------------------------------------------------------------------
 // fourier
 
-    fourier_analysis(image_, "cm3");
+    fourier_analysis(image_, "S_test_2_grey");
 
     return 0;
 }

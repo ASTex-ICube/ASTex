@@ -7,7 +7,7 @@
 #include "ASTex/image_common.h"
 #include "ASTex/Noises/Gabor.h"
 
-#include "ASTex/CCVT_tests/numerical_Tstat.h"
+#include "ASTex/CCVT_tests/mesure_statistiques.h"
 #include "ASTex/CCVT_tests/numerical_Tcontent.h"
 #include "ASTex/CCVT_tests/numerical_Tvois.h"
 #include "ASTex/CCVT_tests/large_numerical_test.h"
@@ -96,6 +96,12 @@ int main(){
                                 Graine(0.65, 0.28, 0.),
                                 Graine(0.12, 0.72, 0.1),
                                 Graine(0.45, 0.48, 0.)};
+//    std::vector<Graine> H_seeds{Graine(0.81, 0.65, -0.0344047),
+//                                Graine(0.15, 0.25, 0.0645013),
+//                                Graine(0.52, 0.91 ,0.019120),
+//                                Graine(0.65, 0.28, -0.036392),
+//                                Graine(0.12, 0.72, 0.06444),
+//                                Graine(0.45, 0.48, -0.0390251)};
     std::vector<double> H_color{0.0, 0.2, 0.4, 0.6, 0.8, 1.0};
 
 

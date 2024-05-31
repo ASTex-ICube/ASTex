@@ -210,6 +210,7 @@ public:
         unsigned h = get_height();
         m_dx = 0.5;
         m_dy = m_dx * double(h) / double(w);
+//        m_image.save("/home/grenier/Documents/ASTex_fork/results/CCVT_CGAL/density.pgm");
         return true;
     }
 

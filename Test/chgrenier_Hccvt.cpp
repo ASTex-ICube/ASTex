@@ -7,7 +7,7 @@
 #include "ASTex/image_common.h"
 #include "ASTex/Noises/Gabor.h"
 
-#include "ASTex/CCVT_tests/numerical_Tstat.h"
+#include "ASTex/CCVT_tests/mesure_statistiques.h"
 #include "ASTex/CCVT_tests/numerical_Tcontent.h"
 #include "ASTex/CCVT_tests/tools.h"
 #include "ASTex/CCVT_tests/data.h"

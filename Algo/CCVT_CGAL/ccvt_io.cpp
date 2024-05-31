@@ -131,11 +131,13 @@ void CCVT::verbose() const
         std::vector<FT> capacities;
         std::vector<FT> areas;
         std::vector<std::vector<FT>> neightbour_proportion;
+        std::vector<std::vector<FT>> neightbour_val;
 
         collect_sites(points, weights);
         areas = get_area();
         capacities = get_capacities();
         neightbour_proportion = get_neightbour_proportion();
+        neightbour_val = get_neightbour_val();
 
         std::cout<<"position (x,y), poids, aires (volumes objectifs)"<<std::endl;
         for(int i=0; i<points.size(); i++){
@@ -144,7 +146,7 @@ void CCVT::verbose() const
         std::cout<<std::endl;
 
 
-        std::cout<<"voisinages"<<std::endl;
+        std::cout<<"voisinages proportion"<<std::endl;
         for(auto it=neightbour_proportion.begin(); it<neightbour_proportion.end(); it++){
             for(auto it2=(*it).begin(); it2<(*it).end(); it2++){
                 std::cout<<(*it2)<<"; ";
@@ -152,6 +154,30 @@ void CCVT::verbose() const
             std::cout<<std::endl;
         }
         std::cout<<std::endl;
+
+        std::cout<<"voisinages valeurs"<<std::endl;
+        for(auto it=neightbour_val.begin(); it<neightbour_val.end(); it++){
+            for(auto it2=(*it).begin(); it2<(*it).end(); it2++){
+                std::cout<<(*it2)<<"; ";
+            }
+            std::cout<<std::endl;
+        }
+        std::cout<<std::endl;
+
+//        std::cout<<"c_ij"<<std::endl;
+//        for(auto vi=m_vertices.begin(); vi<m_vertices.end(); vi++){
+//            Edge_circulator ecirc = m_rt.incident_edges(*vi); // liste des eij
+//            Edge_circulator eend  = ecirc;
+//
+//            CGAL_For_all(ecirc, eend)   // for j in Omega_i
+//            {
+//                Edge edge = *ecirc; // e_ij
+//                if (!m_rt.is_inside(edge)) continue;
+//
+//                Point c_ij = m_rt.get_edge_cw(edge);
+//                std::cout<<c_ij.x()+0.5<<", "<<c_ij.y()+0.5<<std::endl;
+//            }
+//        }
         std::cout<<" ------------------------";
     }
 

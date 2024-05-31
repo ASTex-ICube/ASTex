@@ -2,8 +2,8 @@
 // Created by grenier on 11/10/23.
 //
 
-#ifndef ASTEX_NUMERICAL_TSTAT_H
-#define ASTEX_NUMERICAL_TSTAT_H
+#ifndef ASTEX_MESURE_STATISTIQUES_H
+#define ASTEX_MESURE_STATISTIQUES_H
 
 #include "tools.h"
 
@@ -289,10 +289,10 @@ ImageGrayd histo_2D(ImageGrayd noise1, ImageGrayd noise2, int histo_size)
     double norme = getMax(histo);
 
     // normalisation
-    histo.for_all_pixels([&] (typename ImageGrayd::PixelType& P, int x, int y)
-                         {
-                             P *= 1./norme;  // pour un max à 1
-                         });
+//    histo.for_all_pixels([&] (typename ImageGrayd::PixelType& P, int x, int y)
+//                         {
+//                             P *= 1./norme;  // pour un max à 1
+//                         });
 
     return histo;
 }
@@ -307,10 +307,10 @@ ImageGrayd histo_2D_theo(double moy1, double moy2, double var1, double var2, int
 
     histo.for_all_pixels([&] (typename ImageGrayd::PixelType& P, int x, int y)
                          {
-                             double X = x/double(histo_size-1);
-                             double Y = y/double(histo_size-1);
+                             double X = x;//double(histo_size-1);
+                             double Y = y;//double(histo_size-1);
 
-                             P = gauss(moy1, moy2, var1, var2, X, Y);
+                             P = gauss(moy1, moy2, var1, var2, X, Y, double(histo_size-1));
                          });
     double norme = getMax(histo);
 
@@ -336,10 +336,10 @@ ImageGrayd histo_2D_dist(ImageGrayd histo_reel, double moy1, double moy2, double
 
     histo.for_all_pixels([&] (typename ImageGrayd::PixelType& P, int x, int y)
                          {
-                             double X = x/double(histo_size-1);
-                             double Y = y/double(histo_size-1);
+                             double X = x;//double(histo_size-1);
+                             double Y = y;//double(histo_size-1);
 
-                             double val_theo = gauss(moy1, moy2, var1, var2, X, Y);
+                             double val_theo = gauss(moy1, moy2, var1, var2, X, Y, double(histo_size-1));
                              double val_reel = histo_reel.pixelAbsolute(x,y);
                              double val_dist = val_theo - val_reel;
 
@@ -485,4 +485,4 @@ ImageGrayd histo_2D_dist_vois(ImageGrayd histo_reel, double moy, double var, dou
 }
 
 
-#endif //ASTEX_NUMERICAL_TSTAT_H
+#endif //ASTEX_MESURE_STATISTIQUES_H

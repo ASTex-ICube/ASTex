@@ -7,7 +7,7 @@
 
 #include "ASTex/CCVT_tests/numerical_Tcontent.h"
 #include "ASTex/CCVT_tests/numerical_Tvois.h"
-#include "ASTex/CCVT_tests/numerical_Tstat.h"
+#include "ASTex/CCVT_tests/mesure_statistiques.h"
 
 
 

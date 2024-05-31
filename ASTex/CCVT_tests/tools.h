@@ -32,15 +32,21 @@ void save_pgm(const std::string& filename, ImageGrayd& data)
 
 
 // ---------------------------------------------------------------------------
-double gauss(double moy1, double moy2, double var1, double var2, double x, double y)
+double gauss(double moy1, double moy2, double var1, double var2, double x, double y, double scale)
 {
+
+    double mu1 = scale*moy1;
+    double mu2 = scale*moy2;
+    double sig1 = scale*scale*var1;
+    double sig2 = scale*scale*var2;
+
     // gaussienne en x
-    double X = x-moy1;
-    double G1 = std::exp(-(X*X)/(2.*var1))/(std::sqrt(2.*M_PI*var1));
+    double X = x-mu1;
+    double G1 = std::exp(-(X*X)/(2.*sig1))/(std::sqrt(2.*M_PI*sig1));
 
     // gaussienne en y
-    double Y = y-moy2;
-    double G2 = std::exp(-(Y*Y)/(2.*var2))/(std::sqrt(2.*M_PI*var2));
+    double Y = y-mu2;
+    double G2 = std::exp(-(Y*Y)/(2.*sig2))/(std::sqrt(2.*M_PI*sig2));
 
     return G1*G2;
 }

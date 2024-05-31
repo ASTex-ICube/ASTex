@@ -16,6 +16,7 @@ typedef CLSPositions<CCVT, Point, Vector> LSPositions;
 
 FT CCVT::optimize_positions_via_lloyd(bool update)
 {
+    if(m_verbose){std::cout<<"optimizing positions..."<<std::endl;}
     if (m_timer_on) Timer::start_timer(m_timer, COLOR_BLUE, "Centroid");
     std::vector<Point> points;
     for (unsigned i = 0; i < m_vertices.size(); ++i)
@@ -37,6 +38,7 @@ FT CCVT::optimize_positions_via_lloyd(bool update)
 
 FT CCVT::optimize_positions_via_gradient_ascent(FT& timestep, bool update)
 {
+    if(m_verbose){std::cout<<"optimizing positions..."<<std::endl;}
     std::vector<Point> points;
     collect_visible_points(points);
 
@@ -99,6 +101,84 @@ FT CCVT::optimize_neightbour_via_gradient_descent(FT& timestep, bool update) // 
 
     compute_neightbour_gradient(gradient);
     return compute_norm(gradient);
+}
+
+
+
+
+
+FT CCVT::optimize_neightbour(FT& timestep, bool update) // TODO
+{
+    if(m_verbose){std::cout<<"optimizing positions..."<<std::endl;}
+    std::vector<Point> points;
+
+    std::vector<std::vector<FT>> current_neightbour = get_neightbour_val();
+
+    for (unsigned i = 0; i < m_vertices.size(); ++i)
+    {
+        double norm  =  0.;
+        double facteur_grad = 0.;
+        Vector grad{0., 0.};
+
+        Vertex_handle vi = m_vertices[i]; // x_i
+        if (vi->is_hidden()) continue;
+
+        Edge_circulator ecirc = m_rt.incident_edges(vi); // liste des eij
+        Edge_circulator eend  = ecirc;
+
+        CGAL_For_all(ecirc, eend)   // for j in Omega_i
+        {
+            Edge edge = *ecirc; // e_ij
+            if (!m_rt.is_inside(edge)) continue;
+
+            // position graine x_j
+            Vertex_handle vj = m_rt.get_source(edge); // x_j
+            if (vj == vi) vj = m_rt.get_target(edge);
+            unsigned j = vj->get_index();
+
+            Segment dual = m_rt.build_bounded_dual_edge(edge); // extrémités de e*ij
+
+            double prop_m_ij_obj = m_neightbour_proportions.at(i).at(j);//*compute_value_integral();
+            double sum_m_ij_cur = std::accumulate(current_neightbour.at(i).begin(), current_neightbour.at(i).end(), 0.);// current_neightbour.at(i).at(j);//*m_domain.get_max_value();
+
+            double m_ij_obj = current_neightbour.at(i).at(j);// prop_m_ij_obj*sum_m_ij_cur; // TODO utiliser les m_ij obj
+            double n_eij = m_rt.get_length(edge); // |e_ij|
+            double n_eij_star = m_rt.get_length(dual); // |e*_ij|
+            double wi = vi->get_weight();
+            double wj = vj->get_weight();
+            double rho_xi = m_domain.get_value(vi->get_position(),true);
+            double d_ij = (n_eij*n_eij + wi - wj)/(2.*n_eij);
+
+//            double grad_dij = (wi-wj-n_eij*n_eij)/(n_eij*n_eij*n_eij);
+//            double facteur = (2.*m_ij_cur*(n_eij*n_eij+wi-wj) + m_ij_obj*(n_eij*n_eij+wj-wi))/(4.*n_eij*n_eij*n_eij);
+//            double facteur =  m_ij_obj/n_eij;
+            double facteur = (m_ij_obj + rho_xi*n_eij_star)*(wi - wj - n_eij*n_eij)/(2.*n_eij*n_eij*n_eij);
+
+            facteur_grad += n_eij_star*d_ij;
+            norm += facteur;
+            grad += facteur*Vector{Point{0,0}, vj->get_position()};
+        }
+        double vol = vi->compute_area()/m_domain.integrate_intensity();
+        double rho_xi = m_domain.get_value(vi->get_position(),true);
+        Vector grad_rho = rho_xi*Vector{-(vi->get_position().x()-m_domain.get_mu_x())/(m_domain.get_var_x()),
+                                        -(vi->get_position().y()-m_domain.get_mu_y())/(m_domain.get_var_y())};
+
+        Point ci = Point{0,0} + (1./norm)*(grad + facteur_grad*grad_rho);
+//        Point ci = Point{0,0} + (1./norm)*(grad - vol*grad_rho);
+        if(i==5){
+            points.push_back(ci);
+        } else{
+            points.push_back(vi->get_position());
+        }
+//        points.push_back(ci);
+
+
+
+    }
+    update_positions(points);
+    if (update) update_triangulation();
+
+    return 1.;
 }
 
 
@@ -269,8 +349,8 @@ unsigned CCVT::optimize_all(FT& wstep, FT& xstep, unsigned max_newton_iters,
     FT xthreshold = compute_position_threshold(epsilon);
     FT wthreshold = compute_weight_threshold(epsilon);
 
-//    out << "NbSites = " << nb0 << std::endl;
-//    out << "Threshold: " << xthreshold << " ; " << wthreshold << std::endl;
+    out << "NbSites = " << nb0 << std::endl;
+    out << "Threshold: " << xthreshold << " ; " << wthreshold << std::endl;
 
     m_fixed_connectivity = false;
     FT coarse_xthreshold = 2.0*xthreshold;
@@ -295,11 +375,11 @@ unsigned CCVT::optimize_all(FT& wstep, FT& xstep, unsigned max_newton_iters,
         FT norm = optimize_positions_via_lloyd(true);
 
         nb_assign++;
-//        out << "(Coarse) Norm: " << norm << std::endl;
+        out << "(Coarse) Norm: " << norm << std::endl;
         if (norm <= coarse_xthreshold) break;
     }
 
-//    out << "Partial: " << iters << " iters" << std::endl;
+    out << "Partial: " << iters << " iters" << std::endl;
     m_fixed_connectivity = global_connectivity;
     if (iters == max_iters) return iters;
 
@@ -325,7 +405,7 @@ unsigned CCVT::optimize_all(FT& wstep, FT& xstep, unsigned max_newton_iters,
         FT norm = optimize_positions_via_gradient_ascent(xstep, true);
 
         nb_assign++;
-//        out << "(Fine) Norm: " << norm << std::endl;
+        out << "(Fine) Norm: " << norm << std::endl;
         if (norm <= fine_xthreshold) break;
     }
 
@@ -334,10 +414,10 @@ unsigned CCVT::optimize_all(FT& wstep, FT& xstep, unsigned max_newton_iters,
     // dernière optimisation des volumes
     optimize_weights_via_newton_until_converge(wstep, 0.1*fine_wthreshold, 0, max_newton_iters);
 
-//    std::cout << "NbAssign: " << nb_assign << std::endl;
+    std::cout << "NbAssign: " << nb_assign << std::endl;
 
     m_fixed_connectivity = global_connectivity;
-    return iters;
+    return nb_assign;//iters;
 }
 
 
@@ -362,6 +442,7 @@ unsigned CCVT::optimize_H(FT& wstep, FT& xstep, unsigned max_newton_iters, FT ep
 
     while (iters < max_iters)
     {
+        FT norm = 0.;
         iters++;
         unsigned nb1 = count_visible_sites();
         if (nb1 != nb0) reset_weights();
@@ -370,17 +451,23 @@ unsigned CCVT::optimize_H(FT& wstep, FT& xstep, unsigned max_newton_iters, FT ep
         nb_assign += optimize_weights_via_newton_until_converge(wstep, wthreshold, 0, max_newton_iters);
         verbose();
 
-        // on ajuste les positions pour coller au voisinages
-        FT norm = optimize_neightbour_via_gradient_descent(xstep, true); // TODO
+        // on replace les graine au milieu des cellules (Lloyd step for X)
+        norm = optimize_positions_via_lloyd(true);
         verbose();
 
+
         nb_assign++;
-//        out << "(Fine) Norm: " << norm << std::endl;
         if (norm <= xthreshold) break;
     }
 
     // dernière optimisation des volumes
     optimize_weights_via_newton_until_converge(wstep, wthreshold, 0, max_newton_iters);
+    verbose();
+
+
+    // on ajuste les positions pour coller au voisinages
+//    optimize_neightbour(xstep, true); // TODO
+//    verbose();
 
 
     m_fixed_connectivity = global_connectivity;

@@ -67,12 +67,13 @@ public:
 
         for (unsigned i = 0; i < m_w; ++i)
         {
-            double x = double(i)/m_w;
-            double Gx = std::exp(-(x-moy_x)*(x-moy_x)/(2.*variance_x));
+
+            double y = double(i)/m_h;
+            double Gy = std::exp(-(y-moy_y)*(y-moy_y)/(2.*variance_y));
 
             for (unsigned j = 0; j  < m_h; j++){
-                double y = double(j)/m_h;
-                double Gy = std::exp(-(y-moy_y)*(y-moy_y)/(2.*variance_y));
+                double x = double(j)/m_w;
+                double Gx = std::exp(-(x-moy_x)*(x-moy_x)/(2.*variance_x));
 
                 double value = m_max_original*Gx*Gy;
                 m_original.push_back(value);
@@ -133,7 +134,7 @@ public:
         output << "255" << std::endl;
         for (unsigned i = 0; i < m_w*m_h; ++i)
         {
-            int value = static_cast<int>(255*m_value[i]);
+            int value = static_cast<int>(m_value[i]);
             output << value << std::endl;
         }
         output.close();

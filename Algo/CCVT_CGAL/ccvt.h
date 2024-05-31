@@ -122,6 +122,8 @@ public:
 
                 Segment dual = m_rt.build_bounded_dual_edge(edge); // extrémités de e*ij
                 double n_eij_star = m_rt.get_length(dual); // |e*_ij|
+                if(n_eij_star <= 0.) continue;
+
                 Point c_ijl = dual.target(); // c_ijl
                 Point c_ijk = dual.source(); // c_ijk
 
@@ -137,10 +139,65 @@ public:
 
                 // intégralles produit
                 double int01_rho = compute_int01_gauss_t(mu, sqrt(var));
-                double m_ij = n_eij_star*A*int01_rho; // m_ij actuel
+                double m_ij = n_eij_star*A*int01_rho;//*m_domain.get_max_value(); // m_ij actuel
 
                 propotion_i[j] = m_ij;
             }
+            FT sum = std::accumulate(propotion_i.begin(), propotion_i.end(), 0.);
+            for(auto& i: propotion_i){i/=sum;}
+            proportions.push_back(propotion_i);
+        }
+        return proportions;
+    }
+
+    std::vector<std::vector<FT>> get_neightbour_val() const {
+        std::vector<std::vector<FT>> proportions;
+
+        for (unsigned i = 0; i < m_vertices.size(); ++i){
+            std::vector<FT> propotion_i(m_vertices.size(), 0.);
+
+            Vertex_handle vi = m_vertices[i]; // x_i
+            if (vi->is_hidden()) continue;
+
+            Edge_circulator ecirc = m_rt.incident_edges(vi); // liste des eij
+            Edge_circulator eend  = ecirc;
+
+
+            CGAL_For_all(ecirc, eend)
+            {
+                Edge edge = *ecirc; // e_ij
+                if (!m_rt.is_inside(edge)) continue;
+
+                // position graine x_j
+                Vertex_handle vj = m_rt.get_source(edge); // x_j
+                if (vj == vi) vj = m_rt.get_target(edge);
+                unsigned j = vj->get_index();
+
+                Segment dual = m_rt.build_bounded_dual_edge(edge); // extrémités de e*ij
+                double n_eij_star = m_rt.get_length(dual); // |e*_ij|
+                if(n_eij_star <= 0.) continue;
+
+                Point c_ijl = dual.target(); // c_ijl
+                Point c_ijk = dual.source(); // c_ijk
+
+                // constantes du produit des gaussiennes
+                double a = c_ijl.x()-c_ijk.x();
+                double b = c_ijl.y()-c_ijk.y();
+                double mu_1 = m_domain.get_mu_x()-m_domain.get_dx() - c_ijk.x();
+                double mu_2 = m_domain.get_mu_y()-m_domain.get_dy() - c_ijk.y();
+
+                double A = product_gaussian_amplitude(a, b, mu_1, mu_2, m_domain.get_sig_x(), m_domain.get_sig_y());
+                double mu = product_gaussian_mean(a, b, mu_1, mu_2, m_domain.get_sig_x(), m_domain.get_sig_y());
+                double var = product_gaussian_variance(a, b, mu_1, mu_2, m_domain.get_sig_x(), m_domain.get_sig_y());
+
+                // intégralles produit
+                double int01_rho = compute_int01_gauss_t(mu, sqrt(var));
+                double m_ij = n_eij_star*A*int01_rho;//*m_domain.get_max_value(); // m_ij actuel
+
+                propotion_i[j] = m_ij;
+            }
+//            FT sum = std::accumulate(propotion_i.begin(), propotion_i.end(), 0.);
+//            for(auto& i: propotion_i){i/=sum;}
             proportions.push_back(propotion_i);
         }
         return proportions;
@@ -391,6 +448,8 @@ public:
     FT optimize_positions_via_gradient_ascent(FT& timestep, bool update);
 
     FT optimize_neightbour_via_gradient_descent(FT& timestep, bool update);
+
+    FT optimize_neightbour(FT& timestep, bool update);
 
     FT optimize_weights_via_newton(FT& timestep, bool update);
 
