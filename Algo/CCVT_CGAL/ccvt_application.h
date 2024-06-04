@@ -21,6 +21,7 @@ struct point_info{
 
 struct selection{
     bool active = false;
+    bool toogle = false;
     int id = -1;
 };
 
@@ -38,9 +39,12 @@ public:
     // A function called at each frame, guaranteed never to be called before `onInit`.
     void onFrame();
 
-private:
+    void attacheCCVT(CCVT &ccvt){
+        m_ccvt = ccvt;
+    }
 
-    bool initGui();
+private:
+    bool initGui(GLFWwindow* &window);
     void terminateGui();
     void updateGui();
 
@@ -51,10 +55,46 @@ private:
     void onMouseMove(double xpos, double ypos);
     void addPoint(float xPos, float yPos);
 
+
+    void getCCVTcells(){
+        std::vector<FT> weights;
+        std::vector<Point> points;
+        std::vector<point_info> tmp_points;
+
+        m_ccvt.collect_sites(points, weights);
+
+        for(int i=0; i<points.size(); i++){
+            tmp_points.push_back(point_info(points.at(i).x()+0.5, points.at(i).y()+0.5, weights.at(i)));
+        }
+        m_points = tmp_points;
+    }
+
+    void optimizeCCVT(){
+        std::cout<<"optimizing CCVT..."<<std::endl;
+        FT stepX = 0.01; // pour les positions
+        FT stepW = 0.1; // pour les poids
+        FT epsilon = 1.;
+        unsigned max_newton_iters = 10;// 500;
+        unsigned max_iters = 10;// 500;
+
+        m_ccvt.optimize_H(stepW, stepX, max_newton_iters, epsilon, max_iters);
+        getCCVTcells();
+        updatePoints();
+    }
+
+    void updateCCVT(){
+        std::cout<<"update CCVT..."<<std::endl;
+        std::vector<Point> points;
+        for(auto pi:m_points){
+            points.push_back(Point{pi._x, pi._y});
+        }
+        m_ccvt.set_initial_sites(points);
+    }
+
 private:
     GLFWwindow* m_window_H = nullptr;
-    int m_width_H = 400;
-    int m_height_H = 400;
+    int m_width_H = 600;
+    int m_height_H = 600;
 
     GLFWwindow* m_window_N1 = nullptr;
     GLFWwindow* m_window_N2 = nullptr;
@@ -78,6 +118,8 @@ private:
     unsigned int m_CompositionShaderProgram;
     unsigned int m_CompositionVAO;
 
+    unsigned int m_meanShaderProgram;
+
     unsigned int m_fbo_N1;
     unsigned int m_texture_N1;
 
@@ -87,45 +129,26 @@ private:
 
     CCVT m_ccvt;
     static const unsigned int m_MaxPointsNb = 12;
-//    std::vector<Point> m_ccvtPoints{Point(0.81, 0.65),
-//                                      Point(0.15, 0.25),
-//                                      Point(0.52, 0.91),
-//                                      Point(0.65, 0.28),
-//                                      Point(0.12, 0.72),
-//                                      Point(0.45, 0.48)};
-
-//    float m_points[4*m_MaxPointsNb] = {0.81, 0.65, -0.0344047, 0.,
-//                                       0.15, 0.25, 0.0645013, 0.,
-//                                       0.52, 0.91 ,0.019120, 0.,
-//                                       0.65, 0.28, -0.036392, 0.,
-//                                       0.12, 0.72, 0.06444, 0.,
-//                                       0.45, 0.48, -0.0390251, 0.};
-
-//    std::vector<float> m_points = {0.81, 0.65, -0.0344047, 0.,
-//                                       0.15, 0.25, 0.0645013, 0.,
-//                                       0.52, 0.91 ,0.019120, 0.,
-//                                       0.65, 0.28, -0.036392, 0.,
-//                                       0.12, 0.72, 0.06444, 0.,
-//                                       0.45, 0.48, -0.0390251, 0.};
-
-    std::vector<point_info> m_points = {point_info{0.81, 0.65, 0.},
-                                        point_info{0.15, 0.25, 0.},
-                                        point_info{0.52, 0.91, 0.},
-                                        point_info{0.65, 0.28, 0.},
-                                        point_info{0.12, 0.72, 0.},
-                                        point_info{0.45, 0.48, 0.}};
+//    std::vector<point_info> m_points = {point_info{0.81, 0.65, 0.},
+//                                        point_info{0.15, 0.25, 0.},
+//                                        point_info{0.52, 0.91, 0.},
+//                                        point_info{0.65, 0.28, 0.},
+//                                        point_info{0.12, 0.72, 0.},
+//                                        point_info{0.45, 0.48, 0.}};
+    std::vector<point_info> m_points;
 
     selection m_selected;
 
-    float m_F1Min = 10.;
-    float m_F1Max = 10.;
-    float m_Or1Min = 0.;
-    float m_Or1Max = 0.;
 
-    float m_F2Min = 12.;
-    float m_F2Max = 12.;
-    float m_Or2Min = 0.;
-    float m_Or2Max = 3.;
+    float m_F1Princ = 10.;
+    float m_F1Spread = 0.;
+    float m_Or1Princ = 1.;
+    float m_Or1Spread = 0.;
+
+    float m_F2Princ = 16.;
+    float m_F2Spread = 0.;
+    float m_Or2Princ = 1.;
+    float m_Or2Spread = 3.;
 };
 
 

@@ -18,7 +18,25 @@ struct comput_err{ // foncteur de calcul d'erreur
 
 
 int main() {
+    // description de la densité
+    double mu_x = 0.5;
+    double mu_y = 0.5;
+    double var_x = 0.024025;
+    double var_y = 0.024025;
+
+    // position initial des graines
+    std::vector<Point> init_sites{Point(0.81, 0.65), Point(0.15, 0.25), Point(0.52, 0.91), Point(0.65, 0.28), Point(0.12, 0.72), Point(0.45, 0.48)};
+//    std::vector<FT> custom_capacities{0.0947948, 0.162811, 0.0396879, 0.138455, 0.149857, 0.414395};
+    std::vector<FT> custom_capacities{0.166666667, 0.166666667, 0.166666667, 0.166666667, 0.166666667, 0.166666667};
+
+    CCVT main_ccvt;
+    main_ccvt.set_domain(mu_x, mu_y, var_x, var_y);
+    main_ccvt.set_custom_proportions(custom_capacities);
+    main_ccvt.set_initial_sites(init_sites);
+
     ccvt_application app;
+    app.attacheCCVT(main_ccvt);
+
     if (!app.onInit()) return 1;
 
     while (app.isRunning()) {

@@ -1,10 +1,10 @@
 #version 330 core
 
 uniform vec2 uRes;
-uniform float uFmin;
-uniform float uFmax;
-uniform float uOrmin;
-uniform float uOrmax;
+uniform float uFprinc;
+uniform float uFspread;
+uniform float uOprinc;
+uniform float uOspread;
 
 // CONSTANTE -----------------------------
 #define _PI_ 3.14159265358979
@@ -37,39 +37,46 @@ float gabor(vec2 position, vec2 offset, vec2 direction, float freq, float kernel
     vec2 d_sin = (offset-position)/(kernel_size*kernel_size) * sinus + 2.*_PI_*freq*direction * cosinus; // partie imaginaire
 
 
-    return gauss*sinus;// vec3(sinus, d_sin);
+    return gauss*cosinus;// vec3(sinus, d_sin);
 }
 
 
-float Gabor_noise(vec2 uv, int nb_kernel, float freq_min, float freq_max, float omega_min, float omega_max, float seed, float kernel_size)
+float Gabor_noise(vec2 uv, int nb_kernel, float freq_princ, float freq_spread, float omega_princ, float omega_spread, float seed, float kernel_size)
 {
     float noises= 0.;
+    float var = 0.;
 
     for (int i=0; i<nb_kernel; i++) {
 
-        //float Omega = omega + omega_spread*(0.5*rndi(i,2, seed)-0.5);
-        //float Freq = freq - freq_spread*rndi(i, 4, seed);
-        float Omega = omega_min + (omega_max-omega_min)*rndi(i, 2, seed);
-        float Freq = freq_min + (freq_max-freq_min)*rndi(i, 4, seed);
+//        float Omega = omega_min + (omega_max-omega_min)*rndi(i, 2, seed);
+//        float Freq = freq_min + (freq_max-freq_min)*rndi(i, 4, seed);
+
+        float Omega = omega_princ + omega_spread*(2.*rndi(i, 2, seed) -1.);
+        float Freq = freq_princ + freq_spread*(2.*rndi(i, 4, seed) -1.);
 
         vec2 pos = vec2(rndi(i,0, seed),rndi(i,1, seed));
         vec2 dir = vec2(cos(Omega), sin(Omega));
 
-        float gabor_noise = gabor(uv, pos, dir, Freq, kernel_size);
+        float wi = 2.*rndi(i, 3, seed) -1.;
 
+        float gabor_noise = wi*gabor(uv, pos, dir, Freq, kernel_size);
+
+        var += wi*wi* 0.5*(_PI_*kernel_size*kernel_size)*(1 + exp(-Freq*Freq * kernel_size*kernel_size));
         noises += gabor_noise;
     }
 
-    return noises;
+    return noises/sqrt(var); // division par racine de var pour avoir une variance de 1
 }
 
 void main() {
-    vec2 uv = (gl_FragCoord.xy/uRes.xy);
+    vec2 uv = (gl_FragCoord.xy/uRes.xx);
 
     int nb_kernel = 100;
     float size_kernel = 0.08;
 
-    float noise = 0.2*Gabor_noise(uv, nb_kernel, uFmin, uFmax, uOrmin, uOrmax, 0.624, size_kernel)+0.5;;
+
+    float noise = Gabor_noise(uv, nb_kernel, uFprinc, uFspread, uOprinc, uOspread, 0.624, size_kernel);
+    noise = 0.5 + 0.155*noise; // *0.155 -> variance de 0.155*0.155 = 0,024025; +0.5 -> moyenne de 0.5
 
     gl_FragColor = vec4(vec3(noise), 1.);
 

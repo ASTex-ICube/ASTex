@@ -47,6 +47,7 @@ void check_link(unsigned int shader){
 }
 
 std::string load_shader(const std::string& file_path){
+    std::cout<<"loading shader "<<file_path<<"..."<<std::endl;
     std::string data;
     std::ifstream dataStream(file_path);
 
@@ -62,7 +63,17 @@ std::string load_shader(const std::string& file_path){
 
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////
+//void initImGui(){
+//    // Setup Dear ImGui context
+//    IMGUI_CHECKVERSION();
+//    ImGui::CreateContext();
+//    ImGuiIO& io = ImGui::GetIO();
+//    io.ConfigFlags |= ImGuiConfigFlags_NavEnableKeyboard;     // Enable Keyboard Controls
+//}
+
 bool window_creation(GLFWwindow* &window, const char* name, int width, int height){
+    std::cout<<"creation window "<<name<<"..."<<std::endl;
+
     // fenêtre carte H
     window = glfwCreateWindow(width, height, name, NULL, NULL);
     if (!window) {
@@ -188,7 +199,11 @@ bool setFBO(unsigned int &fbo, unsigned int &texture, int width, int height){
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////
 bool ccvt_application::onInit() {
+    std::cout<<"Initialisation..."<<std::endl;
     glfwSetErrorCallback(error_callback);
+
+    // information initiale du ccvt
+    getCCVTcells();
 
 
     // initialisation de glfw
@@ -231,16 +246,18 @@ bool ccvt_application::onInit() {
 
 
 
-    // fenêtre bruit 1
-    window_creation(m_window_N1, "noise 1", m_width_N, m_height_N);
-    shader_program(m_NoiseShaderProgram, "shaders/noise_shader.frag", "shaders/identity_shader.vert");
-    display_quad(m_NoiseVAO);
-
-
-    // fenêtre bruit 2
-    window_creation(m_window_N2, "noise 2", m_width_N, m_height_N);
-    shader_program(m_NoiseShaderProgram, "shaders/noise_shader.frag", "shaders/identity_shader.vert");
-    display_quad(m_NoiseVAO);
+//    // fenêtre bruit 1
+//    window_creation(m_window_N1, "noise 1", m_width_N, m_height_N);
+//    shader_program(m_NoiseShaderProgram, "shaders/noise_shader.frag", "shaders/identity_shader.vert");
+//    display_quad(m_NoiseVAO);
+////    initGui(m_window_N1);
+//
+//
+//    // fenêtre bruit 2
+//    window_creation(m_window_N2, "noise 2", m_width_N, m_height_N);
+//    shader_program(m_NoiseShaderProgram, "shaders/noise_shader.frag", "shaders/identity_shader.vert");
+//    display_quad(m_NoiseVAO);
+////    initGui(m_window_N2);
 
 
 
@@ -267,6 +284,8 @@ bool ccvt_application::onInit() {
         return false;
     }
 
+    initGui(m_window_T);
+
 
 //    initGui();
 
@@ -276,7 +295,8 @@ bool ccvt_application::onInit() {
 
 
 void ccvt_application::onFinish() {
-//    terminateGui();
+    terminateGui();
+
     glDeleteVertexArrays(1, &m_PointsVAO);
     glDeleteProgram(m_PointsShaderProgram);
 
@@ -290,8 +310,8 @@ void ccvt_application::onFinish() {
     glDeleteProgram(m_CompositionShaderProgram);
 
     glfwDestroyWindow(m_window_H);
-    glfwDestroyWindow(m_window_N1);
-    glfwDestroyWindow(m_window_N2);
+//    glfwDestroyWindow(m_window_N1);
+//    glfwDestroyWindow(m_window_N2);
     glfwDestroyWindow(m_window_T);
     glfwTerminate();
 }
@@ -300,10 +320,15 @@ void ccvt_application::onFinish() {
 
 bool ccvt_application::isRunning() {
     // close the window when "escape" is press
-    if(glfwGetKey(m_window_H, GLFW_KEY_ESCAPE) == GLFW_PRESS){
+    bool is_escape_pressed = glfwGetKey(m_window_H, GLFW_KEY_ESCAPE) == GLFW_PRESS
+//                            or glfwGetKey(m_window_N1, GLFW_KEY_ESCAPE) == GLFW_PRESS
+//                            or glfwGetKey(m_window_N2, GLFW_KEY_ESCAPE) == GLFW_PRESS
+                            or glfwGetKey(m_window_T, GLFW_KEY_ESCAPE) == GLFW_PRESS;
+
+    if(is_escape_pressed){
         glfwSetWindowShouldClose(m_window_H, true);
-        glfwSetWindowShouldClose(m_window_N1, true);
-        glfwSetWindowShouldClose(m_window_N2, true);
+//        glfwSetWindowShouldClose(m_window_N1, true);
+//        glfwSetWindowShouldClose(m_window_N2, true);
         glfwSetWindowShouldClose(m_window_T, true);
     }
 
@@ -344,6 +369,8 @@ void ccvt_application::onFrame() {
     glBindVertexArray(m_ColorVAO);
     glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, 0);
 
+    glBindBuffer(GL_UNIFORM_BUFFER, 0);
+
 
 
     // points
@@ -362,59 +389,65 @@ void ccvt_application::onFrame() {
 
 
 
-    ////////////////////////////////////////////////////////////////////
-    glfwMakeContextCurrent(m_window_N1);
-    glViewport(0, 0, m_width_N, m_height_N); // (lower_left_x, lower_left_y, width, height)
-
-    // clear color
-    glClearColor(0.6f, 0.6f, 0.8f, 1.0f);
-    glClear(GL_COLOR_BUFFER_BIT);
-
-    glUseProgram(m_NoiseShaderProgram);
-
-    // unifoms
-    glUniform2f(glGetUniformLocation(m_NoiseShaderProgram, "uRes"), m_width_N, m_height_N);
-    glUniform1f(glGetUniformLocation(m_NoiseShaderProgram, "uFmin"), m_F1Min);
-    glUniform1f(glGetUniformLocation(m_NoiseShaderProgram, "uFmax"), m_F1Max);
-    glUniform1f(glGetUniformLocation(m_NoiseShaderProgram, "uOrmin"), m_Or1Min);
-    glUniform1f(glGetUniformLocation(m_NoiseShaderProgram, "uOrmax"), m_Or1Max);
-
-    glBindVertexArray(m_NoiseVAO);
-    glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, 0);
 
 
-    // swap the buffers
-    glfwSwapBuffers(m_window_N1);
-
-
-
-
-
-
-
-
-    glfwMakeContextCurrent(m_window_N2);
-    glViewport(0, 0, m_width_N, m_height_N); // (lower_left_x, lower_left_y, width, height)
-
-    // clear color
-    glClearColor(0.6f, 0.6f, 0.8f, 1.0f);
-    glClear(GL_COLOR_BUFFER_BIT);
-
-    glUseProgram(m_NoiseShaderProgram);
-
-    // unifoms
-    glUniform2f(glGetUniformLocation(m_NoiseShaderProgram, "uRes"), m_width_N, m_height_N);
-    glUniform1f(glGetUniformLocation(m_NoiseShaderProgram, "uFmin"), m_F2Min);
-    glUniform1f(glGetUniformLocation(m_NoiseShaderProgram, "uFmax"), m_F2Max);
-    glUniform1f(glGetUniformLocation(m_NoiseShaderProgram, "uOrmin"), m_Or2Min);
-    glUniform1f(glGetUniformLocation(m_NoiseShaderProgram, "uOrmax"), m_Or2Max);
-
-    glBindVertexArray(m_NoiseVAO);
-    glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, 0);
-
-
-    // swap the buffers
-    glfwSwapBuffers(m_window_N2);
+//    ////////////////////////////////////////////////////////////////////
+//    glfwMakeContextCurrent(m_window_N1);
+//    glViewport(0, 0, m_width_N, m_height_N); // (lower_left_x, lower_left_y, width, height)
+//
+//    // clear color
+//    glClearColor(0.6f, 0.6f, 0.8f, 1.0f);
+//    glClear(GL_COLOR_BUFFER_BIT);
+//
+//    glUseProgram(m_NoiseShaderProgram);
+//
+//    // unifoms
+//    glUniform2f(glGetUniformLocation(m_NoiseShaderProgram, "uRes"), m_width_N, m_height_N);
+//    glUniform1f(glGetUniformLocation(m_NoiseShaderProgram, "uFmin"), m_F1Min);
+//    glUniform1f(glGetUniformLocation(m_NoiseShaderProgram, "uFmax"), m_F1Max);
+//    glUniform1f(glGetUniformLocation(m_NoiseShaderProgram, "uOrmin"), m_Or1Min);
+//    glUniform1f(glGetUniformLocation(m_NoiseShaderProgram, "uOrmax"), m_Or1Max);
+//
+//    glBindVertexArray(m_NoiseVAO);
+//    glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, 0);
+//
+////    updateGui();
+//
+//
+//    // swap the buffers
+//    glfwSwapBuffers(m_window_N1);
+//
+//
+//
+//
+//
+//
+//
+//
+//    glfwMakeContextCurrent(m_window_N2);
+//    glViewport(0, 0, m_width_N, m_height_N); // (lower_left_x, lower_left_y, width, height)
+//
+//    // clear color
+//    glClearColor(0.6f, 0.6f, 0.8f, 1.0f);
+//    glClear(GL_COLOR_BUFFER_BIT);
+//
+//    glUseProgram(m_NoiseShaderProgram);
+//
+//    // unifoms
+//    glUniform2f(glGetUniformLocation(m_NoiseShaderProgram, "uRes"), m_width_N, m_height_N);
+//    glUniform1f(glGetUniformLocation(m_NoiseShaderProgram, "uFmin"), m_F2Min);
+//    glUniform1f(glGetUniformLocation(m_NoiseShaderProgram, "uFmax"), m_F2Max);
+//    glUniform1f(glGetUniformLocation(m_NoiseShaderProgram, "uOrmin"), m_Or2Min);
+//    glUniform1f(glGetUniformLocation(m_NoiseShaderProgram, "uOrmax"), m_Or2Max);
+//
+//    glBindVertexArray(m_NoiseVAO);
+//    glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, 0);
+//
+////    updateGui();
+//
+//
+//    // swap the buffers
+//    glfwSwapBuffers(m_window_N2);
 
 
 
@@ -439,10 +472,10 @@ void ccvt_application::onFrame() {
 
     // unifoms
     glUniform2f(glGetUniformLocation(m_NoiseShaderProgram, "uRes"), m_width_T, m_height_T);
-    glUniform1f(glGetUniformLocation(m_NoiseShaderProgram, "uFmin"), m_F1Min);
-    glUniform1f(glGetUniformLocation(m_NoiseShaderProgram, "uFmax"), m_F1Max);
-    glUniform1f(glGetUniformLocation(m_NoiseShaderProgram, "uOrmin"), m_Or1Min);
-    glUniform1f(glGetUniformLocation(m_NoiseShaderProgram, "uOrmax"), m_Or1Max);
+    glUniform1f(glGetUniformLocation(m_NoiseShaderProgram, "uFprinc"), m_F1Princ);
+    glUniform1f(glGetUniformLocation(m_NoiseShaderProgram, "uFspread"), m_F1Spread);
+    glUniform1f(glGetUniformLocation(m_NoiseShaderProgram, "uOprinc"), m_Or1Princ);
+    glUniform1f(glGetUniformLocation(m_NoiseShaderProgram, "uOspread"), m_Or1Spread);
 
     glBindVertexArray(m_NoiseVAO);
 
@@ -466,10 +499,10 @@ void ccvt_application::onFrame() {
 
     // unifoms
     glUniform2f(glGetUniformLocation(m_NoiseShaderProgram, "uRes"), m_width_T, m_height_T);
-    glUniform1f(glGetUniformLocation(m_NoiseShaderProgram, "uFmin"), m_F2Min);
-    glUniform1f(glGetUniformLocation(m_NoiseShaderProgram, "uFmax"), m_F2Max);
-    glUniform1f(glGetUniformLocation(m_NoiseShaderProgram, "uOrmin"), m_Or2Min);
-    glUniform1f(glGetUniformLocation(m_NoiseShaderProgram, "uOrmax"), m_Or2Max);
+    glUniform1f(glGetUniformLocation(m_NoiseShaderProgram, "uFprinc"), m_F2Princ);
+    glUniform1f(glGetUniformLocation(m_NoiseShaderProgram, "uFspread"), m_F2Spread);
+    glUniform1f(glGetUniformLocation(m_NoiseShaderProgram, "uOprinc"), m_Or2Princ);
+    glUniform1f(glGetUniformLocation(m_NoiseShaderProgram, "uOspread"), m_Or2Spread);
 
     glBindVertexArray(m_NoiseVAO);
 
@@ -509,9 +542,15 @@ void ccvt_application::onFrame() {
     glBindVertexArray(m_CompositionVAO);
     glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, 0);
 
+    glBindBuffer(GL_UNIFORM_BUFFER, 0);
+
+
+    updateGui();
+
 
     // swap the buffers
     glfwSwapBuffers(m_window_T);
+
 
 }
 
@@ -519,8 +558,6 @@ void ccvt_application::onFrame() {
 
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
-
 void ccvt_application::displayPoints() {
     glEnable(GL_PROGRAM_POINT_SIZE);
 
@@ -565,16 +602,15 @@ void ccvt_application::updatePoints() {
 
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////
-bool ccvt_application::initGui() {
+bool ccvt_application::initGui(GLFWwindow* &window) {
     // Setup Dear ImGui context
     IMGUI_CHECKVERSION();
     ImGui::CreateContext();
     ImGuiIO& io = ImGui::GetIO();
     io.ConfigFlags |= ImGuiConfigFlags_NavEnableKeyboard;     // Enable Keyboard Controls
-//    io.ConfigFlags |= ImGuiConfigFlags_NavEnableGamepad;      // Enable Gamepad Controls
 
 // Setup Platform/Renderer backends
-    ImGui_ImplGlfw_InitForOpenGL(m_window_H, true);          // Second param install_callback=true will install GLFW callbacks and chain to existing ones.
+    ImGui_ImplGlfw_InitForOpenGL(window, true);          // Second param install_callback=true will install GLFW callbacks and chain to existing ones.
     ImGui_ImplOpenGL3_Init();
 
     return true;
@@ -600,10 +636,69 @@ void ccvt_application::updateGui() {
     ImGui::Text("Application average %.3f ms/frame (%.1f FPS)", 1000.0f / io.Framerate, io.Framerate);
     ImGui::End();
 
-//    ImGui::Begin("test");
-//    ImGui::Text("position x : ", m_newPoint_x);
-//    ImGui::Text("position y : ", m_newPoint_y);
+
+//    ImGui::Begin("color map");
+//    bool optimize = ImGui::Button("volume optimisation");
+//    if(optimize){
+//        optimizeCCVT();
+//    }
 //    ImGui::End();
+
+
+
+    ImGui::Begin("noise 1");
+    ImGui::SliderFloat("Frequence principale", &m_F1Princ, 1., 20.);
+    ImGui::SliderFloat("Étalement fréquence", &m_F1Spread, 1., 20.);
+    ImGui::SliderAngle("Orientation principale", &m_Or1Princ);
+    ImGui::SliderAngle("Étalement orientation", &m_Or1Spread, 0., 180.);
+
+    // we access the ImGui window size
+    const float window_width_N1 = ImGui::GetContentRegionAvail().x;
+    const float window_height_N1 = ImGui::GetContentRegionAvail().y;
+
+    glViewport(0, 0, window_width_N1, window_height_N1);
+
+    // we get the screen position of the window
+    ImVec2 pos_N1 = ImGui::GetCursorScreenPos();
+
+    // and here we can add our created texture as image to ImGui
+    // unfortunately we need to use the cast to void* or I didn't find another way tbh
+    ImGui::GetWindowDrawList()->AddImage(
+            (void *)m_texture_N1,
+            ImVec2(pos_N1.x, pos_N1.y),
+            ImVec2(pos_N1.x + window_width_N1, pos_N1.y + window_height_N1),
+            ImVec2(0, 1),
+            ImVec2(1, 0)
+    );
+    ImGui::End();
+
+
+
+    ImGui::Begin("noise 2");
+    ImGui::SliderFloat("Frequence principale", &m_F2Princ, 1., 20.);
+    ImGui::SliderFloat("Étalement fréquence", &m_F2Spread, 1., 20.);
+    ImGui::SliderAngle("Orientation principale", &m_Or2Princ);
+    ImGui::SliderAngle("Étalement orientation", &m_Or2Spread, 0., 180.);
+
+    // we access the ImGui window size
+    const float window_width_N2 = ImGui::GetContentRegionAvail().x;
+    const float window_height_N2 = ImGui::GetContentRegionAvail().y;
+
+    glViewport(0, 0, window_width_N2, window_height_N2);
+
+    // we get the screen position of the window
+    ImVec2 pos_N2 = ImGui::GetCursorScreenPos();
+
+    // and here we can add our created texture as image to ImGui
+    // unfortunately we need to use the cast to void* or I didn't find another way tbh
+    ImGui::GetWindowDrawList()->AddImage(
+            (void *)m_texture_N2,
+            ImVec2(pos_N2.x, pos_N2.y),
+            ImVec2(pos_N2.x + window_width_N2, pos_N2.y + window_height_N2),
+            ImVec2(0, 1),
+            ImVec2(1, 0)
+    );
+    ImGui::End();
 
 
     ImGui::Render();
@@ -626,12 +721,21 @@ void ccvt_application::onMouseButton(int button, int action, int mods) {
     {
         switch (action) {
             case GLFW_PRESS:
-                m_selected.active = true;
+                m_selected.toogle = true;
                 break;
             case GLFW_RELEASE:
+                m_selected.toogle = false;
                 m_selected.active = false;
+                m_selected.id = -1;
+
+                updateCCVT();
                 break;
         }
+    }
+
+    if(button == GLFW_MOUSE_BUTTON_RIGHT and action == GLFW_PRESS)
+    {
+        optimizeCCVT();
     }
 }
 
@@ -639,19 +743,26 @@ void ccvt_application::onMouseMove(double xpos, double ypos) {
     float xpos_normalized = xpos / m_width_H;
     float ypos_normalized = 1.- ypos / m_height_H;
 
-    for(auto p=m_points.begin(); p<m_points.end(); p++){
-        float len = (xpos_normalized - (*p)._x)*(xpos_normalized - (*p)._x) + (ypos_normalized - (*p)._y)*(ypos_normalized - (*p)._y);
+//    std::cout<<m_selected.active<<" "<<m_selected.toogle<<" "<<m_selected.id<<std::endl;
 
-        if(len < .01 and !m_selected.active){
-            m_selected.id = p-m_points.begin();
-            (*p)._sel = 1.;
-        }
-        else{
-            (*p)._sel = 0.;
+    if(!m_selected.toogle){
+        m_selected.active = false;
+        m_selected.id = -1;
+        for(auto p=m_points.begin(); p<m_points.end(); p++){
+            float len = (xpos_normalized - (*p)._x)*(xpos_normalized - (*p)._x) + (ypos_normalized - (*p)._y)*(ypos_normalized - (*p)._y);
+
+            if(len < .01){
+                m_selected.active = true;
+                m_selected.id = p-m_points.begin();
+                (*p)._sel = 1.;
+            }
+            else{
+                (*p)._sel = 0.;
+            }
         }
     }
 
-    if(m_selected.active){
+    if(m_selected.active and m_selected.toogle and m_selected.id != -1){
         m_points.at(m_selected.id)._x = xpos_normalized;
         m_points.at(m_selected.id)._y = ypos_normalized;
     }
