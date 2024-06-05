@@ -439,27 +439,28 @@ unsigned CCVT::optimize_H(FT& wstep, FT& xstep, unsigned max_newton_iters, FT ep
     FT coarse_wthreshold = 2.0*wthreshold;
 
     unsigned iters = 0;
-    unsigned nb_assign = 0;
+    unsigned nb_assign = 1;
 
+    nb_assign += optimize_weights_via_newton_until_converge(wstep, coarse_wthreshold, 0, max_newton_iters);
 
-    // optimisation "grossière"
-    while (iters < max_iters)
-    {
-        iters++;
-        reset_weights();
-
-        // on ajuste les poids pour coller au capacités (Newton method for W)
-        nb_assign += optimize_weights_via_newton_until_converge(wstep, coarse_wthreshold, 0, max_newton_iters);
-
-        // on replace les graine au milieu des cellules (Lloyd step for X)
-        FT norm = 0.;// optimize_positions_via_lloyd(true);
-
-        nb_assign++;
-        if (norm <= coarse_xthreshold) break;
-    }
+//    // optimisation "grossière"
+//    while (iters < max_iters)
+//    {
+//        iters++;
+//        reset_weights();
+//
+//        // on ajuste les poids pour coller au capacités (Newton method for W)
+//        nb_assign += optimize_weights_via_newton_until_converge(wstep, coarse_wthreshold, 0, max_newton_iters);
+//
+//        // on replace les graine au milieu des cellules (Lloyd step for X)
+//        FT norm = 0.;// optimize_positions_via_lloyd(true);
+//
+//        nb_assign++;
+//        if (norm <= coarse_xthreshold) break;
+//    }
 
 
     m_fixed_connectivity = global_connectivity;
-    return nb_assign;//iters;
+    return nb_assign;//iters; //
 
 }

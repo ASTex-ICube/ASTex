@@ -19,6 +19,15 @@ struct point_info{
     point_info(float x, float y, float w):_x(x), _y(y), _w(w), _sel(0.){};
 };
 
+struct cell_info{
+    float _cap;
+    float _r = 0.;
+    float _g = 0.;
+    float _b = 0.;
+
+    cell_info(float cap, float r, float g, float b):_cap(cap), _r(r), _g(g), _b(b){};
+};
+
 struct selection{
     bool active = false;
     bool toogle = false;
@@ -55,41 +64,9 @@ private:
     void onMouseMove(double xpos, double ypos);
     void addPoint(float xPos, float yPos);
 
-
-    void getCCVTcells(){
-        std::vector<FT> weights;
-        std::vector<Point> points;
-        std::vector<point_info> tmp_points;
-
-        m_ccvt.collect_sites(points, weights);
-
-        for(int i=0; i<points.size(); i++){
-            tmp_points.push_back(point_info(points.at(i).x()+0.5, points.at(i).y()+0.5, weights.at(i)));
-        }
-        m_points = tmp_points;
-    }
-
-    void optimizeCCVT(){
-        std::cout<<"optimizing CCVT..."<<std::endl;
-        FT stepX = 0.01; // pour les positions
-        FT stepW = 0.1; // pour les poids
-        FT epsilon = 1.;
-        unsigned max_newton_iters = 10;// 500;
-        unsigned max_iters = 10;// 500;
-
-        m_ccvt.optimize_H(stepW, stepX, max_newton_iters, epsilon, max_iters);
-        getCCVTcells();
-        updatePoints();
-    }
-
-    void updateCCVT(){
-        std::cout<<"update CCVT..."<<std::endl;
-        std::vector<Point> points;
-        for(auto pi:m_points){
-            points.push_back(Point{pi._x, pi._y});
-        }
-        m_ccvt.set_initial_sites(points);
-    }
+    void getCCVTcells();
+    void optimizeCCVT();
+    void updateCCVT();
 
 private:
     GLFWwindow* m_window_H = nullptr;
@@ -98,8 +75,8 @@ private:
 
     GLFWwindow* m_window_N1 = nullptr;
     GLFWwindow* m_window_N2 = nullptr;
-    int m_width_N = 600;
-    int m_height_N = 600;
+    int m_width_N = 400;
+    int m_height_N = 400;
 
     GLFWwindow* m_window_T = nullptr;
     int m_width_T = 800;
@@ -128,21 +105,18 @@ private:
 
 
     CCVT m_ccvt;
-    static const unsigned int m_MaxPointsNb = 12;
-//    std::vector<point_info> m_points = {point_info{0.81, 0.65, 0.},
-//                                        point_info{0.15, 0.25, 0.},
-//                                        point_info{0.52, 0.91, 0.},
-//                                        point_info{0.65, 0.28, 0.},
-//                                        point_info{0.12, 0.72, 0.},
-//                                        point_info{0.45, 0.48, 0.}};
+    static const unsigned int m_MaxPointsNb = 30;
+    unsigned int m_CurrentPointsNb;
+
     std::vector<point_info> m_points;
+    std::vector<cell_info> m_cells;
 
     selection m_selected;
 
 
     float m_F1Princ = 10.;
     float m_F1Spread = 0.;
-    float m_Or1Princ = 1.;
+    float m_Or1Princ = 2.;
     float m_Or1Spread = 0.;
 
     float m_F2Princ = 16.;

@@ -63,14 +63,6 @@ std::string load_shader(const std::string& file_path){
 
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////
-//void initImGui(){
-//    // Setup Dear ImGui context
-//    IMGUI_CHECKVERSION();
-//    ImGui::CreateContext();
-//    ImGuiIO& io = ImGui::GetIO();
-//    io.ConfigFlags |= ImGuiConfigFlags_NavEnableKeyboard;     // Enable Keyboard Controls
-//}
-
 bool window_creation(GLFWwindow* &window, const char* name, int width, int height){
     std::cout<<"creation window "<<name<<"..."<<std::endl;
 
@@ -246,21 +238,6 @@ bool ccvt_application::onInit() {
 
 
 
-//    // fenêtre bruit 1
-//    window_creation(m_window_N1, "noise 1", m_width_N, m_height_N);
-//    shader_program(m_NoiseShaderProgram, "shaders/noise_shader.frag", "shaders/identity_shader.vert");
-//    display_quad(m_NoiseVAO);
-////    initGui(m_window_N1);
-//
-//
-//    // fenêtre bruit 2
-//    window_creation(m_window_N2, "noise 2", m_width_N, m_height_N);
-//    shader_program(m_NoiseShaderProgram, "shaders/noise_shader.frag", "shaders/identity_shader.vert");
-//    display_quad(m_NoiseVAO);
-////    initGui(m_window_N2);
-
-
-
 
 
 
@@ -287,7 +264,6 @@ bool ccvt_application::onInit() {
     initGui(m_window_T);
 
 
-//    initGui();
 
     return true;
 }
@@ -302,7 +278,7 @@ void ccvt_application::onFinish() {
 
     glDeleteVertexArrays(1, &m_ColorVAO);
     glDeleteProgram(m_ColorShaderProgram);
-
+//
     glDeleteVertexArrays(1, &m_NoiseVAO);
     glDeleteProgram(m_NoiseShaderProgram);
 
@@ -310,8 +286,6 @@ void ccvt_application::onFinish() {
     glDeleteProgram(m_CompositionShaderProgram);
 
     glfwDestroyWindow(m_window_H);
-//    glfwDestroyWindow(m_window_N1);
-//    glfwDestroyWindow(m_window_N2);
     glfwDestroyWindow(m_window_T);
     glfwTerminate();
 }
@@ -321,14 +295,10 @@ void ccvt_application::onFinish() {
 bool ccvt_application::isRunning() {
     // close the window when "escape" is press
     bool is_escape_pressed = glfwGetKey(m_window_H, GLFW_KEY_ESCAPE) == GLFW_PRESS
-//                            or glfwGetKey(m_window_N1, GLFW_KEY_ESCAPE) == GLFW_PRESS
-//                            or glfwGetKey(m_window_N2, GLFW_KEY_ESCAPE) == GLFW_PRESS
                             or glfwGetKey(m_window_T, GLFW_KEY_ESCAPE) == GLFW_PRESS;
 
     if(is_escape_pressed){
         glfwSetWindowShouldClose(m_window_H, true);
-//        glfwSetWindowShouldClose(m_window_N1, true);
-//        glfwSetWindowShouldClose(m_window_N2, true);
         glfwSetWindowShouldClose(m_window_T, true);
     }
 
@@ -340,6 +310,9 @@ bool ccvt_application::isRunning() {
 
 
 void ccvt_application::onFrame() {
+
+
+
 
     ////////////////////////////////////////////////////////////////////
     glfwMakeContextCurrent(m_window_H);
@@ -356,14 +329,22 @@ void ccvt_application::onFrame() {
     glUseProgram(m_ColorShaderProgram);
 
     // unifoms
-    unsigned int UBO; // uniform buffer
-    glGenBuffers(1, &UBO);
-    glBindBuffer(GL_UNIFORM_BUFFER, UBO);
+    unsigned int UBO_points; // uniform buffer
+    glGenBuffers(1, &UBO_points);
+    glBindBuffer(GL_UNIFORM_BUFFER, UBO_points);
     glBufferData(GL_UNIFORM_BUFFER, m_MaxPointsNb*sizeof(point_info), m_points.data(), GL_STREAM_DRAW);
-    glBindBufferRange(GL_UNIFORM_BUFFER, 0, UBO, 0, m_MaxPointsNb*sizeof(point_info));
+    glBindBufferRange(GL_UNIFORM_BUFFER, 0, UBO_points, 0, m_MaxPointsNb * sizeof(point_info));
+
+    unsigned int UBO_colors; // uniform buffer
+    glGenBuffers(1, &UBO_colors);
+    glBindBuffer(GL_UNIFORM_BUFFER, UBO_colors);
+    glBufferData(GL_UNIFORM_BUFFER, m_MaxPointsNb*sizeof(cell_info), m_cells.data(), GL_STREAM_DRAW);
+    glBindBufferRange(GL_UNIFORM_BUFFER, 1, UBO_colors, 0, m_MaxPointsNb * sizeof(cell_info));
 
     glUniformBlockBinding(m_ColorShaderProgram, glGetUniformBlockIndex(m_ColorShaderProgram, "uPoints"), 0);
+    glUniformBlockBinding(m_ColorShaderProgram, glGetUniformBlockIndex(m_ColorShaderProgram, "uColors"), 1);
     glUniform2f(glGetUniformLocation(m_ColorShaderProgram, "uRes"), m_width_H, m_height_H);
+    glUniform1i(glGetUniformLocation(m_ColorShaderProgram, "uPointsNb"), m_CurrentPointsNb);
 
 
     glBindVertexArray(m_ColorVAO);
@@ -378,8 +359,7 @@ void ccvt_application::onFrame() {
     glBindVertexArray(m_PointsVAO);
     glDrawArrays(GL_POINTS, // mode
                    0, // first
-                   6); // count
-
+                   m_CurrentPointsNb); // count
 
 
     // swap the buffers
@@ -391,73 +371,12 @@ void ccvt_application::onFrame() {
 
 
 
-//    ////////////////////////////////////////////////////////////////////
-//    glfwMakeContextCurrent(m_window_N1);
-//    glViewport(0, 0, m_width_N, m_height_N); // (lower_left_x, lower_left_y, width, height)
-//
-//    // clear color
-//    glClearColor(0.6f, 0.6f, 0.8f, 1.0f);
-//    glClear(GL_COLOR_BUFFER_BIT);
-//
-//    glUseProgram(m_NoiseShaderProgram);
-//
-//    // unifoms
-//    glUniform2f(glGetUniformLocation(m_NoiseShaderProgram, "uRes"), m_width_N, m_height_N);
-//    glUniform1f(glGetUniformLocation(m_NoiseShaderProgram, "uFmin"), m_F1Min);
-//    glUniform1f(glGetUniformLocation(m_NoiseShaderProgram, "uFmax"), m_F1Max);
-//    glUniform1f(glGetUniformLocation(m_NoiseShaderProgram, "uOrmin"), m_Or1Min);
-//    glUniform1f(glGetUniformLocation(m_NoiseShaderProgram, "uOrmax"), m_Or1Max);
-//
-//    glBindVertexArray(m_NoiseVAO);
-//    glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, 0);
-//
-////    updateGui();
-//
-//
-//    // swap the buffers
-//    glfwSwapBuffers(m_window_N1);
-//
-//
-//
-//
-//
-//
-//
-//
-//    glfwMakeContextCurrent(m_window_N2);
-//    glViewport(0, 0, m_width_N, m_height_N); // (lower_left_x, lower_left_y, width, height)
-//
-//    // clear color
-//    glClearColor(0.6f, 0.6f, 0.8f, 1.0f);
-//    glClear(GL_COLOR_BUFFER_BIT);
-//
-//    glUseProgram(m_NoiseShaderProgram);
-//
-//    // unifoms
-//    glUniform2f(glGetUniformLocation(m_NoiseShaderProgram, "uRes"), m_width_N, m_height_N);
-//    glUniform1f(glGetUniformLocation(m_NoiseShaderProgram, "uFmin"), m_F2Min);
-//    glUniform1f(glGetUniformLocation(m_NoiseShaderProgram, "uFmax"), m_F2Max);
-//    glUniform1f(glGetUniformLocation(m_NoiseShaderProgram, "uOrmin"), m_Or2Min);
-//    glUniform1f(glGetUniformLocation(m_NoiseShaderProgram, "uOrmax"), m_Or2Max);
-//
-//    glBindVertexArray(m_NoiseVAO);
-//    glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, 0);
-//
-////    updateGui();
-//
-//
-//    // swap the buffers
-//    glfwSwapBuffers(m_window_N2);
-
-
-
 
 
 
     ////////////////////////////////////////////////////////////////////
     glfwMakeContextCurrent(m_window_T);
     glViewport(0, 0, m_width_T, m_height_T); // (lower_left_x, lower_left_y, width, height)
-
 
 
     // fbo noise 1
@@ -530,14 +449,23 @@ void ccvt_application::onFrame() {
 
 
     // uniform buffer
-    unsigned int UBO_H;
-    glGenBuffers(1, &UBO_H);
-    glBindBuffer(GL_UNIFORM_BUFFER, UBO_H);
+    unsigned int UBO_H_points;
+    glGenBuffers(1, &UBO_H_points);
+    glBindBuffer(GL_UNIFORM_BUFFER, UBO_H_points);
     glBufferData(GL_UNIFORM_BUFFER, m_MaxPointsNb*sizeof(point_info), m_points.data(), GL_STREAM_DRAW);
-    glBindBufferRange(GL_UNIFORM_BUFFER, 1, UBO_H, 0, m_MaxPointsNb*sizeof(point_info));
+    glBindBufferRange(GL_UNIFORM_BUFFER, 0, UBO_H_points, 0, m_MaxPointsNb * sizeof(point_info));
 
-    glUniformBlockBinding(m_CompositionShaderProgram, glGetUniformBlockIndex(m_CompositionShaderProgram, "uPoints"), 1);
+    unsigned int UBO_H_colors; // uniform buffer
+    glGenBuffers(1, &UBO_H_colors);
+    glBindBuffer(GL_UNIFORM_BUFFER, UBO_H_colors);
+    glBufferData(GL_UNIFORM_BUFFER, m_MaxPointsNb*sizeof(cell_info), m_cells.data(), GL_STREAM_DRAW);
+    glBindBufferRange(GL_UNIFORM_BUFFER, 1, UBO_H_colors, 0, m_MaxPointsNb * sizeof(cell_info));
+
+    glUniformBlockBinding(m_CompositionShaderProgram, glGetUniformBlockIndex(m_CompositionShaderProgram, "uPoints"), 0);
+    glUniformBlockBinding(m_CompositionShaderProgram, glGetUniformBlockIndex(m_CompositionShaderProgram, "uColors"), 1);
     glUniform2f(glGetUniformLocation(m_CompositionShaderProgram, "uRes"), m_width_T, m_height_T);
+    glUniform1i(glGetUniformLocation(m_CompositionShaderProgram, "uPointsNb"), m_CurrentPointsNb);
+
 
     glBindVertexArray(m_CompositionVAO);
     glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, 0);
@@ -550,6 +478,7 @@ void ccvt_application::onFrame() {
 
     // swap the buffers
     glfwSwapBuffers(m_window_T);
+
 
 
 }
@@ -574,6 +503,10 @@ void ccvt_application::displayPoints() {
 
 
 void ccvt_application::updatePoints() {
+
+//    for(auto pi:m_points){
+//        std::cout<<pi._x<<", "<<pi._y<<std::endl;
+//    }
 
     // Vertex Array object
     glBindVertexArray(m_PointsVAO); // 1. bind VAO
@@ -629,7 +562,7 @@ void ccvt_application::updateGui() {
     ImGui_ImplOpenGL3_NewFrame();
     ImGui_ImplGlfw_NewFrame();
     ImGui::NewFrame();
-//    ImGui::ShowDemoWindow(); // Show demo window! :)
+    ImGui::ShowDemoWindow(); // Show demo window! :)
 
     ImGui::Begin("Hello, world!");
     ImGuiIO& io = ImGui::GetIO();
@@ -647,14 +580,14 @@ void ccvt_application::updateGui() {
 
 
     ImGui::Begin("noise 1");
-    ImGui::SliderFloat("Frequence principale", &m_F1Princ, 1., 20.);
-    ImGui::SliderFloat("Étalement fréquence", &m_F1Spread, 1., 20.);
-    ImGui::SliderAngle("Orientation principale", &m_Or1Princ);
-    ImGui::SliderAngle("Étalement orientation", &m_Or1Spread, 0., 180.);
+    ImGui::SliderFloat("F_0", &m_F1Princ, 4., 30.);
+    ImGui::SliderFloat("F spread", &m_F1Spread, 0., 20.);
+    ImGui::SliderAngle("O_0", &m_Or1Princ);
+    ImGui::SliderAngle("O spread", &m_Or1Spread, 0., 180.);
 
     // we access the ImGui window size
-    const float window_width_N1 = ImGui::GetContentRegionAvail().x;
-    const float window_height_N1 = ImGui::GetContentRegionAvail().y;
+    const float window_width_N1 = m_width_N;//ImGui::GetContentRegionAvail().x;
+    const float window_height_N1 = m_height_N;//ImGui::GetContentRegionAvail().y;
 
     glViewport(0, 0, window_width_N1, window_height_N1);
 
@@ -675,14 +608,14 @@ void ccvt_application::updateGui() {
 
 
     ImGui::Begin("noise 2");
-    ImGui::SliderFloat("Frequence principale", &m_F2Princ, 1., 20.);
-    ImGui::SliderFloat("Étalement fréquence", &m_F2Spread, 1., 20.);
-    ImGui::SliderAngle("Orientation principale", &m_Or2Princ);
-    ImGui::SliderAngle("Étalement orientation", &m_Or2Spread, 0., 180.);
+    ImGui::SliderFloat("F_0", &m_F2Princ, 4., 30.);
+    ImGui::SliderFloat("F spread", &m_F2Spread, 0., 20.);
+    ImGui::SliderAngle("O_0", &m_Or2Princ);
+    ImGui::SliderAngle("O spread", &m_Or2Spread, 0., 180.);
 
     // we access the ImGui window size
-    const float window_width_N2 = ImGui::GetContentRegionAvail().x;
-    const float window_height_N2 = ImGui::GetContentRegionAvail().y;
+    const float window_width_N2 = m_width_N;//ImGui::GetContentRegionAvail().x;
+    const float window_height_N2 = m_height_N;//ImGui::GetContentRegionAvail().y;
 
     glViewport(0, 0, window_width_N2, window_height_N2);
 
@@ -722,13 +655,19 @@ void ccvt_application::onMouseButton(int button, int action, int mods) {
         switch (action) {
             case GLFW_PRESS:
                 m_selected.toogle = true;
+                if(!m_selected.active){
+                    double xpos;
+                    double ypos;
+                    glfwGetCursorPos(m_window_H, &xpos, &ypos);
+                    addPoint(xpos / m_width_H, 1.- ypos / m_height_H);
+                }
                 break;
             case GLFW_RELEASE:
                 m_selected.toogle = false;
                 m_selected.active = false;
                 m_selected.id = -1;
 
-                updateCCVT();
+//                updateCCVT();
                 break;
         }
     }
@@ -770,10 +709,114 @@ void ccvt_application::onMouseMove(double xpos, double ypos) {
     updatePoints();
 }
 
-
+////////////////////////////////////////////////////////////////////////////////////////////////////////////
 void ccvt_application::addPoint(float xPos, float yPos) {
-//    m_points.push_back(xPos);
-//    m_points.push_back(yPos);
-//    m_points.push_back(0.);
-//    m_points.push_back(0.);
+//    std::cout<<"new point : "<<xPos<<", "<<yPos<<std::endl;
+
+    float new_cap = 1./(m_cells.size()+1);
+
+    float caps_sum = new_cap;
+    for(auto ci:m_cells){
+        caps_sum += ci._cap;
+    }
+    for(auto &ci:m_cells){
+        ci._cap = ci._cap/caps_sum;
+    }
+
+    m_points.emplace_back(xPos, yPos, 0.);
+    m_cells.emplace_back(new_cap/caps_sum, 1., 1., 1.);
+    m_CurrentPointsNb = m_points.size();
+
+
+    updatePoints();
+}
+
+
+
+
+void ccvt_application::getCCVTcells(){
+    std::vector<FT> weights;
+    std::vector<Point> points;
+    std::vector<FT> proportions;
+    std::vector<double> R;
+    std::vector<double> G;
+    std::vector<double> B;
+
+    std::vector<point_info> tmp_points;
+    std::vector<cell_info> tmp_cells;
+
+    m_ccvt.collect_sites(points, weights);
+    m_ccvt.get_proportion(proportions);
+    m_ccvt.get_colors(R, G, B);
+
+    for(int i=0; i<points.size(); i++){
+        tmp_points.emplace_back(points.at(i).x()+0.5, points.at(i).y()+0.5, weights.at(i));
+        tmp_cells.emplace_back(proportions.at(i), R.at(i), G.at(i), B.at(i));
+    }
+
+    m_points = tmp_points;
+    m_cells = tmp_cells;
+    m_CurrentPointsNb = m_points.size();
+}
+
+
+
+
+void ccvt_application::optimizeCCVT(){
+    updateCCVT();
+    std::cout<<"optimizing CCVT..."<<std::endl;
+    FT stepX = 0.01; // pour les positions
+    FT stepW = 0.1; // pour les poids
+    FT epsilon = 1.;
+    unsigned max_newton_iters = 500;
+    unsigned max_iters = 500;
+
+    int iter_opt = m_ccvt.optimize_H(stepW, stepX, max_newton_iters, epsilon, max_iters);
+
+    std::cout<<iter_opt<<" itérations (max : "<<max_newton_iters<<")"<<std::endl;
+
+    getCCVTcells();
+    updatePoints();
+}
+
+
+
+
+void ccvt_application::updateCCVT(){
+    std::cout<<"update CCVT..."<<std::endl;
+
+    std::vector<Point> points;
+    std::vector<double> weights;
+    std::vector<double> caps;
+    std::vector<double> R;
+    std::vector<double> G;
+    std::vector<double> B;
+
+    for(auto pi:m_points){
+        points.emplace_back(pi._x, pi._y);
+        weights.emplace_back(pi._w);
+    }
+
+    for(auto ci:m_cells){
+        caps.emplace_back(ci._cap);
+        R.emplace_back(ci._r);
+        G.emplace_back(ci._g);
+        B.emplace_back(ci._b);
+    }
+
+    m_ccvt.set_custom_proportions(caps);
+    m_ccvt.set_sites(points, weights);
+    m_ccvt.set_colors(R, G, B);
+
+
+//    std::cout<<"vérification"<<std::endl;
+//    std::vector<FT> weights_t;
+//    std::vector<Point> points_t;
+//    std::vector<FT> proportions_t;
+//    m_ccvt.collect_sites(points_t, weights_t);
+//    m_ccvt.get_proportion(proportions_t);
+//    for(int i=0; i<points_t.size(); i++){
+//        std::cout<<points_t.at(i).x()+0.5<<", "<<points_t.at(i).y()+0.5<<", "<<weights_t.at(i)<<std::endl;
+//    }
+
 }

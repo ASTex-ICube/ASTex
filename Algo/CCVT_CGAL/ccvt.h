@@ -87,7 +87,9 @@ public:
         m_neightbour_proportions = proportions;
     }
 
-    std::vector<FT> get_capacities() const { return m_capacities; } // TODO : à retirer
+    std::vector<FT> get_capacities() const { return m_capacities; }
+    void get_proportion(std::vector<FT> &proportions) const { proportions = m_proportions; }
+    void get_colors(std::vector<double> &R, std::vector<double> &G, std::vector<double> &B){R = m_r; G = m_g; B = m_b;}
 
     std::vector<FT> get_area() const {
         std::vector<FT> areas;
@@ -261,11 +263,15 @@ public:
 
     void set_initial_sites(std::vector<Point> sites);
 
+    void set_sites(std::vector<Point> sites, std::vector<FT> weights);
+
     void generate_random_sites_based_on_image(const unsigned nb);
 
     void generate_regular_grid(const unsigned nx, const unsigned ny);
 
     void init_colors(const unsigned nb);
+
+    void set_colors(std::vector<double> R, std::vector<double> G, std::vector<double> B);
 
 
 

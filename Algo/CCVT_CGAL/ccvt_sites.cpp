@@ -27,6 +27,7 @@ void CCVT::set_initial_sites(std::vector<Point> sites){
     std::vector<Point> points;
     double dx = m_domain.get_dx();
     double dy = m_domain.get_dy();
+
     for(auto s=sites.begin(); s<sites.end(); s++){
         points.push_back(Point((*s).x()-dx, (*s).y()-dy));
     }
@@ -35,6 +36,23 @@ void CCVT::set_initial_sites(std::vector<Point> sites){
     construct_triangulation(points, weights);
     init_colors(points.size());
 }
+
+
+void CCVT::set_sites(std::vector<Point> sites, std::vector<FT> weights){
+    if (!m_domain.is_valid()) return;
+    std::vector<Point> points;
+    double dx = m_domain.get_dx();
+    double dy = m_domain.get_dy();
+
+    for(auto s=sites.begin(); s<sites.end(); s++){
+        points.push_back(Point((*s).x()-dx, (*s).y()-dy));
+    }
+
+//    std::vector<FT> weights(points.size(), 0.0);
+    construct_triangulation(points, weights);
+    init_colors(points.size());
+}
+
 
 void CCVT::generate_random_sites_based_on_image(const unsigned nb)
 {
@@ -90,4 +108,12 @@ void CCVT::init_colors(const unsigned nb)
         m_g.push_back(random_double(0.0, 1.0));
         m_b.push_back(random_double(0.0, 1.0));
     }
+}
+
+
+void CCVT::set_colors(std::vector<double> R, std::vector<double> G, std::vector<double> B)
+{
+    m_r = R;
+    m_g = G;
+    m_b = B;
 }
