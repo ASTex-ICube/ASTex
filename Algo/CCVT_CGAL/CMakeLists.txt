@@ -18,21 +18,31 @@ find_package(CGAL REQUIRED COMPONENTS Core)
 #find_package(ASTex REQUIRED)
 
 #add_subdirectory(glfw)
-find_package(OpenGL)
+find_package(GLEW REQUIRED)
+find_package(glfw3 3.3 REQUIRED)
+find_package(OpenGL REQUIRED)
 
 
 set( SUITESPARSE_LIBRARIES
         -lm -lamd -lcamd -lcolamd -lccolamd -lcholmod -lspqr -ltbb -lmetis -lblas -llapack )
 
 set(SRCS main_ccvt_cgal.cpp
+        # matrix
         matrix/sparse_array.cpp
         matrix/sparse_matrix.cpp
+        #imgui
         imgui/imgui_impl_opengl3.cpp
         imgui/imgui_impl_glfw.cpp
         imgui/imgui.cpp
         imgui/imgui_demo.cpp
         imgui/imgui_draw.cpp
         imgui/imgui_widgets.cpp
+        imgui/imgui_tables.cpp
+        #implot
+        imgui/implot.cpp
+        imgui/implot_items.cpp
+        imgui/implot_demo.cpp
+        # ccvt
         ccvt_assign.cpp
         ccvt_energy.cpp
         ccvt_histogram.cpp
@@ -52,7 +62,8 @@ target_link_libraries(ccvt_test_main PRIVATE
         glfw
         OpenGL::GL
         OpenGL::GLU
-        GLEW)
+        GLEW
+        ${CMAKE_DL_LIBS})
 #target_link_libraries(ccvt_test_main PRIVATE ASTex)
 
 # Link with SuiteSparse

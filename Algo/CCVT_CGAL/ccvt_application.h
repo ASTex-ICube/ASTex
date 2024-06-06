@@ -63,6 +63,7 @@ private:
     void onMouseButton(int button, int action, int mods);
     void onMouseMove(double xpos, double ypos);
     void addPoint(float xPos, float yPos);
+    void deletePoint(int id);
 
     void getCCVTcells();
     void optimizeCCVT();
@@ -70,8 +71,8 @@ private:
 
 private:
     GLFWwindow* m_window_H = nullptr;
-    int m_width_H = 600;
-    int m_height_H = 600;
+    int m_width_H = 400;
+    int m_height_H = 400;
 
     GLFWwindow* m_window_N1 = nullptr;
     GLFWwindow* m_window_N2 = nullptr;
@@ -95,13 +96,14 @@ private:
     unsigned int m_CompositionShaderProgram;
     unsigned int m_CompositionVAO;
 
-    unsigned int m_meanShaderProgram;
-
     unsigned int m_fbo_N1;
     unsigned int m_texture_N1;
 
     unsigned int m_fbo_N2;
     unsigned int m_texture_N2;
+
+    unsigned int m_fbo_H;
+    unsigned int m_texture_H;
 
 
     CCVT m_ccvt;

@@ -11,6 +11,7 @@
 #include "imgui/imgui.h"
 #include "imgui/imgui_impl_glfw.h"
 #include "imgui/imgui_impl_opengl3.h"
+#include "imgui/implot.h"
 
 #include <iostream>
 #include <fstream>
@@ -214,26 +215,26 @@ bool ccvt_application::onInit() {
     glfwWindowHint(GLFW_RESIZABLE, GLFW_FALSE);
 
 
-    // fenêtre carte H
-    window_creation(m_window_H, "CCVT application", m_width_H, m_height_H);
-
-    // Set the user pointer to be "this"
-    glfwSetWindowUserPointer(m_window_H, this);
-    // mouse button
-    glfwSetMouseButtonCallback(m_window_H, [](GLFWwindow* window, int button, int action, int mods) {
-        auto that = reinterpret_cast<ccvt_application*>(glfwGetWindowUserPointer(window));
-        if (that != nullptr) that->onMouseButton(button, action, mods);
-    });
-    // mouse move
-    glfwSetCursorPosCallback(m_window_H, [](GLFWwindow* window, double xpos, double ypos) {
-        auto that = reinterpret_cast<ccvt_application*>(glfwGetWindowUserPointer(window));
-        if (that != nullptr) that->onMouseMove(xpos, ypos);
-    });
-
-    shader_program(m_PointsShaderProgram, "shaders/points_shader.frag", "shaders/points_shader.vert");
-    displayPoints();
-    shader_program(m_ColorShaderProgram, "shaders/color_shader.frag", "shaders/identity_shader.vert");
-    display_quad(m_ColorVAO);
+//    // fenêtre carte H
+//    window_creation(m_window_H, "CCVT application", m_width_H, m_height_H);
+//
+//    // Set the user pointer to be "this"
+//    glfwSetWindowUserPointer(m_window_H, this);
+//    // mouse button
+//    glfwSetMouseButtonCallback(m_window_H, [](GLFWwindow* window, int button, int action, int mods) {
+//        auto that = reinterpret_cast<ccvt_application*>(glfwGetWindowUserPointer(window));
+//        if (that != nullptr) that->onMouseButton(button, action, mods);
+//    });
+//    // mouse move
+//    glfwSetCursorPosCallback(m_window_H, [](GLFWwindow* window, double xpos, double ypos) {
+//        auto that = reinterpret_cast<ccvt_application*>(glfwGetWindowUserPointer(window));
+//        if (that != nullptr) that->onMouseMove(xpos, ypos);
+//    });
+//
+//    shader_program(m_PointsShaderProgram, "shaders/points_shader.frag", "shaders/points_shader.vert");
+//    displayPoints();
+//    shader_program(m_ColorShaderProgram, "shaders/color_shader.frag", "shaders/identity_shader.vert");
+//    display_quad(m_ColorVAO);
 
 
 
@@ -247,6 +248,9 @@ bool ccvt_application::onInit() {
     shader_program(m_NoiseShaderProgram, "shaders/noise_shader.frag", "shaders/identity_shader.vert");
     display_quad(m_NoiseVAO);
 
+    shader_program(m_ColorShaderProgram, "shaders/color_shader.frag", "shaders/identity_shader.vert");
+    display_quad(m_ColorVAO);
+
     shader_program(m_CompositionShaderProgram, "shaders/composition_shader.frag", "shaders/identity_shader.vert");
     display_quad(m_CompositionVAO);
 
@@ -258,6 +262,11 @@ bool ccvt_application::onInit() {
 
     // fbo noise 2
     if(!setFBO(m_fbo_N2, m_texture_N2, m_width_T, m_height_T)){
+        return false;
+    }
+
+    // fbo color map
+    if(!setFBO(m_fbo_H, m_texture_H, m_width_H, m_height_H)){
         return false;
     }
 
@@ -285,7 +294,7 @@ void ccvt_application::onFinish() {
     glDeleteVertexArrays(1, &m_CompositionVAO);
     glDeleteProgram(m_CompositionShaderProgram);
 
-    glfwDestroyWindow(m_window_H);
+//    glfwDestroyWindow(m_window_H);
     glfwDestroyWindow(m_window_T);
     glfwTerminate();
 }
@@ -294,15 +303,15 @@ void ccvt_application::onFinish() {
 
 bool ccvt_application::isRunning() {
     // close the window when "escape" is press
-    bool is_escape_pressed = glfwGetKey(m_window_H, GLFW_KEY_ESCAPE) == GLFW_PRESS
-                            or glfwGetKey(m_window_T, GLFW_KEY_ESCAPE) == GLFW_PRESS;
+    bool is_escape_pressed = glfwGetKey(m_window_T, GLFW_KEY_ESCAPE) == GLFW_PRESS;
+//                            or glfwGetKey(m_window_T, GLFW_KEY_ESCAPE) == GLFW_PRESS;
 
     if(is_escape_pressed){
-        glfwSetWindowShouldClose(m_window_H, true);
+//        glfwSetWindowShouldClose(m_window_H, true);
         glfwSetWindowShouldClose(m_window_T, true);
     }
 
-    return !glfwWindowShouldClose(m_window_H);
+    return !glfwWindowShouldClose(m_window_T);
 }
 
 
@@ -314,56 +323,56 @@ void ccvt_application::onFrame() {
 
 
 
-    ////////////////////////////////////////////////////////////////////
-    glfwMakeContextCurrent(m_window_H);
-    glViewport(0, 0, m_width_H, m_height_H); // (lower_left_x, lower_left_y, width, height)
-
-    // check and call events
-    glfwPollEvents();
-
-    // clear color
-    glClearColor(0.4f, 0.6f, 0.8f, 1.0f);
-    glClear(GL_COLOR_BUFFER_BIT);
-
-    // colors
-    glUseProgram(m_ColorShaderProgram);
-
-    // unifoms
-    unsigned int UBO_points; // uniform buffer
-    glGenBuffers(1, &UBO_points);
-    glBindBuffer(GL_UNIFORM_BUFFER, UBO_points);
-    glBufferData(GL_UNIFORM_BUFFER, m_MaxPointsNb*sizeof(point_info), m_points.data(), GL_STREAM_DRAW);
-    glBindBufferRange(GL_UNIFORM_BUFFER, 0, UBO_points, 0, m_MaxPointsNb * sizeof(point_info));
-
-    unsigned int UBO_colors; // uniform buffer
-    glGenBuffers(1, &UBO_colors);
-    glBindBuffer(GL_UNIFORM_BUFFER, UBO_colors);
-    glBufferData(GL_UNIFORM_BUFFER, m_MaxPointsNb*sizeof(cell_info), m_cells.data(), GL_STREAM_DRAW);
-    glBindBufferRange(GL_UNIFORM_BUFFER, 1, UBO_colors, 0, m_MaxPointsNb * sizeof(cell_info));
-
-    glUniformBlockBinding(m_ColorShaderProgram, glGetUniformBlockIndex(m_ColorShaderProgram, "uPoints"), 0);
-    glUniformBlockBinding(m_ColorShaderProgram, glGetUniformBlockIndex(m_ColorShaderProgram, "uColors"), 1);
-    glUniform2f(glGetUniformLocation(m_ColorShaderProgram, "uRes"), m_width_H, m_height_H);
-    glUniform1i(glGetUniformLocation(m_ColorShaderProgram, "uPointsNb"), m_CurrentPointsNb);
-
-
-    glBindVertexArray(m_ColorVAO);
-    glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, 0);
-
-    glBindBuffer(GL_UNIFORM_BUFFER, 0);
-
-
-
-    // points
-    glUseProgram(m_PointsShaderProgram);
-    glBindVertexArray(m_PointsVAO);
-    glDrawArrays(GL_POINTS, // mode
-                   0, // first
-                   m_CurrentPointsNb); // count
-
-
-    // swap the buffers
-    glfwSwapBuffers(m_window_H);
+//    ////////////////////////////////////////////////////////////////////
+//    glfwMakeContextCurrent(m_window_H);
+//    glViewport(0, 0, m_width_H, m_height_H); // (lower_left_x, lower_left_y, width, height)
+//
+//    // check and call events
+//    glfwPollEvents();
+//
+//    // clear color
+//    glClearColor(0.4f, 0.6f, 0.8f, 1.0f);
+//    glClear(GL_COLOR_BUFFER_BIT);
+//
+//    // colors
+//    glUseProgram(m_ColorShaderProgram);
+//
+//    // unifoms
+//    unsigned int UBO_points; // uniform buffer
+//    glGenBuffers(1, &UBO_points);
+//    glBindBuffer(GL_UNIFORM_BUFFER, UBO_points);
+//    glBufferData(GL_UNIFORM_BUFFER, m_MaxPointsNb*sizeof(point_info), m_points.data(), GL_STREAM_DRAW);
+//    glBindBufferRange(GL_UNIFORM_BUFFER, 0, UBO_points, 0, m_MaxPointsNb * sizeof(point_info));
+//
+//    unsigned int UBO_colors; // uniform buffer
+//    glGenBuffers(1, &UBO_colors);
+//    glBindBuffer(GL_UNIFORM_BUFFER, UBO_colors);
+//    glBufferData(GL_UNIFORM_BUFFER, m_MaxPointsNb*sizeof(cell_info), m_cells.data(), GL_STREAM_DRAW);
+//    glBindBufferRange(GL_UNIFORM_BUFFER, 1, UBO_colors, 0, m_MaxPointsNb * sizeof(cell_info));
+//
+//    glUniformBlockBinding(m_ColorShaderProgram, glGetUniformBlockIndex(m_ColorShaderProgram, "uPoints"), 0);
+//    glUniformBlockBinding(m_ColorShaderProgram, glGetUniformBlockIndex(m_ColorShaderProgram, "uColors"), 1);
+//    glUniform2f(glGetUniformLocation(m_ColorShaderProgram, "uRes"), m_width_H, m_height_H);
+//    glUniform1i(glGetUniformLocation(m_ColorShaderProgram, "uPointsNb"), m_CurrentPointsNb);
+//
+//
+//    glBindVertexArray(m_ColorVAO);
+//    glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, 0);
+//
+//    glBindBuffer(GL_UNIFORM_BUFFER, 0);
+//
+//
+//
+//    // points
+//    glUseProgram(m_PointsShaderProgram);
+//    glBindVertexArray(m_PointsVAO);
+//    glDrawArrays(GL_POINTS, // mode
+//                   0, // first
+//                   m_CurrentPointsNb); // count
+//
+//
+//    // swap the buffers
+//    glfwSwapBuffers(m_window_H);
 
 
 
@@ -377,6 +386,8 @@ void ccvt_application::onFrame() {
     ////////////////////////////////////////////////////////////////////
     glfwMakeContextCurrent(m_window_T);
     glViewport(0, 0, m_width_T, m_height_T); // (lower_left_x, lower_left_y, width, height)
+
+    glfwPollEvents();
 
 
     // fbo noise 1
@@ -432,6 +443,47 @@ void ccvt_application::onFrame() {
 
 
 
+    // fbo color map
+    glBindFramebuffer(GL_FRAMEBUFFER, m_fbo_H);
+
+    // clear color
+    glClearColor(0.6f, 0.6f, 0.8f, 1.0f);
+    glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT); // we're not using the stencil buffer now
+    glEnable(GL_DEPTH_TEST);
+
+    glUseProgram(m_ColorShaderProgram);
+
+    // unifoms
+    unsigned int UBO_points; // uniform buffer
+    glGenBuffers(1, &UBO_points);
+    glBindBuffer(GL_UNIFORM_BUFFER, UBO_points);
+    glBufferData(GL_UNIFORM_BUFFER, m_MaxPointsNb*sizeof(point_info), m_points.data(), GL_STREAM_DRAW);
+    glBindBufferRange(GL_UNIFORM_BUFFER, 0, UBO_points, 0, m_MaxPointsNb * sizeof(point_info));
+
+    unsigned int UBO_colors; // uniform buffer
+    glGenBuffers(1, &UBO_colors);
+    glBindBuffer(GL_UNIFORM_BUFFER, UBO_colors);
+    glBufferData(GL_UNIFORM_BUFFER, m_MaxPointsNb*sizeof(cell_info), m_cells.data(), GL_STREAM_DRAW);
+    glBindBufferRange(GL_UNIFORM_BUFFER, 1, UBO_colors, 0, m_MaxPointsNb * sizeof(cell_info));
+
+    glUniformBlockBinding(m_ColorShaderProgram, glGetUniformBlockIndex(m_ColorShaderProgram, "uPoints"), 0);
+    glUniformBlockBinding(m_ColorShaderProgram, glGetUniformBlockIndex(m_ColorShaderProgram, "uColors"), 1);
+    glUniform2f(glGetUniformLocation(m_ColorShaderProgram, "uRes"), m_width_H, m_height_H);
+    glUniform1i(glGetUniformLocation(m_ColorShaderProgram, "uPointsNb"), m_CurrentPointsNb);
+
+
+    glBindVertexArray(m_ColorVAO);
+    glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, 0);
+
+    glBindBuffer(GL_UNIFORM_BUFFER, 0);
+
+    glBindFramebuffer(GL_FRAMEBUFFER, 0);
+
+
+
+
+
+
     // composition
     glClearColor(0.4f, 0.6f, 0.8f, 1.0f);
     glClear(GL_COLOR_BUFFER_BIT);
@@ -474,6 +526,9 @@ void ccvt_application::onFrame() {
 
 
     updateGui();
+
+
+
 
 
     // swap the buffers
@@ -539,6 +594,7 @@ bool ccvt_application::initGui(GLFWwindow* &window) {
     // Setup Dear ImGui context
     IMGUI_CHECKVERSION();
     ImGui::CreateContext();
+    ImPlot::CreateContext();
     ImGuiIO& io = ImGui::GetIO();
     io.ConfigFlags |= ImGuiConfigFlags_NavEnableKeyboard;     // Enable Keyboard Controls
 
@@ -553,6 +609,7 @@ bool ccvt_application::initGui(GLFWwindow* &window) {
 void ccvt_application::terminateGui() {
     ImGui_ImplOpenGL3_Shutdown();
     ImGui_ImplGlfw_Shutdown();
+    ImPlot::DestroyContext();
     ImGui::DestroyContext();
 }
 
@@ -562,7 +619,7 @@ void ccvt_application::updateGui() {
     ImGui_ImplOpenGL3_NewFrame();
     ImGui_ImplGlfw_NewFrame();
     ImGui::NewFrame();
-    ImGui::ShowDemoWindow(); // Show demo window! :)
+//    ImGui::ShowDemoWindow(); // Show demo window! :)
 
     ImGui::Begin("Hello, world!");
     ImGuiIO& io = ImGui::GetIO();
@@ -570,12 +627,82 @@ void ccvt_application::updateGui() {
     ImGui::End();
 
 
-//    ImGui::Begin("color map");
-//    bool optimize = ImGui::Button("volume optimisation");
-//    if(optimize){
-//        optimizeCCVT();
-//    }
-//    ImGui::End();
+
+
+
+
+
+    ImGui::Begin("Color map");
+
+    ImPlot::BeginPlot("My Plot", ImVec2(m_width_H, m_height_H), ImPlotFlags_Equal | ImPlotFlags_NoLegend | ImPlotFlags_NoTitle);
+    ImPlot::SetupAxes(NULL,NULL,ImPlotAxisFlags_NoDecorations,ImPlotAxisFlags_NoDecorations);
+    ImPlot::SetupAxesLimits(0, 1, 0, 1, ImGuiCond_Always);
+
+    ImPlot::PlotImage("image", (void *)m_texture_H, ImPlotPoint(0, 0), ImPlotPoint(1, 1), ImVec2(0, 1), ImVec2(1, 0));
+
+    if (ImPlot::IsPlotHovered() && ImGui::IsMouseClicked(0) && ImGui::GetIO().KeyShift) {
+        ImPlotPoint pt = ImPlot::GetPlotMousePos();
+        addPoint(pt.x, pt.y);
+    }
+
+
+    for(auto p=m_points.begin(); p<m_points.end(); p++){
+        bool clicked;
+        bool hovered;
+        bool held;
+        ImPlot::DragPoint(p-m_points.begin(), &(*p)._x, &(*p)._y, ImVec4(0., 0., 0., 1.), 4., ImPlotDragToolFlags_None, &clicked, &hovered, &held);
+//        if(hovered)
+//        {
+//            ImGui::SetItemTooltip(std::to_string(m_cells.at(p-m_points.begin())._r).c_str());
+//        }
+        if(hovered and ImGui::IsKeyDown(ImGuiKey_W))
+        {
+            m_selected.id = p-m_points.begin();
+            ImGui::OpenPopup("cell_param");
+
+        }
+    }
+
+    if (ImGui::BeginPopup("cell_param"))
+    {
+        int id = m_selected.id;
+        ImGui::Text(std::to_string(id).c_str());
+        ImVec4 color = ImVec4(m_cells.at(id)._r, m_cells.at(id)._g, m_cells.at(id)._b, 1.f);
+        ImGui::ColorEdit4("ColorPicker", (float*)&color, ImGuiColorEditFlags_NoInputs | ImGuiColorEditFlags_NoLabel);
+        if (ImGui::Button("Validate"))
+        {
+            m_cells.at(id)._r = color.x;
+            m_cells.at(id)._g = color.y;
+            m_cells.at(id)._b = color.z;
+            ImGui::CloseCurrentPopup();
+        }
+
+        if (ImGui::Button("Delete"))
+        {
+            deletePoint(id);
+            ImGui::CloseCurrentPopup();
+        }
+
+        ImGui::EndPopup();
+    }
+
+
+    ImPlot::EndPlot();
+
+    if(ImGui::Button("Optimize")){
+        optimizeCCVT();
+    }
+
+
+
+    ImGui::End();
+
+
+
+
+
+
+
 
 
 
@@ -604,6 +731,9 @@ void ccvt_application::updateGui() {
             ImVec2(1, 0)
     );
     ImGui::End();
+
+
+
 
 
 
@@ -724,11 +854,17 @@ void ccvt_application::addPoint(float xPos, float yPos) {
     }
 
     m_points.emplace_back(xPos, yPos, 0.);
-    m_cells.emplace_back(new_cap/caps_sum, 1., 1., 1.);
+    m_cells.emplace_back(new_cap/caps_sum, (float(std::rand()) / float(RAND_MAX)), (float(std::rand()) / float(RAND_MAX)), (float(std::rand()) / float(RAND_MAX)));
     m_CurrentPointsNb = m_points.size();
 
 
-    updatePoints();
+//    updatePoints();
+}
+
+void ccvt_application::deletePoint(int id) {
+    m_points.erase(m_points.begin()+id);
+    m_cells.erase(m_cells.begin()+id);
+    m_CurrentPointsNb = m_points.size();
 }
 
 
@@ -776,7 +912,7 @@ void ccvt_application::optimizeCCVT(){
     std::cout<<iter_opt<<" itérations (max : "<<max_newton_iters<<")"<<std::endl;
 
     getCCVTcells();
-    updatePoints();
+//    updatePoints();
 }
 
 
