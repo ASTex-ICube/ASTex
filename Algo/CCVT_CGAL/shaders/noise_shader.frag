@@ -69,7 +69,8 @@ float Gabor_noise(vec2 uv, int nb_kernel, float freq_princ, float freq_spread, f
 }
 
 void main() {
-    vec2 uv = (gl_FragCoord.xy/uRes.xx);
+    float res = max(uRes.x, uRes.y);
+    vec2 uv = (gl_FragCoord.xy/res);
 
     int nb_kernel = 100;
     float size_kernel = 0.08;

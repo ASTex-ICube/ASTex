@@ -64,6 +64,8 @@ private:
     void onMouseMove(double xpos, double ypos);
     void addPoint(float xPos, float yPos);
     void deletePoint(int id);
+    void normilizeCap();
+    void equalizeCap();
 
     void getCCVTcells();
     void optimizeCCVT();
@@ -80,7 +82,7 @@ private:
     int m_height_N = 400;
 
     GLFWwindow* m_window_T = nullptr;
-    int m_width_T = 800;
+    int m_width_T = 1200;
     int m_height_T = 800;
 
     unsigned int m_PointsShaderProgram;

@@ -621,9 +621,10 @@ void ccvt_application::updateGui() {
     ImGui::NewFrame();
 //    ImGui::ShowDemoWindow(); // Show demo window! :)
 
-    ImGui::Begin("Hello, world!");
+    ImGui::Begin("Performances");
     ImGuiIO& io = ImGui::GetIO();
-    ImGui::Text("Application average %.3f ms/frame (%.1f FPS)", 1000.0f / io.Framerate, io.Framerate);
+    ImGui::Text("Application average %.3f ms/frame", 1000.0f / io.Framerate);
+    ImGui::Text("(%.3f FPS)", io.Framerate);
     ImGui::End();
 
 
@@ -634,52 +635,154 @@ void ccvt_application::updateGui() {
 
     ImGui::Begin("Color map");
 
-    ImPlot::BeginPlot("My Plot", ImVec2(m_width_H, m_height_H), ImPlotFlags_Equal | ImPlotFlags_NoLegend | ImPlotFlags_NoTitle);
-    ImPlot::SetupAxes(NULL,NULL,ImPlotAxisFlags_NoDecorations,ImPlotAxisFlags_NoDecorations);
-    ImPlot::SetupAxesLimits(0, 1, 0, 1, ImGuiCond_Always);
+    if(ImPlot::BeginPlot("map plot", ImVec2(m_width_H, m_height_H), ImPlotFlags_Equal | ImPlotFlags_NoLegend | ImPlotFlags_NoTitle))
+    {
+        ImPlot::SetupAxesLimits(0, 1, 0, 1, ImGuiCond_Always);
+        ImPlot::SetupAxes(NULL,NULL,ImPlotAxisFlags_NoDecorations,ImPlotAxisFlags_NoDecorations);
 
-    ImPlot::PlotImage("image", (void *)m_texture_H, ImPlotPoint(0, 0), ImPlotPoint(1, 1), ImVec2(0, 1), ImVec2(1, 0));
+        ImPlot::PlotImage("image", (void *)m_texture_H, ImPlotPoint(0, 0), ImPlotPoint(1, 1), ImVec2(0, 1), ImVec2(1, 0));
 
-    if (ImPlot::IsPlotHovered() && ImGui::IsMouseClicked(0) && ImGui::GetIO().KeyShift) {
-        ImPlotPoint pt = ImPlot::GetPlotMousePos();
-        addPoint(pt.x, pt.y);
+
+        // ajout de points
+        if (ImPlot::IsPlotHovered() && ImGui::IsMouseClicked(0) && ImGui::GetIO().KeyShift) {
+            ImPlotPoint pt = ImPlot::GetPlotMousePos();
+            addPoint(pt.x, pt.y);
+        }
+
+        // déplacement
+        for(auto p=m_points.begin(); p<m_points.end(); p++){
+            bool clicked;
+            bool hovered;
+            bool held;
+            ImVec4 color = m_selected.active and m_selected.id==p-m_points.begin() ? ImVec4(1., 1., 1., 1.) : ImVec4(0., 0., 0., 1.);
+            ImPlot::DragPoint(p-m_points.begin(), &(*p)._x, &(*p)._y, color, 4., ImPlotDragToolFlags_None, &clicked, &hovered, &held);
+            if(hovered)
+            {
+//                ImGui::SetItemTooltip(std::to_string(p-m_points.begin()).c_str());
+                ImGui::BeginTooltip();
+                ImGui::Text(("cell id : "+std::to_string(p-m_points.begin())).c_str());
+                ImGui::Text(("position : "+std::to_string((*p)._x) +", " + std::to_string((*p)._y)).c_str());
+//                ImGui::Text("color proportion : "+);
+                ImGui::EndTooltip();
+            }
+//            if(hovered and ImGui::IsKeyDown(ImGuiKey_W))
+//            {
+//                m_selected.id = p-m_points.begin();
+//                ImGui::OpenPopup("cell_param");
+//
+//            }
+        }
+
+//        // suppression et changement de couleur
+//        if (ImGui::BeginPopup("cell_param"))
+//        {
+//            int id = m_selected.id;
+//            ImGui::Text(std::to_string(id).c_str());
+//            ImVec4 color = ImVec4(m_cells.at(id)._r, m_cells.at(id)._g, m_cells.at(id)._b, 1.f);
+//            ImGui::ColorEdit4("ColorPicker", (float*)&color, ImGuiColorEditFlags_NoInputs | ImGuiColorEditFlags_NoLabel);
+//            if (ImGui::Button("Validate"))
+//            {
+//                m_cells.at(id)._r = color.x;
+//                m_cells.at(id)._g = color.y;
+//                m_cells.at(id)._b = color.z;
+//                ImGui::CloseCurrentPopup();
+//            }
+//
+//            if (ImGui::Button("Delete"))
+//            {
+//                deletePoint(id);
+//                ImGui::CloseCurrentPopup();
+//            }
+//
+//            ImGui::EndPopup();
+//        }
+        ImPlot::EndPlot();
+
     }
 
 
-    for(auto p=m_points.begin(); p<m_points.end(); p++){
-        bool clicked;
-        bool hovered;
-        bool held;
-        ImPlot::DragPoint(p-m_points.begin(), &(*p)._x, &(*p)._y, ImVec4(0., 0., 0., 1.), 4., ImPlotDragToolFlags_None, &clicked, &hovered, &held);
-//        if(hovered)
-//        {
-//            ImGui::SetItemTooltip(std::to_string(m_cells.at(p-m_points.begin())._r).c_str());
-//        }
-        if(hovered and ImGui::IsKeyDown(ImGuiKey_W))
+
+
+
+
+
+//    for(auto c=m_cells.begin(); c<m_cells.end(); c++)
+//    {
+//        int id = c-m_cells.begin();
+//
+//        ImGui::PushStyleColor(ImGuiCol_FrameBg, ImVec4((*c)._r, (*c)._g, (*c)._b, 1.f));
+//        ImGui::DragFloat((std::to_string(id)+"drag").c_str(), &(*c)._cap, 0.005f,  0.01f, 1.f, "%f");
+//        if(ImGui::IsItemEdited()){normilizeCap();}
+//        ImGui::PopStyleColor(1);
+//    }
+
+
+    // barre proportion des couleurs
+    float window_x = ImGui::GetContentRegionAvail().x;
+    ImGui::GetStyle().ItemSpacing.x = 0.;
+    m_selected.active = false;
+    for(auto c=m_cells.begin(); c<m_cells.end(); c++)
+    {
+        int id = c-m_cells.begin();
+
+        if (c>m_cells.begin()){
+            ImGui::SameLine();
+        }
+
+        ImGui::PushStyleColor(ImGuiCol_Button, ImVec4((*c)._r, (*c)._g, (*c)._b, 1.f));
+        if(ImGui::Button(("cell "+std::to_string(id)).c_str(), ImVec2(window_x*(*c)._cap, 60)))
         {
-            m_selected.id = p-m_points.begin();
+            m_selected.id = id;
             ImGui::OpenPopup("cell_param");
 
         }
+//        m_selected.active = ImGui::IsItemHovered();
+        if(ImGui::IsItemHovered()){
+            m_selected.id = id;
+            m_selected.active = true;
+        }
+        ImGui::PopStyleColor(1);
     }
 
+
+
+
+    // suppression et changement de couleur
     if (ImGui::BeginPopup("cell_param"))
     {
         int id = m_selected.id;
-        ImGui::Text(std::to_string(id).c_str());
-        ImVec4 color = ImVec4(m_cells.at(id)._r, m_cells.at(id)._g, m_cells.at(id)._b, 1.f);
-        ImGui::ColorEdit4("ColorPicker", (float*)&color, ImGuiColorEditFlags_NoInputs | ImGuiColorEditFlags_NoLabel);
-        if (ImGui::Button("Validate"))
+        ImGui::Text(("cell "+std::to_string(id)).c_str());
+        ImVec4 current_color(m_cells.at(id)._r, m_cells.at(id)._g, m_cells.at(id)._b, 1.f);
+
+
+        ImGui::PushStyleColor(ImGuiCol_FrameBg, current_color);
+        ImGui::DragFloat("proportion", &m_cells.at(id)._cap, 0.005f,  0.01f, 1.f, "%f");
+        if(ImGui::IsItemEdited()){normilizeCap();}
+        ImGui::PopStyleColor(1);
+
+
+        ImGui::Separator();
+        static ImVec4 color;// = current_color;// ImVec4(m_cells.at(id)._r, m_cells.at(id)._g, m_cells.at(id)._b, 1.f);
+        ImGui::ColorPicker4("ColorPicker", (float*)&color, ImGuiColorEditFlags_NoInputs | ImGuiColorEditFlags_NoLabel, &current_color.x);
+
+
+        ImGui::GetStyle().ItemSpacing.x = 8.;
+        if (ImGui::Button("Change color"))
         {
             m_cells.at(id)._r = color.x;
             m_cells.at(id)._g = color.y;
             m_cells.at(id)._b = color.z;
-            ImGui::CloseCurrentPopup();
+//            ImGui::CloseCurrentPopup();
         }
-
+        ImGui::SameLine();
         if (ImGui::Button("Delete"))
         {
             deletePoint(id);
+            ImGui::CloseCurrentPopup();
+        }
+        ImGui::SameLine();
+        if (ImGui::Button("Validate"))
+        {
             ImGui::CloseCurrentPopup();
         }
 
@@ -687,10 +790,14 @@ void ccvt_application::updateGui() {
     }
 
 
-    ImPlot::EndPlot();
-
+    ImGui::Separator();
+    ImGui::GetStyle().ItemSpacing.x = 8.;
     if(ImGui::Button("Optimize")){
         optimizeCCVT();
+    }
+    ImGui::SameLine();
+    if(ImGui::Button("Same proportions")){
+        equalizeCap();
     }
 
 
@@ -843,30 +950,36 @@ void ccvt_application::onMouseMove(double xpos, double ypos) {
 void ccvt_application::addPoint(float xPos, float yPos) {
 //    std::cout<<"new point : "<<xPos<<", "<<yPos<<std::endl;
 
-    float new_cap = 1./(m_cells.size()+1);
-
-    float caps_sum = new_cap;
-    for(auto ci:m_cells){
-        caps_sum += ci._cap;
-    }
-    for(auto &ci:m_cells){
-        ci._cap = ci._cap/caps_sum;
-    }
+    float new_cap = 1.f/(m_cells.size()+1);
 
     m_points.emplace_back(xPos, yPos, 0.);
-    m_cells.emplace_back(new_cap/caps_sum, (float(std::rand()) / float(RAND_MAX)), (float(std::rand()) / float(RAND_MAX)), (float(std::rand()) / float(RAND_MAX)));
+    m_cells.emplace_back(new_cap, (float(std::rand()) / float(RAND_MAX)), (float(std::rand()) / float(RAND_MAX)), (float(std::rand()) / float(RAND_MAX)));
     m_CurrentPointsNb = m_points.size();
 
-
-//    updatePoints();
+    normilizeCap();
 }
 
 void ccvt_application::deletePoint(int id) {
     m_points.erase(m_points.begin()+id);
     m_cells.erase(m_cells.begin()+id);
     m_CurrentPointsNb = m_points.size();
+
+    normilizeCap();
 }
 
+auto sum_caps = [](float a, cell_info b){return a + b._cap;};
+void ccvt_application::normilizeCap() {
+    float sum = std::accumulate(m_cells.begin(), m_cells.end(), 0.f, sum_caps);
+    for(auto &ci:m_cells){
+        ci._cap = ci._cap/sum;
+    }
+}
+
+void ccvt_application::equalizeCap() {
+    for(auto &ci:m_cells){
+        ci._cap = 1./m_CurrentPointsNb;
+    }
+}
 
 
 
@@ -899,6 +1012,7 @@ void ccvt_application::getCCVTcells(){
 
 
 void ccvt_application::optimizeCCVT(){
+    normilizeCap();
     updateCCVT();
     std::cout<<"optimizing CCVT..."<<std::endl;
     FT stepX = 0.01; // pour les positions
