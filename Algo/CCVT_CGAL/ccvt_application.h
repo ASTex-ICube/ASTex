@@ -53,15 +53,19 @@ public:
     }
 
 private:
+    void drawNoise(unsigned int &fbo, float width, float height, float freq_princ, float freq_spread, float omega_princ, float omega_spread, float seed);
+    void drawCM();
+    void drawComposition();
+
     bool initGui(GLFWwindow* &window);
     void terminateGui();
     void updateGui();
-
-    void displayPoints();
-    void updatePoints();
-
-    void onMouseButton(int button, int action, int mods);
-    void onMouseMove(double xpos, double ypos);
+//
+//    void displayPoints();
+//    void updatePoints();
+//
+//    void onMouseButton(int button, int action, int mods);
+//    void onMouseMove(double xpos, double ypos);
     void addPoint(float xPos, float yPos);
     void deletePoint(int id);
     void normilizeCap();
@@ -71,23 +75,34 @@ private:
     void optimizeCCVT();
     void updateCCVT();
 
+    void saveTexture(unsigned  int fbo_id, int width, int height, const std::string &filename);
+//    void savePPM(const std::string& filename, unsigned int* data, int width, int height);
+
+
+    void computeStatistiques(unsigned int fbo_id, int width, int height, float &mean, float &var);
+    float computeMean(float* data, int NB);
+    float computeSquareMean(float* data, int NB);
+    void computeProportions();
+
+
+
 private:
     GLFWwindow* m_window_H = nullptr;
     int m_width_H = 400;
     int m_height_H = 400;
 
-    GLFWwindow* m_window_N1 = nullptr;
-    GLFWwindow* m_window_N2 = nullptr;
+//    GLFWwindow* m_window_N1 = nullptr;
+//    GLFWwindow* m_window_N2 = nullptr;
     int m_width_N = 400;
     int m_height_N = 400;
 
     GLFWwindow* m_window_T = nullptr;
-    int m_width_T = 1200;
-    int m_height_T = 800;
+    int m_width_T = 800;// 1600;
+    int m_height_T = 800;//900;
 
-    unsigned int m_PointsShaderProgram;
-    unsigned int m_PointsVAO;
-    unsigned int m_PointsVBO;
+//    unsigned int m_PointsShaderProgram;
+//    unsigned int m_PointsVAO;
+//    unsigned int m_PointsVBO;
 
     unsigned int m_ColorShaderProgram;
     unsigned int m_ColorVAO;
@@ -100,30 +115,48 @@ private:
 
     unsigned int m_fbo_N1;
     unsigned int m_texture_N1;
+    unsigned int m_fbo_N1_ui;
+    unsigned int m_texture_N1_ui;
 
     unsigned int m_fbo_N2;
     unsigned int m_texture_N2;
+    unsigned int m_fbo_N2_ui;
+    unsigned int m_texture_N2_ui;
 
     unsigned int m_fbo_H;
     unsigned int m_texture_H;
+    unsigned int m_fbo_T;
+    unsigned int m_texture_T;
+
+    bool m_n1_changed = false;
+    bool m_n2_changed = false;
+
+    float m_mean_N1;
+    float m_mean_N2;
+    float m_var_N1;
+    float m_var_N2;
+
 
 
     CCVT m_ccvt;
-    static const unsigned int m_MaxPointsNb = 30;
+    static const unsigned int m_MaxPointsNb = 30; // change in composition shader and color shader too
     unsigned int m_CurrentPointsNb;
 
     std::vector<point_info> m_points;
     std::vector<cell_info> m_cells;
+    std::vector<int> m_histo;
 
     selection m_selected;
 
+    std::string m_infoBuffer = "";
 
-    float m_F1Princ = 10.;
+
+    float m_F1Princ = 16.;
     float m_F1Spread = 0.;
     float m_Or1Princ = 2.;
     float m_Or1Spread = 0.;
 
-    float m_F2Princ = 16.;
+    float m_F2Princ = 20.;
     float m_F2Spread = 0.;
     float m_Or2Princ = 1.;
     float m_Or2Spread = 3.;

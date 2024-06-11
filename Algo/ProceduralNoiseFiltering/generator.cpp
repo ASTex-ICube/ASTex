@@ -280,7 +280,7 @@ int gaussianize(int argc, char **argv)
 
 			gt.ComputeTinput(img,imgT);
 //            Histogram<IMG> h;
-//            h.computeHisto(imgT, 256);
+//            h.computeProportions(imgT, 256);
 //            h.exportHisto("giota_f", 0.03);
 
 			saveGamma(imgT, filename, _16bits);
@@ -295,7 +295,7 @@ int gaussianize(int argc, char **argv)
 			gt.ComputeTinput(img,imgT);
 
 //            Histogram<IMG> h;
-//            h.computeHisto(imgT, 256);
+//            h.computeProportions(imgT, 256);
 //            h.exportHisto("giota_d", 0.03);
 
 			saveGamma(imgT, filename, _16bits);

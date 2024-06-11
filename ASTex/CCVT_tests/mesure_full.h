@@ -123,7 +123,7 @@ void mesure_E(ImageRGBu8 image_,
                               }
                           });
 
-    std::cout<<"pixel : "<<p<<", frontière : "<<d_v+d_h<<", triple : "<<t<<std::endl;
+//    std::cout<<"pixel : "<<p<<", frontière : "<<d_v+d_h<<", triple : "<<t<<std::endl;
 
     presences = couleurs_pres;
     voisinages = couleurs_vois;

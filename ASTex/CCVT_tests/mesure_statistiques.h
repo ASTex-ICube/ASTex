@@ -18,6 +18,12 @@ double moyenne(ImageGrayd inputNoise)
     return sum/(inputNoise.width()*inputNoise.height());
 }
 
+double moyenne_255(ImageGrayd inputNoise)
+{
+    double moy = moyenne(inputNoise);
+    return moy/255.;
+}
+
 
 //double moyenne(noise inputNoise, int img_size, int resolution)
 //{
@@ -50,6 +56,12 @@ double moyenne_carre(ImageGrayd inputNoise)
                                   sum += P*P;
                               });
     return sum/(inputNoise.width()*inputNoise.height());
+}
+
+double moyenne_carre_255(ImageGrayd inputNoise)
+{
+    double moy = moyenne_carre(inputNoise);
+    return moy/(255.*255.);
 }
 
 
@@ -279,8 +291,8 @@ ImageGrayd histo_2D(ImageGrayd noise1, ImageGrayd noise2, int histo_size)
     {
         for(int y=0; y<noise1.height(); y++)
         {
-            double nx = noise1.pixelAbsolute(x, y)*(histo_size-1);
-            double ny = noise2.pixelAbsolute(x, y)*(histo_size-1);
+            double nx = noise1.pixelAbsolute(x, y);//*(histo_size-1);
+            double ny = noise2.pixelAbsolute(x, y);//*(histo_size-1);
 
             histo.pixelAbsolute(int(std::round(nx)), int(std::round(ny))) += 1.;
 //            histo.pixelAbsolute(int(std::floor(nx)), int(std::floor(ny))) += 1.;
@@ -289,10 +301,10 @@ ImageGrayd histo_2D(ImageGrayd noise1, ImageGrayd noise2, int histo_size)
     double norme = getMax(histo);
 
     // normalisation
-//    histo.for_all_pixels([&] (typename ImageGrayd::PixelType& P, int x, int y)
-//                         {
-//                             P *= 1./norme;  // pour un max à 1
-//                         });
+    histo.for_all_pixels([&] (typename ImageGrayd::PixelType& P, int x, int y)
+                         {
+                             P *= 1./norme;  // pour un max à 1
+                         });
 
     return histo;
 }

@@ -5,6 +5,7 @@ uniform float uFprinc;
 uniform float uFspread;
 uniform float uOprinc;
 uniform float uOspread;
+uniform float uSeed;
 
 // CONSTANTE -----------------------------
 #define _PI_ 3.14159265358979
@@ -12,8 +13,8 @@ uniform float uOspread;
 // ---- tools -------------------------------------
 float rndi(int i, int j, float seed)
 {
-    //return fract(1e5*sin(float(i)+3.*float(j)+seed)); // 0.567
-    return fract(sin(float(i)+9876.*float(j))*(12345.+seed) + cos(float(i)+6789.*float(j))*(12345.-seed));
+    return fract(1e5*sin(float(i)+3.*float(j)+seed)); // 0.567
+//    return fract(sin(float(i)+9876.*float(j))*(12345.+seed) + cos(float(i)+6789.*float(j))*(12345.-seed));
 
 }
 
@@ -51,10 +52,11 @@ float Gabor_noise(vec2 uv, int nb_kernel, float freq_princ, float freq_spread, f
 //        float Omega = omega_min + (omega_max-omega_min)*rndi(i, 2, seed);
 //        float Freq = freq_min + (freq_max-freq_min)*rndi(i, 4, seed);
 
-        float Omega = omega_princ + omega_spread*(2.*rndi(i, 2, seed) -1.);
-        float Freq = freq_princ + freq_spread*(2.*rndi(i, 4, seed) -1.);
+        float Omega = omega_princ + omega_spread*(2.*rndi(i, 2, seed) -1.) + 0.5*rndi(i, 5, seed);
+        float Freq = freq_princ + freq_spread*(2.*rndi(i, 4, seed) -1.) + rndi(i, 6, seed);
 
-        vec2 pos = vec2(rndi(i,0, seed),rndi(i,1, seed));
+//        vec2 pos = vec2(rndi(i,0, seed),rndi(i,1, seed));//
+        vec2 pos = 1.2*vec2(rndi(i,0, seed),rndi(i,1, seed))-vec2(0.1);
         vec2 dir = vec2(cos(Omega), sin(Omega));
 
         float wi = 2.*rndi(i, 3, seed) -1.;
@@ -72,12 +74,12 @@ void main() {
     float res = max(uRes.x, uRes.y);
     vec2 uv = (gl_FragCoord.xy/res);
 
-    int nb_kernel = 100;
-    float size_kernel = 0.08;
+    int nb_kernel = 20*int(uFprinc);// 100;
+    float size_kernel = max(2.4/uFprinc, 0.05);// 0.0566;// 0.08;
 
 
-    float noise = Gabor_noise(uv, nb_kernel, uFprinc, uFspread, uOprinc, uOspread, 0.624, size_kernel);
-    noise = 0.5 + 0.155*noise; // *0.155 -> variance de 0.155*0.155 = 0,024025; +0.5 -> moyenne de 0.5
+    float noise = Gabor_noise(uv, nb_kernel, uFprinc, uFspread, uOprinc, uOspread, uSeed*0.624, size_kernel);
+    noise = 0.5 + 0.15*noise; // *0.155 -> variance de 0.155*0.155 = 0,024025; +0.5 -> moyenne de 0.5
 
     gl_FragColor = vec4(vec3(noise), 1.);
 

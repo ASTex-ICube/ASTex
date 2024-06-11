@@ -215,30 +215,6 @@ bool ccvt_application::onInit() {
     glfwWindowHint(GLFW_RESIZABLE, GLFW_FALSE);
 
 
-//    // fenêtre carte H
-//    window_creation(m_window_H, "CCVT application", m_width_H, m_height_H);
-//
-//    // Set the user pointer to be "this"
-//    glfwSetWindowUserPointer(m_window_H, this);
-//    // mouse button
-//    glfwSetMouseButtonCallback(m_window_H, [](GLFWwindow* window, int button, int action, int mods) {
-//        auto that = reinterpret_cast<ccvt_application*>(glfwGetWindowUserPointer(window));
-//        if (that != nullptr) that->onMouseButton(button, action, mods);
-//    });
-//    // mouse move
-//    glfwSetCursorPosCallback(m_window_H, [](GLFWwindow* window, double xpos, double ypos) {
-//        auto that = reinterpret_cast<ccvt_application*>(glfwGetWindowUserPointer(window));
-//        if (that != nullptr) that->onMouseMove(xpos, ypos);
-//    });
-//
-//    shader_program(m_PointsShaderProgram, "shaders/points_shader.frag", "shaders/points_shader.vert");
-//    displayPoints();
-//    shader_program(m_ColorShaderProgram, "shaders/color_shader.frag", "shaders/identity_shader.vert");
-//    display_quad(m_ColorVAO);
-
-
-
-
 
 
 
@@ -259,16 +235,41 @@ bool ccvt_application::onInit() {
     if(!setFBO(m_fbo_N1, m_texture_N1, m_width_T, m_height_T)){
         return false;
     }
+    drawNoise(m_fbo_N1, m_width_T, m_height_T, m_F1Princ, m_F1Spread, m_Or1Princ, m_Or1Spread, 1.);
+    computeStatistiques(m_fbo_N1, m_width_T, m_height_T, m_mean_N1, m_var_N1);
+
+
+    if(!setFBO(m_fbo_N1_ui, m_texture_N1_ui, m_width_N, m_height_N)){
+        return false;
+    }
+    drawNoise(m_fbo_N1_ui, m_width_T, m_height_T, m_F1Princ, m_F1Spread, m_Or1Princ, m_Or1Spread, 1.);
+
+
 
     // fbo noise 2
     if(!setFBO(m_fbo_N2, m_texture_N2, m_width_T, m_height_T)){
         return false;
     }
+    drawNoise(m_fbo_N2, m_width_T, m_height_T, m_F2Princ, m_F2Spread, m_Or2Princ, m_Or2Spread, 2.);
+    computeStatistiques(m_fbo_N2, m_width_T, m_height_T, m_mean_N2, m_var_N2);
+
+    if(!setFBO(m_fbo_N2_ui, m_texture_N2_ui, m_width_N, m_height_N)){
+        return false;
+    }
+    drawNoise(m_fbo_N2_ui, m_width_T, m_height_T, m_F2Princ, m_F2Spread, m_Or2Princ, m_Or2Spread, 2.);
+
+
 
     // fbo color map
     if(!setFBO(m_fbo_H, m_texture_H, m_width_H, m_height_H)){
         return false;
     }
+
+    // fbo composition
+    if(!setFBO(m_fbo_T, m_texture_T, m_width_T, m_height_T)){
+        return false;
+    }
+    computeProportions();
 
     initGui(m_window_T);
 
@@ -282,8 +283,8 @@ bool ccvt_application::onInit() {
 void ccvt_application::onFinish() {
     terminateGui();
 
-    glDeleteVertexArrays(1, &m_PointsVAO);
-    glDeleteProgram(m_PointsShaderProgram);
+//    glDeleteVertexArrays(1, &m_PointsVAO);
+//    glDeleteProgram(m_PointsShaderProgram);
 
     glDeleteVertexArrays(1, &m_ColorVAO);
     glDeleteProgram(m_ColorShaderProgram);
@@ -320,69 +321,6 @@ bool ccvt_application::isRunning() {
 
 void ccvt_application::onFrame() {
 
-
-
-
-//    ////////////////////////////////////////////////////////////////////
-//    glfwMakeContextCurrent(m_window_H);
-//    glViewport(0, 0, m_width_H, m_height_H); // (lower_left_x, lower_left_y, width, height)
-//
-//    // check and call events
-//    glfwPollEvents();
-//
-//    // clear color
-//    glClearColor(0.4f, 0.6f, 0.8f, 1.0f);
-//    glClear(GL_COLOR_BUFFER_BIT);
-//
-//    // colors
-//    glUseProgram(m_ColorShaderProgram);
-//
-//    // unifoms
-//    unsigned int UBO_points; // uniform buffer
-//    glGenBuffers(1, &UBO_points);
-//    glBindBuffer(GL_UNIFORM_BUFFER, UBO_points);
-//    glBufferData(GL_UNIFORM_BUFFER, m_MaxPointsNb*sizeof(point_info), m_points.data(), GL_STREAM_DRAW);
-//    glBindBufferRange(GL_UNIFORM_BUFFER, 0, UBO_points, 0, m_MaxPointsNb * sizeof(point_info));
-//
-//    unsigned int UBO_colors; // uniform buffer
-//    glGenBuffers(1, &UBO_colors);
-//    glBindBuffer(GL_UNIFORM_BUFFER, UBO_colors);
-//    glBufferData(GL_UNIFORM_BUFFER, m_MaxPointsNb*sizeof(cell_info), m_cells.data(), GL_STREAM_DRAW);
-//    glBindBufferRange(GL_UNIFORM_BUFFER, 1, UBO_colors, 0, m_MaxPointsNb * sizeof(cell_info));
-//
-//    glUniformBlockBinding(m_ColorShaderProgram, glGetUniformBlockIndex(m_ColorShaderProgram, "uPoints"), 0);
-//    glUniformBlockBinding(m_ColorShaderProgram, glGetUniformBlockIndex(m_ColorShaderProgram, "uColors"), 1);
-//    glUniform2f(glGetUniformLocation(m_ColorShaderProgram, "uRes"), m_width_H, m_height_H);
-//    glUniform1i(glGetUniformLocation(m_ColorShaderProgram, "uPointsNb"), m_CurrentPointsNb);
-//
-//
-//    glBindVertexArray(m_ColorVAO);
-//    glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, 0);
-//
-//    glBindBuffer(GL_UNIFORM_BUFFER, 0);
-//
-//
-//
-//    // points
-//    glUseProgram(m_PointsShaderProgram);
-//    glBindVertexArray(m_PointsVAO);
-//    glDrawArrays(GL_POINTS, // mode
-//                   0, // first
-//                   m_CurrentPointsNb); // count
-//
-//
-//    // swap the buffers
-//    glfwSwapBuffers(m_window_H);
-
-
-
-
-
-
-
-
-
-
     ////////////////////////////////////////////////////////////////////
     glfwMakeContextCurrent(m_window_T);
     glViewport(0, 0, m_width_T, m_height_T); // (lower_left_x, lower_left_y, width, height)
@@ -390,8 +328,58 @@ void ccvt_application::onFrame() {
     glfwPollEvents();
 
 
-    // fbo noise 1
-    glBindFramebuffer(GL_FRAMEBUFFER, m_fbo_N1);
+
+    // noise 1
+    //////////////////////////////////////
+    if(m_n1_changed){
+        drawNoise(m_fbo_N1, m_width_T, m_height_T, m_F1Princ, m_F1Spread, m_Or1Princ, m_Or1Spread, 1.);
+        drawNoise(m_fbo_N1_ui, m_width_T, m_height_T, m_F1Princ, m_F1Spread, m_Or1Princ, m_Or1Spread, 1.);
+        m_n1_changed = false;
+    }
+
+
+    // noise 2
+    //////////////////////////////////////
+    if(m_n2_changed)
+    {
+        drawNoise(m_fbo_N2, m_width_T, m_height_T, m_F2Princ, m_F2Spread, m_Or2Princ, m_Or2Spread, 2.);
+        drawNoise(m_fbo_N2_ui, m_width_T, m_height_T, m_F2Princ, m_F2Spread, m_Or2Princ, m_Or2Spread, 2.);
+        m_n2_changed = false;
+    }
+
+
+
+
+    // color map
+    //////////////////////////////////////
+    drawCM();
+
+
+
+    // composition
+    //////////////////////////////////////
+    drawComposition();
+
+    updateGui();
+
+
+
+
+
+    // swap the buffers
+    glfwSwapBuffers(m_window_T);
+
+
+
+}
+
+
+
+
+////////////////////////////////////////////////////////////////////////////////////////////////////////////
+void ccvt_application::drawNoise(unsigned int &fbo, float width, float height, float freq_princ, float freq_spread, float omega_princ, float omega_spread, float seed) {
+    glViewport(0, 0, width, height); // (lower_left_x, lower_left_y, width, height)
+    glBindFramebuffer(GL_FRAMEBUFFER, fbo);
 
     // clear color
     glClearColor(0.6f, 0.6f, 0.8f, 1.0f);
@@ -401,49 +389,25 @@ void ccvt_application::onFrame() {
     glUseProgram(m_NoiseShaderProgram);
 
     // unifoms
-    glUniform2f(glGetUniformLocation(m_NoiseShaderProgram, "uRes"), m_width_T, m_height_T);
-    glUniform1f(glGetUniformLocation(m_NoiseShaderProgram, "uFprinc"), m_F1Princ);
-    glUniform1f(glGetUniformLocation(m_NoiseShaderProgram, "uFspread"), m_F1Spread);
-    glUniform1f(glGetUniformLocation(m_NoiseShaderProgram, "uOprinc"), m_Or1Princ);
-    glUniform1f(glGetUniformLocation(m_NoiseShaderProgram, "uOspread"), m_Or1Spread);
+    glUniform2f(glGetUniformLocation(m_NoiseShaderProgram, "uRes"), width, height);
+    glUniform1f(glGetUniformLocation(m_NoiseShaderProgram, "uFprinc"), freq_princ);
+    glUniform1f(glGetUniformLocation(m_NoiseShaderProgram, "uFspread"), freq_spread);
+    glUniform1f(glGetUniformLocation(m_NoiseShaderProgram, "uOprinc"), omega_princ);
+    glUniform1f(glGetUniformLocation(m_NoiseShaderProgram, "uOspread"), omega_spread);
+    glUniform1f(glGetUniformLocation(m_NoiseShaderProgram, "uSeed"), seed);
 
     glBindVertexArray(m_NoiseVAO);
 
     glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, 0);
 
     glBindFramebuffer(GL_FRAMEBUFFER, 0);
+}
 
 
 
 
-
-    // fbo noise 2
-    glBindFramebuffer(GL_FRAMEBUFFER, m_fbo_N2);
-
-    // clear color
-    glClearColor(0.6f, 0.6f, 0.8f, 1.0f);
-    glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT); // we're not using the stencil buffer now
-    glEnable(GL_DEPTH_TEST);
-
-    glUseProgram(m_NoiseShaderProgram);
-
-    // unifoms
-    glUniform2f(glGetUniformLocation(m_NoiseShaderProgram, "uRes"), m_width_T, m_height_T);
-    glUniform1f(glGetUniformLocation(m_NoiseShaderProgram, "uFprinc"), m_F2Princ);
-    glUniform1f(glGetUniformLocation(m_NoiseShaderProgram, "uFspread"), m_F2Spread);
-    glUniform1f(glGetUniformLocation(m_NoiseShaderProgram, "uOprinc"), m_Or2Princ);
-    glUniform1f(glGetUniformLocation(m_NoiseShaderProgram, "uOspread"), m_Or2Spread);
-
-    glBindVertexArray(m_NoiseVAO);
-
-    glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, 0);
-
-    glBindFramebuffer(GL_FRAMEBUFFER, 0);
-
-
-
-
-    // fbo color map
+void ccvt_application::drawCM() {
+    glViewport(0, 0, m_width_H, m_height_H);
     glBindFramebuffer(GL_FRAMEBUFFER, m_fbo_H);
 
     // clear color
@@ -478,13 +442,14 @@ void ccvt_application::onFrame() {
     glBindBuffer(GL_UNIFORM_BUFFER, 0);
 
     glBindFramebuffer(GL_FRAMEBUFFER, 0);
+}
 
 
 
 
 
-
-    // composition
+void ccvt_application::drawComposition() {
+    glViewport(0, 0, m_width_T, m_height_T);
     glClearColor(0.4f, 0.6f, 0.8f, 1.0f);
     glClear(GL_COLOR_BUFFER_BIT);
     glDisable(GL_DEPTH_TEST);
@@ -523,67 +488,7 @@ void ccvt_application::onFrame() {
     glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, 0);
 
     glBindBuffer(GL_UNIFORM_BUFFER, 0);
-
-
-    updateGui();
-
-
-
-
-
-    // swap the buffers
-    glfwSwapBuffers(m_window_T);
-
-
-
 }
-
-
-
-
-////////////////////////////////////////////////////////////////////////////////////////////////////////////
-void ccvt_application::displayPoints() {
-    glEnable(GL_PROGRAM_POINT_SIZE);
-
-
-    // Vertex Array object
-    glGenVertexArrays(1, &m_PointsVAO);
-
-    // Vertex buffer object
-    glGenBuffers(1, &m_PointsVBO);
-
-    updatePoints();
-
-}
-
-
-void ccvt_application::updatePoints() {
-
-//    for(auto pi:m_points){
-//        std::cout<<pi._x<<", "<<pi._y<<std::endl;
-//    }
-
-    // Vertex Array object
-    glBindVertexArray(m_PointsVAO); // 1. bind VAO
-
-    // Vertex buffer object
-    glBindBuffer(GL_ARRAY_BUFFER, m_PointsVBO); // 2. copy the vertices in a buffer
-    glBufferData(GL_ARRAY_BUFFER, m_MaxPointsNb*sizeof(point_info), m_points.data(), GL_STREAM_DRAW);
-
-
-    glVertexAttribPointer( // 4. set the vertex attributes pointer
-            0, // location
-            4, // size of attribute (vec4)
-            GL_FLOAT, // data type
-            GL_FALSE, // data need to bee normalized ?
-            4*sizeof(float), // distance between consecutive vertex
-            (void*)0); // offset
-    glEnableVertexAttribArray(0);
-}
-
-
-
-
 
 
 
@@ -621,12 +526,53 @@ void ccvt_application::updateGui() {
     ImGui::NewFrame();
 //    ImGui::ShowDemoWindow(); // Show demo window! :)
 
+
+
     ImGui::Begin("Performances");
     ImGuiIO& io = ImGui::GetIO();
     ImGui::Text("Application average %.3f ms/frame", 1000.0f / io.Framerate);
     ImGui::Text("(%.3f FPS)", io.Framerate);
     ImGui::End();
 
+
+    ImGui::Begin("Infos");
+    if(ImGui::Button("Statistiques noises")){
+        computeStatistiques(m_fbo_N1, m_width_T, m_height_T, m_mean_N1, m_var_N1);
+        computeStatistiques(m_fbo_N2, m_width_T, m_height_T, m_mean_N2, m_var_N2);
+    }
+    ImGui::Text("Noise 1:");
+    ImGui::BulletText(
+            "Mean = %f\n",
+            m_mean_N1
+    );
+    ImGui::BulletText(
+            "Variance = %f\n",
+            m_var_N1
+    );
+
+    ImGui::Text("Noise 2:");
+    ImGui::BulletText(
+            "Mean = %f\n",
+            m_mean_N2
+    );
+    ImGui::BulletText(
+            "Variance = %f\n",
+            m_var_N2
+    );
+
+    ImGui::Separator();
+    if(ImGui::Button("Proportion colors")){
+        computeProportions();
+    }
+    for(auto c=m_cells.begin(); c<m_cells.end(); c++){
+        ImGui::ColorButton("color", ImVec4((*c)._r, (*c)._g, (*c)._b, 1.), ImGuiColorEditFlags_NoBorder);
+        ImGui::SameLine();
+        ImGui::Text(": %f (obj : %f) ", m_histo.at(c-m_cells.begin())/float(m_width_T*m_height_T), (*c)._cap);
+    }
+
+    ImGui::Separator();
+    ImGui::Text(m_infoBuffer.c_str());
+    ImGui::End();
 
 
 
@@ -658,44 +604,13 @@ void ccvt_application::updateGui() {
             ImPlot::DragPoint(p-m_points.begin(), &(*p)._x, &(*p)._y, color, 4., ImPlotDragToolFlags_None, &clicked, &hovered, &held);
             if(hovered)
             {
-//                ImGui::SetItemTooltip(std::to_string(p-m_points.begin()).c_str());
                 ImGui::BeginTooltip();
                 ImGui::Text(("cell id : "+std::to_string(p-m_points.begin())).c_str());
                 ImGui::Text(("position : "+std::to_string((*p)._x) +", " + std::to_string((*p)._y)).c_str());
-//                ImGui::Text("color proportion : "+);
                 ImGui::EndTooltip();
             }
-//            if(hovered and ImGui::IsKeyDown(ImGuiKey_W))
-//            {
-//                m_selected.id = p-m_points.begin();
-//                ImGui::OpenPopup("cell_param");
-//
-//            }
         }
 
-//        // suppression et changement de couleur
-//        if (ImGui::BeginPopup("cell_param"))
-//        {
-//            int id = m_selected.id;
-//            ImGui::Text(std::to_string(id).c_str());
-//            ImVec4 color = ImVec4(m_cells.at(id)._r, m_cells.at(id)._g, m_cells.at(id)._b, 1.f);
-//            ImGui::ColorEdit4("ColorPicker", (float*)&color, ImGuiColorEditFlags_NoInputs | ImGuiColorEditFlags_NoLabel);
-//            if (ImGui::Button("Validate"))
-//            {
-//                m_cells.at(id)._r = color.x;
-//                m_cells.at(id)._g = color.y;
-//                m_cells.at(id)._b = color.z;
-//                ImGui::CloseCurrentPopup();
-//            }
-//
-//            if (ImGui::Button("Delete"))
-//            {
-//                deletePoint(id);
-//                ImGui::CloseCurrentPopup();
-//            }
-//
-//            ImGui::EndPopup();
-//        }
         ImPlot::EndPlot();
 
     }
@@ -703,18 +618,6 @@ void ccvt_application::updateGui() {
 
 
 
-
-
-
-//    for(auto c=m_cells.begin(); c<m_cells.end(); c++)
-//    {
-//        int id = c-m_cells.begin();
-//
-//        ImGui::PushStyleColor(ImGuiCol_FrameBg, ImVec4((*c)._r, (*c)._g, (*c)._b, 1.f));
-//        ImGui::DragFloat((std::to_string(id)+"drag").c_str(), &(*c)._cap, 0.005f,  0.01f, 1.f, "%f");
-//        if(ImGui::IsItemEdited()){normilizeCap();}
-//        ImGui::PopStyleColor(1);
-//    }
 
 
     // barre proportion des couleurs
@@ -736,7 +639,6 @@ void ccvt_application::updateGui() {
             ImGui::OpenPopup("cell_param");
 
         }
-//        m_selected.active = ImGui::IsItemHovered();
         if(ImGui::IsItemHovered()){
             m_selected.id = id;
             m_selected.active = true;
@@ -762,7 +664,7 @@ void ccvt_application::updateGui() {
 
 
         ImGui::Separator();
-        static ImVec4 color;// = current_color;// ImVec4(m_cells.at(id)._r, m_cells.at(id)._g, m_cells.at(id)._b, 1.f);
+        static ImVec4 color;
         ImGui::ColorPicker4("ColorPicker", (float*)&color, ImGuiColorEditFlags_NoInputs | ImGuiColorEditFlags_NoLabel, &current_color.x);
 
 
@@ -772,7 +674,6 @@ void ccvt_application::updateGui() {
             m_cells.at(id)._r = color.x;
             m_cells.at(id)._g = color.y;
             m_cells.at(id)._b = color.z;
-//            ImGui::CloseCurrentPopup();
         }
         ImGui::SameLine();
         if (ImGui::Button("Delete"))
@@ -792,14 +693,39 @@ void ccvt_application::updateGui() {
 
     ImGui::Separator();
     ImGui::GetStyle().ItemSpacing.x = 8.;
-    if(ImGui::Button("Optimize")){
-        optimizeCCVT();
-    }
-    ImGui::SameLine();
     if(ImGui::Button("Same proportions")){
         equalizeCap();
     }
+    ImGui::SameLine();
+    if(ImGui::Button("Save")){
+        saveTexture(m_fbo_H, m_width_H, m_height_H, "color_map.ppm");
+        saveTexture(m_fbo_N1, m_width_T, m_height_T, "noise_1.ppm");
+        saveTexture(m_fbo_N2, m_width_T, m_height_T, "noise_2.ppm");
 
+        glBindFramebuffer(GL_FRAMEBUFFER, m_fbo_T);
+        drawComposition();
+        glBindFramebuffer(GL_FRAMEBUFFER, 0);
+        saveTexture(m_fbo_T, m_width_T, m_height_T, "composition.ppm");
+    }
+    ImGui::SameLine();
+    if(ImGui::Button("Optimize")){
+//        ImGui::SameLine();
+//        ImGui::ProgressBar(-1.0f * (float)ImGui::GetTime(), ImVec2(0.0f, 0.0f), "Searching..");
+        optimizeCCVT();
+    }
+
+
+
+    ImGui::Separator();
+    ImGui::Text("Number of points :");
+    ImGui::BulletText(
+            "Max number = %i\n",
+            m_MaxPointsNb
+    );
+    ImGui::BulletText(
+            "Current number = %i\n",
+            m_CurrentPointsNb
+    );
 
 
     ImGui::End();
@@ -814,16 +740,22 @@ void ccvt_application::updateGui() {
 
 
     ImGui::Begin("noise 1");
-    ImGui::SliderFloat("F_0", &m_F1Princ, 4., 30.);
+
+    ImGui::SliderFloat("F_0", &m_F1Princ, 10., 60.);
+    if(ImGui::IsItemEdited()){m_n1_changed = true;}
     ImGui::SliderFloat("F spread", &m_F1Spread, 0., 20.);
+    if(ImGui::IsItemEdited()){m_n1_changed = true;}
     ImGui::SliderAngle("O_0", &m_Or1Princ);
+    if(ImGui::IsItemEdited()){m_n1_changed = true;}
     ImGui::SliderAngle("O spread", &m_Or1Spread, 0., 180.);
+    if(ImGui::IsItemEdited()){m_n1_changed = true;}
+
 
     // we access the ImGui window size
     const float window_width_N1 = m_width_N;//ImGui::GetContentRegionAvail().x;
     const float window_height_N1 = m_height_N;//ImGui::GetContentRegionAvail().y;
 
-    glViewport(0, 0, window_width_N1, window_height_N1);
+//    glViewport(0, 0, window_width_N1, window_height_N1);
 
     // we get the screen position of the window
     ImVec2 pos_N1 = ImGui::GetCursorScreenPos();
@@ -831,7 +763,7 @@ void ccvt_application::updateGui() {
     // and here we can add our created texture as image to ImGui
     // unfortunately we need to use the cast to void* or I didn't find another way tbh
     ImGui::GetWindowDrawList()->AddImage(
-            (void *)m_texture_N1,
+            (void *)m_texture_N1_ui,
             ImVec2(pos_N1.x, pos_N1.y),
             ImVec2(pos_N1.x + window_width_N1, pos_N1.y + window_height_N1),
             ImVec2(0, 1),
@@ -845,16 +777,22 @@ void ccvt_application::updateGui() {
 
 
     ImGui::Begin("noise 2");
-    ImGui::SliderFloat("F_0", &m_F2Princ, 4., 30.);
+
+    ImGui::SliderFloat("F_0", &m_F2Princ, 10., 60.);
+    if(ImGui::IsItemEdited()){m_n2_changed = true;}
     ImGui::SliderFloat("F spread", &m_F2Spread, 0., 20.);
+    if(ImGui::IsItemEdited()){m_n2_changed = true;}
     ImGui::SliderAngle("O_0", &m_Or2Princ);
+    if(ImGui::IsItemEdited()){m_n2_changed = true;}
     ImGui::SliderAngle("O spread", &m_Or2Spread, 0., 180.);
+    if(ImGui::IsItemEdited()){m_n2_changed = true;}
+
 
     // we access the ImGui window size
     const float window_width_N2 = m_width_N;//ImGui::GetContentRegionAvail().x;
     const float window_height_N2 = m_height_N;//ImGui::GetContentRegionAvail().y;
 
-    glViewport(0, 0, window_width_N2, window_height_N2);
+//    glViewport(0, 0, window_width_N2, window_height_N2);
 
     // we get the screen position of the window
     ImVec2 pos_N2 = ImGui::GetCursorScreenPos();
@@ -862,7 +800,7 @@ void ccvt_application::updateGui() {
     // and here we can add our created texture as image to ImGui
     // unfortunately we need to use the cast to void* or I didn't find another way tbh
     ImGui::GetWindowDrawList()->AddImage(
-            (void *)m_texture_N2,
+            (void *)m_texture_N2_ui,
             ImVec2(pos_N2.x, pos_N2.y),
             ImVec2(pos_N2.x + window_width_N2, pos_N2.y + window_height_N2),
             ImVec2(0, 1),
@@ -878,93 +816,30 @@ void ccvt_application::updateGui() {
 
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////
-void ccvt_application::onMouseButton(int button, int action, int mods) {
-//    ImGuiIO& io = ImGui::GetIO();
-//    if (io.WantCaptureMouse) {
-//        // Don't rotate the camera if the mouse is already captured by an ImGui
-//        // interaction at this frame.
-//        return;
-//    }
-
-
-    if(button == GLFW_MOUSE_BUTTON_LEFT)
-    {
-        switch (action) {
-            case GLFW_PRESS:
-                m_selected.toogle = true;
-                if(!m_selected.active){
-                    double xpos;
-                    double ypos;
-                    glfwGetCursorPos(m_window_H, &xpos, &ypos);
-                    addPoint(xpos / m_width_H, 1.- ypos / m_height_H);
-                }
-                break;
-            case GLFW_RELEASE:
-                m_selected.toogle = false;
-                m_selected.active = false;
-                m_selected.id = -1;
-
-//                updateCCVT();
-                break;
-        }
-    }
-
-    if(button == GLFW_MOUSE_BUTTON_RIGHT and action == GLFW_PRESS)
-    {
-        optimizeCCVT();
-    }
-}
-
-void ccvt_application::onMouseMove(double xpos, double ypos) {
-    float xpos_normalized = xpos / m_width_H;
-    float ypos_normalized = 1.- ypos / m_height_H;
-
-//    std::cout<<m_selected.active<<" "<<m_selected.toogle<<" "<<m_selected.id<<std::endl;
-
-    if(!m_selected.toogle){
-        m_selected.active = false;
-        m_selected.id = -1;
-        for(auto p=m_points.begin(); p<m_points.end(); p++){
-            float len = (xpos_normalized - (*p)._x)*(xpos_normalized - (*p)._x) + (ypos_normalized - (*p)._y)*(ypos_normalized - (*p)._y);
-
-            if(len < .01){
-                m_selected.active = true;
-                m_selected.id = p-m_points.begin();
-                (*p)._sel = 1.;
-            }
-            else{
-                (*p)._sel = 0.;
-            }
-        }
-    }
-
-    if(m_selected.active and m_selected.toogle and m_selected.id != -1){
-        m_points.at(m_selected.id)._x = xpos_normalized;
-        m_points.at(m_selected.id)._y = ypos_normalized;
-    }
-
-    updatePoints();
-}
-
-////////////////////////////////////////////////////////////////////////////////////////////////////////////
 void ccvt_application::addPoint(float xPos, float yPos) {
 //    std::cout<<"new point : "<<xPos<<", "<<yPos<<std::endl;
+    if(m_CurrentPointsNb < m_MaxPointsNb){
+        float new_cap = 1.f/(m_cells.size()+1);
 
-    float new_cap = 1.f/(m_cells.size()+1);
+        m_points.emplace_back(xPos, yPos, 0.);
+        m_cells.emplace_back(new_cap, (float(std::rand()) / float(RAND_MAX)), (float(std::rand()) / float(RAND_MAX)), (float(std::rand()) / float(RAND_MAX)));
+        m_CurrentPointsNb = m_points.size();
 
-    m_points.emplace_back(xPos, yPos, 0.);
-    m_cells.emplace_back(new_cap, (float(std::rand()) / float(RAND_MAX)), (float(std::rand()) / float(RAND_MAX)), (float(std::rand()) / float(RAND_MAX)));
-    m_CurrentPointsNb = m_points.size();
+        normilizeCap();
+        m_histo.resize(m_CurrentPointsNb, m_cells.end()->_cap);
+    }
 
-    normilizeCap();
 }
 
 void ccvt_application::deletePoint(int id) {
-    m_points.erase(m_points.begin()+id);
-    m_cells.erase(m_cells.begin()+id);
-    m_CurrentPointsNb = m_points.size();
+    if(m_CurrentPointsNb>1){
+        m_points.erase(m_points.begin()+id);
+        m_cells.erase(m_cells.begin()+id);
+        m_histo.erase(m_histo.begin()+id);
+        m_CurrentPointsNb = m_points.size();
 
-    normilizeCap();
+        normilizeCap();
+    }
 }
 
 auto sum_caps = [](float a, cell_info b){return a + b._cap;};
@@ -1024,9 +899,9 @@ void ccvt_application::optimizeCCVT(){
     int iter_opt = m_ccvt.optimize_H(stepW, stepX, max_newton_iters, epsilon, max_iters);
 
     std::cout<<iter_opt<<" itérations (max : "<<max_newton_iters<<")"<<std::endl;
+    m_infoBuffer+= std::to_string(iter_opt) + " itérations (max : " + std::to_string(max_newton_iters) + ")\n";
 
     getCCVTcells();
-//    updatePoints();
 }
 
 
@@ -1054,19 +929,142 @@ void ccvt_application::updateCCVT(){
         B.emplace_back(ci._b);
     }
 
+    computeStatistiques(m_fbo_N1, m_width_T, m_height_T, m_mean_N1, m_var_N1);
+    computeStatistiques(m_fbo_N2, m_width_T, m_height_T, m_mean_N2, m_var_N2);
+
+    m_ccvt.set_domain(m_mean_N1, m_mean_N2, m_var_N1, m_var_N2);
     m_ccvt.set_custom_proportions(caps);
     m_ccvt.set_sites(points, weights);
     m_ccvt.set_colors(R, G, B);
 
+}
 
-//    std::cout<<"vérification"<<std::endl;
-//    std::vector<FT> weights_t;
-//    std::vector<Point> points_t;
-//    std::vector<FT> proportions_t;
-//    m_ccvt.collect_sites(points_t, weights_t);
-//    m_ccvt.get_proportion(proportions_t);
-//    for(int i=0; i<points_t.size(); i++){
-//        std::cout<<points_t.at(i).x()+0.5<<", "<<points_t.at(i).y()+0.5<<", "<<weights_t.at(i)<<std::endl;
+
+
+////////////////////////////////////////////////////////////////////////////////////////////////////////////
+void ccvt_application::saveTexture(unsigned int fbo_id, int width, int height, const std::string &filename) {
+    std::cout<<"saving "<<filename<<"..."<<std::endl;
+
+    glBindFramebuffer(GL_FRAMEBUFFER, fbo_id);
+
+    glViewport(0, 0, width, height);
+
+    float pixel[3*width*height];
+    glReadPixels(0, 0, width, height, GL_RGB, GL_FLOAT, &pixel);
+
+//    unsigned int pixel[3*width*height];
+//    glReadPixels(0, 0, width, height, GL_RGB, GL_UNSIGNED_INT, &pixel);
+
+//    savePPM(filename, pixel, width, height);
+
+    glBindFramebuffer(GL_FRAMEBUFFER, 0);
+
+
+
+    std::ofstream output(filename.c_str());
+    output << "P3" << std::endl;
+    output << "# " << filename << std::endl;
+    output << width << " " << height << std::endl;
+    output << "255" << std::endl;
+
+    int value;
+    for(int p=0; p<width*height*3; p+=3)
+    {
+        for(int c=0; c<3; c++){
+            value = static_cast<int>(255*pixel[p + c ]);
+//            value = (255.*data[p + c ])/2147483648.;
+//            value = (255.*pixel[p + c ])/4294967295.;
+            output << value <<" ";
+        }
+        output << std::endl;
+    }
+    output.close();
+
+}
+
+
+//void ccvt_application::savePPM(const std::string &filename, unsigned int* data, int width, int height) {
+//
+//
+//    std::ofstream output(filename.c_str());
+//    output << "P3" << std::endl;
+//    output << "# " << filename << std::endl;
+//    output << width << " " << height << std::endl;
+//    output << "255" << std::endl;
+//
+//    int value;
+//    for(int p=0; p<width*height*3; p+=3)
+//    {
+//        for(int c=0; c<3; c++){
+////            value = static_cast<int>(255*data[p + c ]);
+////            value = (255.*data[p + c ])/2147483648.;
+//            value = (255.*data[p + c ])/4294967295.;
+//            output << value <<" ";
+//        }
+//        output << std::endl;
 //    }
+//    output.close();
+//}
+
+
+////////////////////////////////////////////////////////////////////////////////////////////////////////////
+void ccvt_application::computeStatistiques(unsigned int fbo_id, int width, int height, float &mean, float &var) {
+    glBindFramebuffer(GL_FRAMEBUFFER, fbo_id);
+
+    glViewport(0, 0, width, height);
+    float pixel[width*height];
+    glReadPixels(0, 0, width, height, GL_RED, GL_FLOAT, &pixel);
+
+    glBindFramebuffer(GL_FRAMEBUFFER, 0);
+
+    float moy = computeMean(pixel, width*height);
+    float moyS = computeSquareMean(pixel, width*height);
+
+    mean = moy;
+    var = moyS - moy*moy;
+}
+
+
+float ccvt_application::computeMean(float *data, int NB) {
+    float value = 0;
+    for(int p=0; p<NB; p++)
+    {
+        value += data[p];
+    }
+    return value/NB;
+}
+
+
+float ccvt_application::computeSquareMean(float *data, int NB) {
+    float value = 0;
+    for(int p=0; p<NB; p++)
+    {
+        value += data[p]*data[p];
+    }
+    return value/NB;
+}
+
+void ccvt_application::computeProportions() {
+    glBindFramebuffer(GL_FRAMEBUFFER, m_fbo_T);
+    drawComposition();
+
+    float pixel[3*m_width_T*m_height_T];
+    glReadPixels(0, 0, m_width_T, m_height_T, GL_RGB, GL_FLOAT, &pixel);
+
+    glBindFramebuffer(GL_FRAMEBUFFER, 0);
+
+
+    std::vector<int> histo(m_CurrentPointsNb, 0);
+    for(int p=0; p<m_width_T*m_height_T*3; p+=3)
+    {
+        for(auto c=m_cells.begin(); c<m_cells.end(); c++){
+
+            bool found = abs(pixel[p]-(*c)._r)<0.01 and abs(pixel[p+1]-(*c)._g)<0.01 and abs(pixel[p+2]-(*c)._b)<0.01;
+            if(found){
+                histo.at(c-m_cells.begin()) += 1;
+            }
+        }
+    }
+    m_histo=histo;
 
 }

@@ -21,8 +21,8 @@ int main() {
     // description de la densité
     double mu_x = 0.5;
     double mu_y = 0.5;
-    double var_x = 0.024025;
-    double var_y = 0.024025;
+    double var_x = 0.02;//4025; // 0.0151757;//
+    double var_y = 0.02;//4025; // 0.0151757;//
 
     // position initial des graines
     std::vector<Point> init_sites{Point(0.81, 0.65), Point(0.15, 0.25), Point(0.52, 0.91), Point(0.65, 0.28), Point(0.12, 0.72), Point(0.45, 0.48)};

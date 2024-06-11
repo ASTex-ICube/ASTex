@@ -1,201 +1,316 @@
 //
-// Created by grenier on 22/08/23.
+// Created by grenier on 17/11/23.
 //
-#include <iostream>
+//
+// Created by grenier on 18/09/23.
+//
 
-#include "ASTex/image_gray.h"
-#include "ASTex/image_common.h"
+#include <chrono>
+#include <iostream>
+#include <string>
+#include <fstream>
+
+#include <ASTex/image_gray.h>
+#include <ASTex/image_rgb.h>
 #include "ASTex/Noises/Gabor.h"
 
 #include "ASTex/CCVT_tests/mesure_statistiques.h"
-#include "ASTex/CCVT_tests/numerical_Tcontent.h"
-#include "ASTex/CCVT_tests/tools.h"
-#include "ASTex/CCVT_tests/data.h"
-//#include "CCVT_CGAL/ccvt.h"
-//#include "CCVT_CGAL/types.h"
+#include "ASTex/CCVT_tests/mesure_full.h"
+
 
 
 using namespace ASTex;
 
 
 
-
-
-
-int main(){
-    std::string working_directory = "/home/grenier/Documents/ASTex_fork/results/CCVT_CGAL/";
-
-    // ---------------------------------------------------------------------------
-    int resolution = 256;
-    int img_size = 4096;//4096;//2048; // nombre de pixel dans l'image
+int main()
+{
+// ---------------------------------------------------------------------------
+    int img_size = 800;//4096;//2048; // nombre de pixel dans l'image
     int cm_size = 256;//256;//512;
 
-    float number_of_impulses_per_kernel = 64.;// 64.0;
-    unsigned period = 128; // non utilisé
 
-    float K_ = 1.0; //laisser à 1
-    float a_ = 0.01; // taille des noyaux (a*a = 1/variance)0.02
+// ---------------------------------------------------------------------------
+    ImageGrayd noise_1(img_size, img_size);
+    noise_1.load("/home/grenier/Documents/ASTex_fork/results/CCVT_CGAL/application/noise_1.png");
 
-    unsigned random_offset_ = 954248632;
-    unsigned seed_ = 4;
-
-
-    // ---------------------------------------------------------------------------
-    noise noise_1(K_, // isotrope
-                  a_,
-                  0.06,//0.012, //F_0_,
-                  0.785, //omega_0_,
-                  number_of_impulses_per_kernel,
-                  period,
-                  random_offset_,
-                  seed_);
-    ImageGrayd image_1 = storing_noise_d(resolution, img_size, noise_1);
-    save_pgm(working_directory + "gabor1.pgm", image_1);
+    ImageGrayd noise_2(img_size, img_size);
+    noise_2.load("/home/grenier/Documents/ASTex_fork/results/CCVT_CGAL/application/noise_2.png");
 
 
-    noise noise_2(K_, // anisotrope
-                  a_,
-                  0.06,//0.02, //F_0_,
-                  3., //omega_0_,
-                  number_of_impulses_per_kernel,
-                  period,
-                  random_offset_-4,
-                  seed_+12);
-    ImageGrayd image_2 = storing_noise_d(resolution, img_size, noise_2);
-    save_pgm(working_directory + "gabor2.pgm", image_2);
 
+// ---------------------------------------------------------------------------
+// statistiques
+    double mu_1 = moyenne_255(noise_1); // mu
+    double mu_2 = moyenne_255(noise_2); // mu'
 
-    // ---------------------------------------------------------------------------
-    // statistiques
-    double mu_1 = moyenne(image_1); // mu
-    double mu_2 = moyenne(image_2); // mu'
-
-    double mu_1_carre = moyenne_carre(image_1);
-    double mu_2_carre = moyenne_carre(image_2);
+    double mu_1_carre = moyenne_carre_255(noise_1);
+    double mu_2_carre = moyenne_carre_255(noise_2);
 
     double var_1 = mu_1_carre - mu_1*mu_1; // sigma
     double var_2 = mu_2_carre - mu_2*mu_2; // sigma'
 
+
+
+    // affichage
+    std::cout<<"statistiques bruits"<<std::endl;
+
+    std::cout<<"bruit N  : "<<std::endl;
+    std::cout<<"moyenne = "<<mu_1<<std::endl;
+    std::cout<<"variance = "<<var_1<<std::endl;
+    std::cout<<std::endl;
+
+    std::cout<<"bruit N'  : "<<std::endl;
+    std::cout<<"moyenne = "<<mu_2<<std::endl;
+    std::cout<<"variance = "<<var_2<<std::endl;
+    std::cout<<std::endl;
+
+
     // histogrammes
-    ImageGrayd histo_N1_N2 = histo_2D(image_1, image_2, cm_size); // réel
-    save_pgm(working_directory + "density_real.pgm", histo_N1_N2);
-
     ImageGrayd histo_theo = histo_2D_theo(mu_1, mu_2, var_1, var_2, cm_size); // théorique
-    save_pgm(working_directory + "density_theo.pgm", histo_theo);
+    IO::save(histo_theo, "/home/grenier/Documents/ASTex_fork/results/CCVT_CGAL/application/histo_theo.png");
+
+    ImageGrayd histo_theo_app = histo_2D_theo(0.5, 0.5, 0.02, 0.02, cm_size); // théorique
+    IO::save(histo_theo_app, "/home/grenier/Documents/ASTex_fork/results/CCVT_CGAL/application/histo_theo_app.png");
 
 
-    // ---------------------------------------------------------------------------
-    ImageGrayd cm_(cm_size, cm_size);
-    ImageGrayd res_composition(img_size, img_size);
 
-    // ---------------------------------------------------------------------------
-    for(auto s=CCVT_seeds.begin(); s<CCVT_seeds.end(); s++){
-        std::vector<Graine> H_seeds = *s;
-        std::vector<double> H_color{0.0, 0.2, 0.4, 0.6, 0.8, 1.0};
+    ImageGrayd histo_N1_N2 = histo_2D(noise_1, noise_2, cm_size); // réel
+    IO::save(histo_N1_N2, "/home/grenier/Documents/ASTex_fork/results/CCVT_CGAL/application/histo_reel.png");
 
 
-        cm_.parallel_for_all_pixels([&] (typename ImageGrayd::PixelType& P, int x, int y)
-                                    {
-                                        double dist = 100.;
-                                        int id_seed = -1;
 
-                                        for(int i=0; i<H_seeds.size(); i++){
-                                            double X = double(x)/(cm_size-1);
-                                            double Y = double(y)/(cm_size-1);
-
-//                                            double new_dist = (H_seeds.at(i).x_ - X)*(H_seeds.at(i).x_ - X) +
-//                                                              (H_seeds.at(i).y_ - Y)*(H_seeds.at(i).y_ - Y) -
-//                                                              H_seeds.at(i).weight_;
-
-                                            double new_dist = (X - H_seeds.at(i).x_)*(X - H_seeds.at(i).x_) +
-                                                              (Y - H_seeds.at(i).y_)*(Y - H_seeds.at(i).y_) -
-                                                              H_seeds.at(i).weight_;
-
-                                            if(new_dist<dist){
-                                                dist = new_dist;
-                                                id_seed = i;
-                                            }
-                                            P = H_color.at(id_seed);
-                                        }
-                                    });
-//        save_pgm(working_directory + "color_map_ccvt.pgm", cm_);
+//// ---------------------------------------------------------------------------
+//    ImageRGBu8 cm_(cm_size, cm_size);
+//    cm_.load("file");
 
 
-        // ---------------------------------------------------------------------------
 
-        res_composition.parallel_for_all_pixels([&] (typename ImageGrayd::PixelType& P, int x, int y)
-                                                {
-                                                    // valeur sur [0, 1]
-                                                    double n1 = image_1.pixelAbsolute(x,y);
-                                                    double n2 = image_2.pixelAbsolute(x,y);
 
-                                                    int id_n1 = int(std::round(n1*(cm_size-1)));
-                                                    int id_n2 = int(std::round(n2*(cm_size-1)));
-
-                                                    P = cm_.pixelAbsolute(id_n1, id_n2);
-                                                });
-//        save_pgm(working_directory + "res_composition_ccvt.pgm", res_composition);
+// ---------------------------------------------------------------------------
+    ImageRGBu8 res_composition(img_size, img_size);
+    res_composition.load("/home/grenier/Documents/ASTex_fork/results/CCVT_CGAL/application/composition.png");
 
 
 
 
 
-        // ---------------------------------------------------------------------------
-
-        // proportion présence dans E
-//        std::cout<<"mesure présence dans E"<<std::endl;
-        std::vector<color_info> couleurs_E = Tcontent(res_composition);
-        std::sort(couleurs_E.begin(), couleurs_E.end());
-
-        double tot_pixel_E = 0.;
-        for(auto it = couleurs_E.begin(); it != couleurs_E.end(); it++)
-        {
-            tot_pixel_E += (*it).compteur_;
-        }
 
 
+// ---------------------------------------------------------------------------
+    std::vector<color_info> couleurs_E;
+    std::vector<color_vois> couleur_vois_E;
+    std::vector<color_triple> couleur_tri_E;
+    int nb_voisinage = 0;
+    int nb_voisinage_diff = 0;
 
-        // capacité présence dans H
-//        std::cout<<"estimation présence dans H"<<std::endl;
-//    std::vector<color_info> couleurs_H = cell_capacity_real_histo(cm_, histo_N1_N2);
-        std::vector<color_info> couleurs_H = cell_capacity(cm_, mu_1, mu_2, var_1, var_2);
-        std::sort(couleurs_H.begin(), couleurs_H.end());
+    mesure_E(res_composition,
+             couleurs_E, couleur_vois_E, couleur_tri_E,
+             false, nb_voisinage, nb_voisinage_diff);
 
-        double tot_pixel_H = 0.;
-        for(auto it = couleurs_H.begin(); it != couleurs_H.end(); it++)
-        {
-            tot_pixel_H += (*it).compteurD_;
-        }
+    // tri
+    std::sort(couleurs_E.begin(), couleurs_E.end());
+    std::sort(couleur_vois_E.begin(), couleur_vois_E.end());
+    std::sort(couleur_tri_E.begin(), couleur_tri_E.end());
 
-
-
-
-        // affichage
-        if(couleurs_E.size() != H_color.size()){
-            std::cout<<"fail : ";
-            for(auto g=H_seeds.begin(); g<H_seeds.end(); g++){
-                std::cout<<"("<<(*g).x_<<", "<<(*g).y_<<", "<<(*g).weight_<<")";
-            }
-            std::cout<<std::endl;
-        }
-        else{
-//            std::cout<<"erreurs présence ccvt (%)"<<std::endl;
-            std::cout<<"couleurs & mesure E & estimation H & erreurs \\\\"<<std::endl;
-//            std::cout<<"\\hline"<<std::endl;
-            for(int i=0; i<couleurs_E.size(); i++){
-                double couleur = couleurs_E.at(i).couleur_;
-                double proportion_E = couleurs_E.at(i).compteur_/tot_pixel_E;
-                double proportion_H = couleurs_H.at(i).compteurD_/tot_pixel_H;
-                double err = std::abs(proportion_E - proportion_H)/proportion_E;
-
-                std::cout<<couleur<<" & "<< proportion_E<<" & "<< proportion_H<<" & "<< 100.*err<<" \\\\"<<std::endl;
-            }
-            std::cout<<std::endl;
-        }
-
-
-
+    // compte du total
+    double tot_pixel_E = 0.;
+    for(auto it = couleurs_E.begin(); it != couleurs_E.end(); it++)
+    {
+        tot_pixel_E += (*it).compteur_;
     }
 
 
+    // affichage
+    std::cout<<"présence texture"<<std::endl;
+    for(auto col=couleurs_E.begin(); col<couleurs_E.end(); col++){
+        ImageRGBu8::PixelType couleur = (*col).couleur_;
+        double proportion_E = (*col).compteur_/tot_pixel_E;
+
+        std::cout<<couleur<<" & "<< proportion_E<<std::endl;
+    }
+    std::cout<<std::endl;
+
+
+//    std::cout<<"voisinage texture"<<std::endl;
+//    for(auto vois=couleur_vois_E.begin(); vois<couleur_vois_E.end(); vois++){
+//        ImageRGBu8::PixelType couleur1 = (*vois).couleur1_;
+//        ImageRGBu8::PixelType couleur2 = (*vois).couleur2_;
+//        double proportion_E = (*vois).compteur_;
+//
+//        std::cout<<couleur1<<", "<<couleur2<<" & "<< proportion_E<<std::endl;
+//    }
+//    std::cout<<std::endl;
+//
+//
+//
+//    std::cout<<"triplet texture"<<std::endl;
+//    for(auto tri=couleur_tri_E.begin(); tri<couleur_tri_E.end(); tri++){
+//        ImageRGBu8::PixelType couleur1 = (*tri).couleur1_;
+//        ImageRGBu8::PixelType couleur2 = (*tri).couleur2_;
+//        ImageRGBu8::PixelType couleur3 = (*tri).couleur3_;
+//        double proportion_E = (*tri).compteur_;
+//
+//        std::cout<<couleur1<<", "<<couleur2<<", "<<couleur3<<" & "<< proportion_E<<std::endl;
+//    }
+//    std::cout<<std::endl;
+
+
+
+
+
+
+
+
+//// ---------------------------------------------------------------------------
+//    std::vector<color_info> couleurs_H;
+//    std::vector<color_info> couleurs_H_r;
+//
+//    std::vector<color_vois> couleur_vois_H;
+//    std::vector<color_vois> couleur_vois_H_r;
+//
+//    std::vector<color_triple> couleur_tripl_H;
+//    std::vector<color_triple> couleur_tripl_H_r;
+//
+//    mesure_H(cm_, couleurs_H, couleurs_H_r,
+//             couleur_vois_H, couleur_vois_H_r,
+//             couleur_tripl_H, couleur_tripl_H_r,
+//             mu_1, mu_2, var_1, var_2, histo_N1_N2, true);
+//
+//    // tri
+//    std::sort(couleurs_H.begin(), couleurs_H.end());
+//    std::sort(couleurs_H_r.begin(), couleurs_H_r.end());
+//
+//    std::sort(couleur_vois_H.begin(), couleur_vois_H.end());
+//    std::sort(couleur_vois_H_r.begin(), couleur_vois_H_r.end());
+//
+//    std::sort(couleur_tripl_H.begin(), couleur_tripl_H.end());
+//    std::sort(couleur_tripl_H_r.begin(), couleur_tripl_H_r.end());
+//
+//
+//    // compte total
+//    double tot_pixel_H = 0.;
+//    for(auto it = couleurs_H.begin(); it != couleurs_H.end(); it++)
+//    {
+//        tot_pixel_H += (*it).compteurD_;
+//    }
+//
+//    double tot_pixel_H_r = 0.;
+//    for(auto it = couleurs_H_r.begin(); it != couleurs_H_r.end(); it++)
+//    {
+//        tot_pixel_H_r += (*it).compteurD_;
+//    }
+//
+//
+//
+//    // affichage
+//    std::cout<<"présence carte H histo théo"<<std::endl;
+//    for(auto col=couleurs_H.begin(); col<couleurs_H.end(); col++){
+//        ImageRGBu8::PixelType couleur = (*col).couleur_;
+//        double proportion_E = (*col).compteurD_;//tot_pixel_E;
+//
+//        std::cout<<couleur<<" & "<< proportion_E<<std::endl;
+//    }
+//    std::cout<<std::endl;
+//
+//
+//
+//    std::cout<<"présence carte H histo réel"<<std::endl;
+//    for(auto col=couleurs_H_r.begin(); col<couleurs_H_r.end(); col++){
+//        ImageRGBu8::PixelType couleur = (*col).couleur_;
+//        double proportion_E = (*col).compteur_;//tot_pixel_E;
+//
+//        std::cout<<couleur<<" & "<< proportion_E<<std::endl;
+//    }
+//    std::cout<<std::endl;
+//
+//
+//
+//
+//
+//
+//
+//
+//
+////    std::cout<<"voisinage carte H histo théo"<<std::endl;
+////    for(int i=0; i<couleur_vois_H.size(); i++){
+////        ImageRGBu8::PixelType couleur1 = couleur_vois_H.at(i).couleur1_;
+////        ImageRGBu8::PixelType couleur2 = couleur_vois_H.at(i).couleur2_;
+////        double proportion_H;
+////
+////
+////        if(couleur1 == couleur2){
+////            proportion_H = couleur_vois_H.at(i).compteurD_/double(nb_voisinage);
+////        }
+////        else{
+////            proportion_H = couleur_vois_H.at(i).compteurD_/(2.*double(nb_voisinage));
+////        }
+////
+////        std::cout<<couleur1<<", "<<couleur2<<" & "<< proportion_H<<std::endl;
+////    }
+////    std::cout<<std::endl;
+////
+////
+////
+//    std::cout<<"voisinage carte H histo théo"<<std::endl;
+//    for(auto vois=couleur_vois_H.begin(); vois<couleur_vois_H.end(); vois++){
+//        ImageRGBu8::PixelType couleur1 = (*vois).couleur1_;
+//        ImageRGBu8::PixelType couleur2 = (*vois).couleur2_;
+//        double proportion_E = (*vois).compteurD_;
+//
+//        std::cout<<couleur1<<", "<<couleur2<<" & "<< proportion_E<<std::endl;
+//    }
+//    std::cout<<std::endl;
+//
+//
+//    std::cout<<"voisinage carte H histo réel"<<std::endl;
+//    for(auto vois=couleur_vois_H_r.begin(); vois<couleur_vois_H_r.end(); vois++){
+//        ImageRGBu8::PixelType couleur1 = (*vois).couleur1_;
+//        ImageRGBu8::PixelType couleur2 = (*vois).couleur2_;
+//        double proportion_E = (*vois).compteur_;
+//
+//        std::cout<<couleur1<<", "<<couleur2<<" & "<< proportion_E<<std::endl;
+//    }
+//    std::cout<<std::endl;
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//    std::cout<<"triplet carte H histo théo"<<std::endl;
+//    for(auto tri=couleur_tripl_H.begin(); tri<couleur_tripl_H.end(); tri++){
+//        ImageRGBu8::PixelType couleur1 = (*tri).couleur1_;
+//        ImageRGBu8::PixelType couleur2 = (*tri).couleur2_;
+//        ImageRGBu8::PixelType couleur3 = (*tri).couleur3_;
+//        double proportion_E = (*tri).compteurD_;
+//
+//        std::cout<<couleur1<<", "<<couleur2<<", "<<couleur3<<" & "<< proportion_E<<std::endl;
+//    }
+//    std::cout<<std::endl;
+//
+//
+//    std::cout<<"triplet carte H histo réel"<<std::endl;
+//    for(auto tri=couleur_tripl_H_r.begin(); tri<couleur_tripl_H_r.end(); tri++){
+//        ImageRGBu8::PixelType couleur1 = (*tri).couleur1_;
+//        ImageRGBu8::PixelType couleur2 = (*tri).couleur2_;
+//        ImageRGBu8::PixelType couleur3 = (*tri).couleur3_;
+//        double proportion_E = (*tri).compteur_;
+//
+//        std::cout<<couleur1<<", "<<couleur2<<", "<<couleur3<<" & "<< proportion_E<<std::endl;
+//    }
+//    std::cout<<std::endl;
+
+
+
+
+
+
+    return EXIT_SUCCESS;
 }
+
