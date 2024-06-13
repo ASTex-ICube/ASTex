@@ -571,6 +571,34 @@ void ccvt_application::updateGui() {
     }
 
     ImGui::Separator();
+    static bool color_map = true;
+    static bool noise_1 = true;
+    static bool noise_2 = true;
+    static bool composition = true;
+    if(ImGui::Button("Save")){
+        if(color_map){
+            saveTexture(m_fbo_H, m_width_H, m_height_H, "color_map.ppm");
+        }
+        if(noise_1){
+            saveTexture(m_fbo_N1, m_width_T, m_height_T, "noise_1.ppm");
+        }
+        if(noise_2){
+            saveTexture(m_fbo_N2, m_width_T, m_height_T, "noise_2.ppm");
+        }
+        if(composition){
+            glBindFramebuffer(GL_FRAMEBUFFER, m_fbo_T);
+            drawComposition();
+            glBindFramebuffer(GL_FRAMEBUFFER, 0);
+            saveTexture(m_fbo_T, m_width_T, m_height_T, "composition.ppm");
+        }
+    }
+
+    ImGui::Checkbox("color_map.ppm", &color_map);
+    ImGui::Checkbox("noise_1.ppm", &noise_1);
+    ImGui::Checkbox("noise_2.ppm", &noise_2);
+    ImGui::Checkbox("composition.ppm", &composition);
+
+    ImGui::Separator();
     ImGui::Text(m_infoBuffer.c_str());
     ImGui::End();
 
@@ -696,17 +724,17 @@ void ccvt_application::updateGui() {
     if(ImGui::Button("Same proportions")){
         equalizeCap();
     }
-    ImGui::SameLine();
-    if(ImGui::Button("Save")){
-        saveTexture(m_fbo_H, m_width_H, m_height_H, "color_map.ppm");
-        saveTexture(m_fbo_N1, m_width_T, m_height_T, "noise_1.ppm");
-        saveTexture(m_fbo_N2, m_width_T, m_height_T, "noise_2.ppm");
-
-        glBindFramebuffer(GL_FRAMEBUFFER, m_fbo_T);
-        drawComposition();
-        glBindFramebuffer(GL_FRAMEBUFFER, 0);
-        saveTexture(m_fbo_T, m_width_T, m_height_T, "composition.ppm");
-    }
+//    ImGui::SameLine();
+//    if(ImGui::Button("Save")){
+//        saveTexture(m_fbo_H, m_width_H, m_height_H, "color_map.ppm");
+//        saveTexture(m_fbo_N1, m_width_T, m_height_T, "noise_1.ppm");
+//        saveTexture(m_fbo_N2, m_width_T, m_height_T, "noise_2.ppm");
+//
+//        glBindFramebuffer(GL_FRAMEBUFFER, m_fbo_T);
+//        drawComposition();
+//        glBindFramebuffer(GL_FRAMEBUFFER, 0);
+//        saveTexture(m_fbo_T, m_width_T, m_height_T, "composition.ppm");
+//    }
     ImGui::SameLine();
     if(ImGui::Button("Optimize")){
 //        ImGui::SameLine();

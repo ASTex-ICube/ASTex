@@ -30,7 +30,7 @@ struct cell_info{
 
 struct selection{
     bool active = false;
-    bool toogle = false;
+//    bool toogle = false;
     int id = -1;
 };
 
@@ -87,7 +87,7 @@ private:
 
 
 private:
-    GLFWwindow* m_window_H = nullptr;
+//    GLFWwindow* m_window_H = nullptr;
     int m_width_H = 400;
     int m_height_H = 400;
 

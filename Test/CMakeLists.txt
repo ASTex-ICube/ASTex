@@ -12,8 +12,7 @@ set(exec_list test_exr_io test_super_pixel test_saliency test_contentExchange te
     test_heightToTexture test_PCTSResynthesis test_texton test_contentExchangeAmplification test_csn 
 	test_spectrum test_cyclostationaryPSD
 	test_simple_tiling_n_blending
-	chgrenier_tests chgrenier_fourier chgrenier_cm2d chgrenier_Tcontent chgrenier_Eregions chgrenier_eqPointProcess chgrenier_analyseT
-		chgrenier_Href chgrenier_Hccvt
+	chgrenier_analyseT chgrenier_Hccvt
 	nlutz_tests)
 
 

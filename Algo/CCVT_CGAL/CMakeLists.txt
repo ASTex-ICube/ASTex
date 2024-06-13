@@ -2,7 +2,7 @@
 # This is the CMake script for compiling a CGAL application.
 
 cmake_minimum_required(VERSION 3.1...3.23)
-project(ccvt_test_Charline)
+project(ccvt_cgal_chgrenier)
 
 
 # Include this package's headers first
@@ -52,11 +52,11 @@ set(SRCS main_ccvt_cgal.cpp
         ccvt_sites.cpp
         ccvt_application.cpp)
 
-add_executable(ccvt_test_main ${SRCS} )
+add_executable(ccvt_cgal_chgrenier ${SRCS} )
 
-target_sources(ccvt_test_main PRIVATE main_ccvt_cgal.cpp)
+target_sources(ccvt_cgal_chgrenier PRIVATE main_ccvt_cgal.cpp)
 
-target_link_libraries(ccvt_test_main PRIVATE
+target_link_libraries(ccvt_cgal_chgrenier PRIVATE
         CGAL::CGAL
         ${SUITESPARSE_LIBRARIES}
         glfw
@@ -70,8 +70,8 @@ target_link_libraries(ccvt_test_main PRIVATE
 #target_link_libraries( ccvt_test_main ${SUITESPARSE_LIBRARIES} )
 
 
-cgal_add_compilation_test(ccvt_test_main)
+cgal_add_compilation_test(ccvt_cgal_chgrenier)
 
 # nice vs solution
-set_target_properties(ccvt_test_main PROPERTIES FOLDER Algo)
+set_target_properties(ccvt_cgal_chgrenier PROPERTIES FOLDER Algo)
 
