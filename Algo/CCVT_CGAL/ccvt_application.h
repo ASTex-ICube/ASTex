@@ -80,8 +80,8 @@ private:
 
 
     void computeStatistiques(unsigned int fbo_id, int width, int height, float &mean, float &var);
-    float computeMean(float* data, int NB);
-    float computeSquareMean(float* data, int NB);
+    float computeMean(std::vector<float> data);
+    float computeSquareMean(std::vector<float> data);
     void computeProportions();
 
 
@@ -97,8 +97,8 @@ private:
     int m_height_N = 400;
 
     GLFWwindow* m_window_T = nullptr;
-    int m_width_T = 800;// 1600;
-    int m_height_T = 800;//900;
+    int m_width_T = 1600;
+    int m_height_T = 900;
 
 //    unsigned int m_PointsShaderProgram;
 //    unsigned int m_PointsVAO;

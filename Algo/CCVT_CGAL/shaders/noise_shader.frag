@@ -74,12 +74,13 @@ void main() {
     float res = max(uRes.x, uRes.y);
     vec2 uv = (gl_FragCoord.xy/res);
 
-    int nb_kernel = 20*int(uFprinc);// 100;
+    int nb_kernel = 10*int(uFprinc);// 100;
     float size_kernel = max(2.4/uFprinc, 0.05);// 0.0566;// 0.08;
 
 
     float noise = Gabor_noise(uv, nb_kernel, uFprinc, uFspread, uOprinc, uOspread, uSeed*0.624, size_kernel);
-    noise = 0.5 + 0.15*noise; // *0.155 -> variance de 0.155*0.155 = 0,024025; +0.5 -> moyenne de 0.5
+//    noise = 0.5 + 0.15*noise; // *0.155 -> variance de 0.155*0.155 = 0,024025; +0.5 -> moyenne de 0.5
+    noise = 0.16*noise+0.5;
 
     gl_FragColor = vec4(vec3(noise), 1.);
 

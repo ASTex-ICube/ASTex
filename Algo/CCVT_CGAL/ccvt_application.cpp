@@ -567,7 +567,7 @@ void ccvt_application::updateGui() {
     for(auto c=m_cells.begin(); c<m_cells.end(); c++){
         ImGui::ColorButton("color", ImVec4((*c)._r, (*c)._g, (*c)._b, 1.), ImGuiColorEditFlags_NoBorder);
         ImGui::SameLine();
-        ImGui::Text(": %f (obj : %f) ", m_histo.at(c-m_cells.begin())/float(m_width_T*m_height_T), (*c)._cap);
+        ImGui::Text(" %.2f%% (obj: %.2f%%) ", 100.*m_histo.at(c-m_cells.begin())/float(m_width_T*m_height_T), 100.*(*c)._cap);
     }
 
     ImGui::Separator();
@@ -919,7 +919,7 @@ void ccvt_application::updateCCVT(){
 
     for(auto pi:m_points){
         points.emplace_back(pi._x, pi._y);
-        weights.emplace_back(pi._w);
+        weights.emplace_back(0.);//pi._w);
     }
 
     for(auto ci:m_cells){
@@ -949,13 +949,9 @@ void ccvt_application::saveTexture(unsigned int fbo_id, int width, int height, c
 
     glViewport(0, 0, width, height);
 
-    float pixel[3*width*height];
-    glReadPixels(0, 0, width, height, GL_RGB, GL_FLOAT, &pixel);
+    std::vector<float> pixel(3*width*height);
+    glReadPixels(0, 0, width, height, GL_RGB, GL_FLOAT, pixel.data());
 
-//    unsigned int pixel[3*width*height];
-//    glReadPixels(0, 0, width, height, GL_RGB, GL_UNSIGNED_INT, &pixel);
-
-//    savePPM(filename, pixel, width, height);
 
     glBindFramebuffer(GL_FRAMEBUFFER, 0);
 
@@ -972,39 +968,13 @@ void ccvt_application::saveTexture(unsigned int fbo_id, int width, int height, c
     {
         for(int c=0; c<3; c++){
             value = static_cast<int>(255*pixel[p + c ]);
-//            value = (255.*data[p + c ])/2147483648.;
-//            value = (255.*pixel[p + c ])/4294967295.;
             output << value <<" ";
         }
         output << std::endl;
     }
     output.close();
-
+//    delete[] pixel;
 }
-
-
-//void ccvt_application::savePPM(const std::string &filename, unsigned int* data, int width, int height) {
-//
-//
-//    std::ofstream output(filename.c_str());
-//    output << "P3" << std::endl;
-//    output << "# " << filename << std::endl;
-//    output << width << " " << height << std::endl;
-//    output << "255" << std::endl;
-//
-//    int value;
-//    for(int p=0; p<width*height*3; p+=3)
-//    {
-//        for(int c=0; c<3; c++){
-////            value = static_cast<int>(255*data[p + c ]);
-////            value = (255.*data[p + c ])/2147483648.;
-//            value = (255.*data[p + c ])/4294967295.;
-//            output << value <<" ";
-//        }
-//        output << std::endl;
-//    }
-//    output.close();
-//}
 
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -1012,44 +982,43 @@ void ccvt_application::computeStatistiques(unsigned int fbo_id, int width, int h
     glBindFramebuffer(GL_FRAMEBUFFER, fbo_id);
 
     glViewport(0, 0, width, height);
-    float pixel[width*height];
-    glReadPixels(0, 0, width, height, GL_RED, GL_FLOAT, &pixel);
+
+    std::vector<float> pixel(width*height);
+    glReadPixels(0, 0, width, height, GL_RED, GL_FLOAT, pixel.data());
 
     glBindFramebuffer(GL_FRAMEBUFFER, 0);
 
-    float moy = computeMean(pixel, width*height);
-    float moyS = computeSquareMean(pixel, width*height);
+    float moy = computeMean(pixel);
+    float moyS = computeSquareMean(pixel);
 
     mean = moy;
     var = moyS - moy*moy;
 }
 
 
-float ccvt_application::computeMean(float *data, int NB) {
+float ccvt_application::computeMean(std::vector<float> data) {
     float value = 0;
-    for(int p=0; p<NB; p++)
-    {
-        value += data[p];
+    for(auto d:data){
+        value += d;
     }
-    return value/NB;
+    return value/data.size();
 }
 
 
-float ccvt_application::computeSquareMean(float *data, int NB) {
+float ccvt_application::computeSquareMean(std::vector<float> data) {
     float value = 0;
-    for(int p=0; p<NB; p++)
-    {
-        value += data[p]*data[p];
+    for(auto d:data){
+        value += d*d;
     }
-    return value/NB;
+    return value/data.size();
 }
 
 void ccvt_application::computeProportions() {
     glBindFramebuffer(GL_FRAMEBUFFER, m_fbo_T);
     drawComposition();
 
-    float pixel[3*m_width_T*m_height_T];
-    glReadPixels(0, 0, m_width_T, m_height_T, GL_RGB, GL_FLOAT, &pixel);
+    std::vector<float> pixel(3*m_width_T*m_height_T);
+    glReadPixels(0, 0, m_width_T, m_height_T, GL_RGB, GL_FLOAT, pixel.data());
 
     glBindFramebuffer(GL_FRAMEBUFFER, 0);
 
@@ -1066,5 +1035,4 @@ void ccvt_application::computeProportions() {
         }
     }
     m_histo=histo;
-
 }
