@@ -28,6 +28,17 @@ struct cell_info{
     cell_info(float cap, float r, float g, float b):_cap(cap), _r(r), _g(g), _b(b){};
 };
 
+struct histo_info{
+    int _count;
+    float _obj;
+    float _r;
+    float _g;
+    float _b;
+
+    histo_info(float r, float g, float b): _count(0), _obj(0.), _r(r), _g(g), _b(b){};
+    void incr(){_count++;}
+};
+
 struct selection{
     bool active = false;
 //    bool toogle = false;
@@ -60,13 +71,15 @@ private:
     bool initGui(GLFWwindow* &window);
     void terminateGui();
     void updateGui();
+    void cellPopup(int id);
 //
 //    void displayPoints();
 //    void updatePoints();
 //
 //    void onMouseButton(int button, int action, int mods);
 //    void onMouseMove(double xpos, double ypos);
-    void addPoint(float xPos, float yPos);
+    void addPoint(float xPos, float yPos, float r, float g, float b);
+    void insertPoint(int vecPos, float xPos, float yPos, float r, float g, float b);
     void deletePoint(int id);
     void normilizeCap();
     void equalizeCap();
@@ -98,7 +111,7 @@ private:
 
     GLFWwindow* m_window_T = nullptr;
     int m_width_T = 1600;
-    int m_height_T = 900;
+    int m_height_T = 900; // 900
 
 //    unsigned int m_PointsShaderProgram;
 //    unsigned int m_PointsVAO;
@@ -144,7 +157,7 @@ private:
 
     std::vector<point_info> m_points;
     std::vector<cell_info> m_cells;
-    std::vector<int> m_histo;
+    std::vector<histo_info> m_histo;
 
     selection m_selected;
 

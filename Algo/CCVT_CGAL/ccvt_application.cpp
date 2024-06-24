@@ -64,7 +64,7 @@ std::string load_shader(const std::string& file_path){
 
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////
-bool window_creation(GLFWwindow* &window, const char* name, int width, int height){
+bool window_creation(GLFWwindow* &window, const char* name, int& width, int& height){
     std::cout<<"creation window "<<name<<"..."<<std::endl;
 
     // fenêtre carte H
@@ -76,6 +76,11 @@ bool window_creation(GLFWwindow* &window, const char* name, int width, int heigh
     }
     glfwMakeContextCurrent(window);
 
+    // int width_t, height_t;
+    // glfwGetWindowSize(window, &width_t, &height_t);
+    glfwGetFramebufferSize(window, &width, &height);
+    // std::cout<<width_t<<", "<<height_t<<std::endl;
+    // glfwSetWindowSize(window, width, height);
 
     // initialising GLEW
     glewExperimental = GL_TRUE;
@@ -411,7 +416,7 @@ void ccvt_application::drawCM() {
     glBindFramebuffer(GL_FRAMEBUFFER, m_fbo_H);
 
     // clear color
-    glClearColor(0.6f, 0.6f, 0.8f, 1.0f);
+    glClearColor(0.4f, 0.6f, 0.8f, 1.0f);
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT); // we're not using the stencil buffer now
     glEnable(GL_DEPTH_TEST);
 
@@ -450,9 +455,9 @@ void ccvt_application::drawCM() {
 
 void ccvt_application::drawComposition() {
     glViewport(0, 0, m_width_T, m_height_T);
-    glClearColor(0.4f, 0.6f, 0.8f, 1.0f);
-    glClear(GL_COLOR_BUFFER_BIT);
-    glDisable(GL_DEPTH_TEST);
+    glClearColor(0.9f, 0.1f, 0.1f, 1.0f);
+    glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT); // we're not using the stencil buffer now
+    glEnable(GL_DEPTH_TEST);
 
     glUseProgram(m_CompositionShaderProgram);
 
@@ -519,6 +524,57 @@ void ccvt_application::terminateGui() {
 }
 
 
+void ccvt_application::cellPopup(int id)
+{
+    // suppression et changement de couleur
+    ImGui::Text(("cell "+std::to_string(id)).c_str());
+    ImVec4 current_color(m_cells.at(id)._r, m_cells.at(id)._g, m_cells.at(id)._b, 1.f);
+
+
+
+
+    ImGui::PushStyleColor(ImGuiCol_FrameBg, current_color);
+    ImGui::DragFloat("proportion", &m_cells.at(id)._cap, 0.005f,  0.01f, 1.f, "%f");
+    if(ImGui::IsItemEdited()){normilizeCap();}
+    ImGui::PopStyleColor(1);
+
+
+    ImGui::Separator();
+    static ImVec4 color;
+    ImGui::ColorPicker4("ColorPicker", (float*)&color, ImGuiColorEditFlags_NoInputs | ImGuiColorEditFlags_NoLabel, &current_color.x);
+
+
+    ImGui::GetStyle().ItemSpacing.x = 8.;
+    if (ImGui::Button("Change color"))
+    {
+        m_cells.at(id)._r = color.x;
+        m_cells.at(id)._g = color.y;
+        m_cells.at(id)._b = color.z;
+    }
+    ImGui::SameLine();
+    if (ImGui::Button("Duplicate"))
+    {
+        float posX = m_points.at(id)._x + 0.2*(float(std::rand()) / float(RAND_MAX)) - 0.1;
+        float posY = m_points.at(id)._y + 0.2*(float(std::rand()) / float(RAND_MAX)) - 0.1;
+        insertPoint(id, posX, posY,current_color.x, current_color.y, current_color.z);
+    }
+    ImGui::SameLine();
+    if (ImGui::Button("Delete"))
+    {
+        deletePoint(id);
+        ImGui::CloseCurrentPopup();
+    }
+    ImGui::SameLine();
+    if (ImGui::Button("Validate"))
+    {
+        ImGui::CloseCurrentPopup();
+    }
+
+    ImGui::EndPopup();
+}
+
+
+
 void ccvt_application::updateGui() {
     // Start the Dear ImGui frame
     ImGui_ImplOpenGL3_NewFrame();
@@ -564,10 +620,15 @@ void ccvt_application::updateGui() {
     if(ImGui::Button("Proportion colors")){
         computeProportions();
     }
-    for(auto c=m_cells.begin(); c<m_cells.end(); c++){
+    // for(auto c=m_cells.begin(); c<m_cells.end(); c++){
+    //     ImGui::ColorButton("color", ImVec4((*c)._r, (*c)._g, (*c)._b, 1.), ImGuiColorEditFlags_NoBorder);
+    //     ImGui::SameLine();
+    //     ImGui::Text(" %.2f%% (obj: %.2f%%) ", 100.*m_histo.at(c-m_cells.begin())._count/float(m_width_T*m_height_T), 100.*(*c)._cap);
+    // }
+    for(auto c=m_histo.begin(); c<m_histo.end(); c++){
         ImGui::ColorButton("color", ImVec4((*c)._r, (*c)._g, (*c)._b, 1.), ImGuiColorEditFlags_NoBorder);
         ImGui::SameLine();
-        ImGui::Text(" %.2f%% (obj: %.2f%%) ", 100.*m_histo.at(c-m_cells.begin())/float(m_width_T*m_height_T), 100.*(*c)._cap);
+        ImGui::Text(" %.2f%% (obj: %.2f%%) ", 100.*(*c)._count/float(m_width_T*m_height_T), 100.*(*c)._obj);
     }
 
     ImGui::Separator();
@@ -618,10 +679,11 @@ void ccvt_application::updateGui() {
 
 
         // ajout de points
-        if (ImPlot::IsPlotHovered() && ImGui::IsMouseClicked(0) && ImGui::GetIO().KeyShift) {
+        if (ImPlot::IsPlotHovered() && ImGui::IsMouseClicked(0) && ImGui::GetIO().KeyShift) { //  && ImGui::GetIO().KeyShift
             ImPlotPoint pt = ImPlot::GetPlotMousePos();
-            addPoint(pt.x, pt.y);
+            addPoint(pt.x, pt.y, (float(std::rand()) / float(RAND_MAX)), (float(std::rand()) / float(RAND_MAX)), (float(std::rand()) / float(RAND_MAX)));
         }
+
 
         // déplacement
         for(auto p=m_points.begin(); p<m_points.end(); p++){
@@ -629,7 +691,7 @@ void ccvt_application::updateGui() {
             bool hovered;
             bool held;
             ImVec4 color = m_selected.active and m_selected.id==p-m_points.begin() ? ImVec4(1., 1., 1., 1.) : ImVec4(0., 0., 0., 1.);
-            ImPlot::DragPoint(p-m_points.begin(), &(*p)._x, &(*p)._y, color, 4., ImPlotDragToolFlags_None, &clicked, &hovered, &held);
+            ImPlot::DragPoint(p-m_points.begin(), &(*p)._x, &(*p)._y, color, 6., ImPlotDragToolFlags_None, &clicked, &hovered, &held);
             if(hovered)
             {
                 ImGui::BeginTooltip();
@@ -637,7 +699,21 @@ void ccvt_application::updateGui() {
                 ImGui::Text(("position : "+std::to_string((*p)._x) +", " + std::to_string((*p)._y)).c_str());
                 ImGui::EndTooltip();
             }
+            if(clicked && ImGui::GetIO().KeyCtrl)
+            {
+                m_selected.id = p-m_points.begin();
+                ImGui::OpenPopup("cell_param");
+            }
         }
+
+
+        // suppression et changement de couleur
+        if (ImGui::BeginPopup("cell_param"))
+        {
+            int id = m_selected.id;
+            cellPopup(id);
+        }
+
 
         ImPlot::EndPlot();
 
@@ -681,41 +757,7 @@ void ccvt_application::updateGui() {
     if (ImGui::BeginPopup("cell_param"))
     {
         int id = m_selected.id;
-        ImGui::Text(("cell "+std::to_string(id)).c_str());
-        ImVec4 current_color(m_cells.at(id)._r, m_cells.at(id)._g, m_cells.at(id)._b, 1.f);
-
-
-        ImGui::PushStyleColor(ImGuiCol_FrameBg, current_color);
-        ImGui::DragFloat("proportion", &m_cells.at(id)._cap, 0.005f,  0.01f, 1.f, "%f");
-        if(ImGui::IsItemEdited()){normilizeCap();}
-        ImGui::PopStyleColor(1);
-
-
-        ImGui::Separator();
-        static ImVec4 color;
-        ImGui::ColorPicker4("ColorPicker", (float*)&color, ImGuiColorEditFlags_NoInputs | ImGuiColorEditFlags_NoLabel, &current_color.x);
-
-
-        ImGui::GetStyle().ItemSpacing.x = 8.;
-        if (ImGui::Button("Change color"))
-        {
-            m_cells.at(id)._r = color.x;
-            m_cells.at(id)._g = color.y;
-            m_cells.at(id)._b = color.z;
-        }
-        ImGui::SameLine();
-        if (ImGui::Button("Delete"))
-        {
-            deletePoint(id);
-            ImGui::CloseCurrentPopup();
-        }
-        ImGui::SameLine();
-        if (ImGui::Button("Validate"))
-        {
-            ImGui::CloseCurrentPopup();
-        }
-
-        ImGui::EndPopup();
+        cellPopup(id);
     }
 
 
@@ -724,21 +766,8 @@ void ccvt_application::updateGui() {
     if(ImGui::Button("Same proportions")){
         equalizeCap();
     }
-//    ImGui::SameLine();
-//    if(ImGui::Button("Save")){
-//        saveTexture(m_fbo_H, m_width_H, m_height_H, "color_map.ppm");
-//        saveTexture(m_fbo_N1, m_width_T, m_height_T, "noise_1.ppm");
-//        saveTexture(m_fbo_N2, m_width_T, m_height_T, "noise_2.ppm");
-//
-//        glBindFramebuffer(GL_FRAMEBUFFER, m_fbo_T);
-//        drawComposition();
-//        glBindFramebuffer(GL_FRAMEBUFFER, 0);
-//        saveTexture(m_fbo_T, m_width_T, m_height_T, "composition.ppm");
-//    }
     ImGui::SameLine();
     if(ImGui::Button("Optimize")){
-//        ImGui::SameLine();
-//        ImGui::ProgressBar(-1.0f * (float)ImGui::GetTime(), ImVec2(0.0f, 0.0f), "Searching..");
         optimizeCCVT();
     }
 
@@ -844,20 +873,38 @@ void ccvt_application::updateGui() {
 
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////
-void ccvt_application::addPoint(float xPos, float yPos) {
+void ccvt_application::addPoint(float xPos, float yPos, float r, float g, float b) {
 //    std::cout<<"new point : "<<xPos<<", "<<yPos<<std::endl;
     if(m_CurrentPointsNb < m_MaxPointsNb){
         float new_cap = 1.f/(m_cells.size()+1);
 
         m_points.emplace_back(xPos, yPos, 0.);
-        m_cells.emplace_back(new_cap, (float(std::rand()) / float(RAND_MAX)), (float(std::rand()) / float(RAND_MAX)), (float(std::rand()) / float(RAND_MAX)));
+        m_cells.emplace_back(new_cap, r, g, b);
         m_CurrentPointsNb = m_points.size();
 
         normilizeCap();
-        m_histo.resize(m_CurrentPointsNb, m_cells.end()->_cap);
+        // m_histo.resize(m_CurrentPointsNb, m_cells.end()->_cap);
+        computeProportions();
     }
 
 }
+
+void ccvt_application::insertPoint(int vecPos, float xPos, float yPos, float r, float g, float b)
+{
+    if(m_CurrentPointsNb < m_MaxPointsNb)
+    {
+        float new_cap = 1.f/(m_cells.size()+1);
+
+        m_points.insert(m_points.begin()+vecPos, point_info{xPos, yPos, 0.}); //emplace_back(xPos, yPos, 0.);
+        m_cells.insert(m_cells.begin()+vecPos, cell_info{new_cap, r, g, b}); //emplace_back(new_cap, r, g, b);
+        m_CurrentPointsNb = m_points.size();
+
+        normilizeCap();
+        // m_histo.resize(m_CurrentPointsNb, m_cells.end()->_cap);
+        computeProportions();
+    }
+}
+
 
 void ccvt_application::deletePoint(int id) {
     if(m_CurrentPointsNb>1){
@@ -867,6 +914,7 @@ void ccvt_application::deletePoint(int id) {
         m_CurrentPointsNb = m_points.size();
 
         normilizeCap();
+        computeProportions();
     }
 }
 
@@ -924,12 +972,14 @@ void ccvt_application::optimizeCCVT(){
     unsigned max_newton_iters = 500;
     unsigned max_iters = 500;
 
-    int iter_opt = m_ccvt.optimize_H(stepW, stepX, max_newton_iters, epsilon, max_iters);
+    // int iter_opt = m_ccvt.optimize_H(stepW, stepX, max_newton_iters, epsilon, max_iters);
+    int iter_opt = m_ccvt.optimize_all(stepW, stepX, max_newton_iters, epsilon, max_iters, std::cout);
 
     std::cout<<iter_opt<<" itérations (max : "<<max_newton_iters<<")"<<std::endl;
     m_infoBuffer+= std::to_string(iter_opt) + " itérations (max : " + std::to_string(max_newton_iters) + ")\n";
 
     getCCVTcells();
+    computeProportions();
 }
 
 
@@ -1051,16 +1101,46 @@ void ccvt_application::computeProportions() {
     glBindFramebuffer(GL_FRAMEBUFFER, 0);
 
 
-    std::vector<int> histo(m_CurrentPointsNb, 0);
+    std::vector<histo_info> histo;//(m_CurrentPointsNb);
     for(int p=0; p<m_width_T*m_height_T*3; p+=3)
     {
-        for(auto c=m_cells.begin(); c<m_cells.end(); c++){
+        bool found = false;
+        for(auto c = histo.begin(); c<histo.end(); c++)
+        {
+            found = abs(pixel[p]-(*c)._r)<0.01 and abs(pixel[p+1]-(*c)._g)<0.01 and abs(pixel[p+2]-(*c)._b)<0.01;
+            if(found)
+            {
+                histo.at(c-histo.begin()).incr();
+                break;
+            }
+        }
+        if(!found)
+        {
+            histo.emplace_back(pixel[p], pixel[p+1], pixel[p+2]);
+        }
 
-            bool found = abs(pixel[p]-(*c)._r)<0.01 and abs(pixel[p+1]-(*c)._g)<0.01 and abs(pixel[p+2]-(*c)._b)<0.01;
-            if(found){
-                histo.at(c-m_cells.begin()) += 1;
+
+        // for(auto c=m_cells.begin(); c<m_cells.end(); c++){
+        //
+        //     bool found = abs(pixel[p]-(*c)._r)<0.01 and abs(pixel[p+1]-(*c)._g)<0.01 and abs(pixel[p+2]-(*c)._b)<0.01;
+        //     if(found){
+        //         histo.at(c-m_cells.begin()) += 1;
+        //     }
+        // }
+    }
+
+    for(auto c=m_cells.begin(); c<m_cells.end(); c++)
+    {
+        for(auto h = histo.begin(); h<histo.end(); h++)
+        {
+            bool found = abs((*h)._r-(*c)._r)<0.01 and abs((*h)._g-(*c)._g)<0.01 and abs((*h)._b-(*c)._b)<0.01;
+            if(found)
+            {
+                (*h)._obj+=(*c)._cap;
             }
         }
     }
+
+
     m_histo=histo;
 }
