@@ -321,13 +321,18 @@ unsigned CCVT::optimize_weights_via_newton_until_converge(FT& timestep,
                                                            unsigned max_iters)
 {
     if(m_verbose){std::cout<<"optimizing weights..."<<std::endl;}
+    std::cout<<"optimizing weights..."<<std::endl;
     for (unsigned i = 0; i < max_iters; ++i) // boucle 28 à 33
     {
         bool flag = (update == 0 || (i+1) % update == 0);
         FT norm = optimize_weights_via_newton(timestep, flag); // ||nabla_w F||
-        if (norm < threshold) return i;
+        if (norm < threshold)
+        {
+            std::cout<<"--- weight optimized ---"<<std::endl;
+            return i;
+        }
     }
-//    std::cout<<"newton_max_iter reached"<<std::endl;
+    std::cout<<"newton_max_iter reached"<<std::endl;
     return max_iters;
 }
 
@@ -343,6 +348,12 @@ unsigned CCVT::optimize_all(FT& wstep, FT& xstep, unsigned max_newton_iters,
                              FT epsilon, unsigned max_iters,
                              std::ostream& out)
 {
+    if (m_timer_on)
+    {
+        Timer::start_timer(m_timer, COLOR_RED, "optimisation complète");
+        std::cout << std::endl;
+    }
+
     bool global_connectivity = m_fixed_connectivity;
     unsigned nb0 = count_visible_sites();
 
@@ -363,10 +374,15 @@ unsigned CCVT::optimize_all(FT& wstep, FT& xstep, unsigned max_newton_iters,
 
 
     // optimisation "grossière"
+    // if (m_timer_on)
+    // {
+    //     Timer::start_timer(m_timer, COLOR_RED, "optimisation grossière");
+    //     std::cout << std::endl;
+    // }
     while (iters < max_iters)
     {
         iters++;
-        reset_weights();
+        reset_weights(); // Triangulation...
 
         // on ajuste les poids pour coller au capacités (Newton method for W)
         nb_assign += optimize_weights_via_newton_until_converge(wstep, coarse_wthreshold, 0, max_newton_iters);
@@ -378,6 +394,7 @@ unsigned CCVT::optimize_all(FT& wstep, FT& xstep, unsigned max_newton_iters,
         out << "(Coarse) Norm: " << norm << std::endl;
         if (norm <= coarse_xthreshold) break;
     }
+    // if (m_timer_on) Timer::stop_timer(m_timer, COLOR_RED);
 
     out << "Partial: " << iters << " iters" << std::endl;
     m_fixed_connectivity = global_connectivity;
@@ -392,6 +409,11 @@ unsigned CCVT::optimize_all(FT& wstep, FT& xstep, unsigned max_newton_iters,
 
 
     // optimisation "fine"
+    // if (m_timer_on)
+    // {
+    //     Timer::start_timer(m_timer, COLOR_RED, "optimisation fine");
+    //     std::cout << std::endl;
+    // }
     while (iters < max_iters)
     {
         iters++;
@@ -408,15 +430,24 @@ unsigned CCVT::optimize_all(FT& wstep, FT& xstep, unsigned max_newton_iters,
         out << "(Fine) Norm: " << norm << std::endl;
         if (norm <= fine_xthreshold) break;
     }
+    // if (m_timer_on) Timer::stop_timer(m_timer, COLOR_RED);
 
 
 
     // dernière optimisation des volumes
+    // if (m_timer_on)
+    // {
+    //     Timer::start_timer(m_timer, COLOR_RED, "optimisation volume final");
+    //     std::cout << std::endl;
+    // }
     optimize_weights_via_newton_until_converge(wstep, 0.1*fine_wthreshold, 0, max_newton_iters);
+    // if (m_timer_on) Timer::stop_timer(m_timer, COLOR_RED);
 
     std::cout << "NbAssign: " << nb_assign << std::endl;
 
     m_fixed_connectivity = global_connectivity;
+
+    if (m_timer_on) Timer::stop_timer(m_timer, COLOR_RED);
     return nb_assign;//iters;
 }
 

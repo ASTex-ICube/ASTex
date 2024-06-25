@@ -15,14 +15,19 @@ int main() {
     double var_x = 0.02;//4025; // 0.0151757;//
     double var_y = 0.02;//4025; // 0.0151757;//
 
+    unsigned size_x = 32;// 256;
+    unsigned size_y = 32;// 256;
+    double max_val = 255.;
+
     // position initial des graines
     std::vector<Point> init_sites{Point(0.81, 0.65), Point(0.15, 0.25), Point(0.52, 0.91), Point(0.65, 0.28), Point(0.12, 0.72), Point(0.45, 0.48)};
     std::vector<FT> custom_capacities{0.1313, 0.0534, 0.0546, 0.1644, 0.0493, 0.5469};
 
     CCVT main_ccvt;
-    main_ccvt.set_domain(mu_x, mu_y, var_x, var_y);
+    main_ccvt.set_domain(mu_x, mu_y, var_x, var_y, size_x, size_y, max_val);
     main_ccvt.set_custom_proportions(custom_capacities);
     main_ccvt.set_initial_sites(init_sites);
+    // main_ccvt.toggle_timer();
 
     ccvt_application app;
     app.attacheCCVT(main_ccvt);

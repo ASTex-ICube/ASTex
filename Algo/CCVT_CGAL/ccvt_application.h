@@ -61,6 +61,9 @@ public:
 
     void attacheCCVT(CCVT &ccvt){
         m_ccvt = ccvt;
+        m_size_density = m_ccvt.get_domain_size_x();
+        m_size_density = m_ccvt.get_domain_size_y();
+        m_max_val = m_ccvt.get_domain_max_val();
     }
 
 private:
@@ -150,8 +153,10 @@ private:
     float m_var_N2;
 
 
-
     CCVT m_ccvt;
+    unsigned m_size_density;
+    float m_max_val;
+
     static const unsigned int m_MaxPointsNb = 30; // change in composition shader and color shader too
     unsigned int m_CurrentPointsNb;
 
@@ -161,7 +166,8 @@ private:
 
     selection m_selected;
 
-    std::string m_infoBuffer = "";
+    std::string m_infoBuffer{"", 100};
+    std::vector<double> m_timer;
 
 
     float m_F1Princ = 16.;

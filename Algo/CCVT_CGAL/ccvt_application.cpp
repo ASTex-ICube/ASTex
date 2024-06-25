@@ -3,6 +3,7 @@
 //
 
 #include "ccvt_application.h"
+#include "timer.h"
 
 #include <GL/glew.h>
 #include <GL/gl.h>
@@ -526,19 +527,27 @@ void ccvt_application::terminateGui() {
 
 void ccvt_application::cellPopup(int id)
 {
-    // suppression et changement de couleur
+    // identifiant de la cellule
     ImGui::Text(("cell "+std::to_string(id)).c_str());
+    ImGui::SameLine(ImGui::GetContentRegionAvail().x-35);
+    if (ImGui::Button("Close"))
+    {
+        ImGui::CloseCurrentPopup();
+    }
+
+    // position de la graine
+    ImGui::Separator();
+    ImGui::InputScalar("position x",   ImGuiDataType_Float,  &(m_points.at(id)._x),  NULL);
+    ImGui::InputScalar("position y",   ImGuiDataType_Float,  &(m_points.at(id)._y),  NULL);
+
+    // proportion
     ImVec4 current_color(m_cells.at(id)._r, m_cells.at(id)._g, m_cells.at(id)._b, 1.f);
-
-
-
-
     ImGui::PushStyleColor(ImGuiCol_FrameBg, current_color);
     ImGui::DragFloat("proportion", &m_cells.at(id)._cap, 0.005f,  0.01f, 1.f, "%f");
     if(ImGui::IsItemEdited()){normilizeCap();}
     ImGui::PopStyleColor(1);
 
-
+    // couleur
     ImGui::Separator();
     static ImVec4 color;
     ImGui::ColorPicker4("ColorPicker", (float*)&color, ImGuiColorEditFlags_NoInputs | ImGuiColorEditFlags_NoLabel, &current_color.x);
@@ -564,11 +573,11 @@ void ccvt_application::cellPopup(int id)
         deletePoint(id);
         ImGui::CloseCurrentPopup();
     }
-    ImGui::SameLine();
-    if (ImGui::Button("Validate"))
-    {
-        ImGui::CloseCurrentPopup();
-    }
+    // ImGui::SameLine();
+    // if (ImGui::Button("Close"))
+    // {
+    //     ImGui::CloseCurrentPopup();
+    // }
 
     ImGui::EndPopup();
 }
@@ -580,8 +589,7 @@ void ccvt_application::updateGui() {
     ImGui_ImplOpenGL3_NewFrame();
     ImGui_ImplGlfw_NewFrame();
     ImGui::NewFrame();
-//    ImGui::ShowDemoWindow(); // Show demo window! :)
-
+    // ImGui::ShowDemoWindow(); // Show demo window! :)
 
 
     ImGui::Begin("Performances");
@@ -770,6 +778,9 @@ void ccvt_application::updateGui() {
     if(ImGui::Button("Optimize")){
         optimizeCCVT();
     }
+
+    ImGui::Separator();
+    ImGui::InputScalar("size H",   ImGuiDataType_U16,  &m_size_density,  NULL);
 
 
 
@@ -973,10 +984,13 @@ void ccvt_application::optimizeCCVT(){
     unsigned max_iters = 500;
 
     // int iter_opt = m_ccvt.optimize_H(stepW, stepX, max_newton_iters, epsilon, max_iters);
+    Timer::start_timer(m_timer, COLOR_BLUE, "optimize proportions");
     int iter_opt = m_ccvt.optimize_all(stepW, stepX, max_newton_iters, epsilon, max_iters, std::cout);
+    double duration = Timer::stop_timer(m_timer, COLOR_BLUE);
 
     std::cout<<iter_opt<<" itérations (max : "<<max_newton_iters<<")"<<std::endl;
-    m_infoBuffer+= std::to_string(iter_opt) + " itérations (max : " + std::to_string(max_newton_iters) + ")\n";
+    //m_infoBuffer = std::to_string(iter_opt) + " iterations in "+std::to_string(duration) + "s (max : " + std::to_string(max_newton_iters) + ")\n";
+    std::sprintf(m_infoBuffer.data(), "%i iteration done in %.3fs", iter_opt, duration);
 
     getCCVTcells();
     computeProportions();
@@ -997,7 +1011,7 @@ void ccvt_application::updateCCVT(){
 
     for(auto pi:m_points){
         points.emplace_back(pi._x, pi._y);
-        weights.emplace_back(0.);//pi._w);
+        weights.emplace_back(pi._w);
     }
 
     for(auto ci:m_cells){
@@ -1010,7 +1024,7 @@ void ccvt_application::updateCCVT(){
     computeStatistiques(m_fbo_N1, m_width_T, m_height_T, m_mean_N1, m_var_N1);
     computeStatistiques(m_fbo_N2, m_width_T, m_height_T, m_mean_N2, m_var_N2);
 
-    m_ccvt.set_domain(m_mean_N1, m_mean_N2, m_var_N1, m_var_N2);
+    m_ccvt.set_domain(m_mean_N1, m_mean_N2, m_var_N1, m_var_N2, m_size_density, m_size_density, m_max_val);
     m_ccvt.set_custom_proportions(caps);
     m_ccvt.set_sites(points, weights);
     m_ccvt.set_colors(R, G, B);

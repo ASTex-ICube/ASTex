@@ -78,6 +78,10 @@ public:
     double get_tau() const { return m_tau; }
     void set_tau(double tau) { m_tau = tau; }
 
+    unsigned get_domain_size_x() const {return m_domain.get_width();}
+    unsigned get_domain_size_y() const {return m_domain.get_height();}
+    double get_domain_max_val() const {return m_domain.get_max_value();}
+
     void set_custom_proportions(std::vector<FT>& proportions){
         m_proportions = proportions;
         m_custom_proportions = true;
@@ -222,8 +226,8 @@ public:
     }
 
 
-    void set_domain(double moy_x, double moy_y, double variance_x, double variance_y){
-        bool ok = m_domain.set(moy_x, moy_y, variance_x, variance_y);
+    void set_domain(double moy_x, double moy_y, double variance_x, double variance_y, unsigned size_x, unsigned size_y, double max_val){
+        bool ok = m_domain.set(moy_x, moy_y, variance_x, variance_y, size_x, size_y, max_val);
         if (!ok) return;
 
         m_rt.set_boundary(m_domain.get_dx(),

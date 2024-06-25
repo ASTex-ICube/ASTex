@@ -29,7 +29,7 @@ public:
     }
 
     static
-    void stop_timer(std::vector<double>& timer,
+    double stop_timer(std::vector<double>& timer,
                     const int color,
                     const std::string msg = std::string())
     {
@@ -37,6 +37,7 @@ public:
         timer.pop_back();
         set_color(color);
         std::cout << "done" << white << " (" << duration << " s) " << msg << std::endl;
+        return duration;
     }
 
     static

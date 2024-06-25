@@ -59,11 +59,11 @@ public:
     }
 
     // set a gaussian density from average and variance
-    bool set_data(double moy_x, double moy_y, double variance_x, double variance_y){
+    bool set_data(double moy_x, double moy_y, double variance_x, double variance_y, unsigned size_x, unsigned size_y, double max_val){
         m_original.clear();
-        m_h = 256;
-        m_w = 256;
-        m_max_original = 255.;
+        m_h = size_y;// 128; //256;
+        m_w = size_x;// 128; //256;
+        m_max_original = max_val;// 255.;
 
         for (unsigned i = 0; i < m_w; ++i)
         {

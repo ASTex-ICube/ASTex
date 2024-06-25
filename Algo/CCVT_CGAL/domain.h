@@ -199,8 +199,8 @@ public:
         return true;
     }
 
-    bool set(double moy_x, double moy_y, double variance_x, double variance_y){
-        m_image.set_data(moy_x, moy_y, variance_x, variance_y);
+    bool set(double moy_x, double moy_y, double variance_x, double variance_y, unsigned size_x, unsigned size_y, double max_val){
+        m_image.set_data(moy_x, moy_y, variance_x, variance_y, size_x, size_y, max_val);
         m_mu_x = moy_x;
         m_mu_y = moy_y;
         m_var_x = variance_x;

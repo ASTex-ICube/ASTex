@@ -109,9 +109,15 @@ void CCVT::assign_pixels()
     }
 
     if (m_timer_on) Timer::stop_timer(m_timer, COLOR_GREEN);
-    if (m_timer_on) Timer::start_timer(m_timer, COLOR_GREEN, "Assign");
+    if (m_timer_on)
+    {
+        Timer::start_timer(m_timer, COLOR_GREEN, "Assign");
+        std::cout << std::endl;
+    }
+
 
     Vertex_handle vertex = Vertex_handle();
+    if (m_timer_on) Timer::start_timer(m_timer, COLOR_YELLOW, "boucle");
     for (unsigned i = 0; i < width; ++i)
     {
         for (unsigned j = 0; j < height; ++j)
@@ -137,6 +143,7 @@ void CCVT::assign_pixels()
             }
         }
     }
+    if (m_timer_on) Timer::stop_timer(m_timer, COLOR_YELLOW);
 
     if (m_timer_on) Timer::stop_timer(m_timer, COLOR_GREEN);
 }
