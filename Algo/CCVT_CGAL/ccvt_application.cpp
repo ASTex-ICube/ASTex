@@ -647,6 +647,7 @@ void ccvt_application::updateGui() {
     if(ImGui::Button("Save")){
         if(color_map){
             saveTexture(m_fbo_H, m_width_H, m_height_H, "color_map.ppm");
+            saveData("color_map.txt");
         }
         if(noise_1){
             saveTexture(m_fbo_N1, m_width_T, m_height_T, "noise_1.ppm");
@@ -791,6 +792,10 @@ void ccvt_application::updateGui() {
             m_MaxPointsNb
     );
     ImGui::BulletText(
+            "Min number = %i\n",
+            3
+    );
+    ImGui::BulletText(
             "Current number = %i\n",
             m_CurrentPointsNb
     );
@@ -813,9 +818,9 @@ void ccvt_application::updateGui() {
     if(ImGui::IsItemEdited()){m_n1_changed = true;}
     ImGui::SliderFloat("F spread", &m_F1Spread, 0., 20.);
     if(ImGui::IsItemEdited()){m_n1_changed = true;}
-    ImGui::SliderAngle("O_0", &m_Or1Princ);
+    ImGui::SliderAngle("O_0", &m_Or1Princ, 0., 180.);
     if(ImGui::IsItemEdited()){m_n1_changed = true;}
-    ImGui::SliderAngle("O spread", &m_Or1Spread, 0., 180.);
+    ImGui::SliderAngle("O spread", &m_Or1Spread, 0., 90.);
     if(ImGui::IsItemEdited()){m_n1_changed = true;}
 
 
@@ -850,9 +855,9 @@ void ccvt_application::updateGui() {
     if(ImGui::IsItemEdited()){m_n2_changed = true;}
     ImGui::SliderFloat("F spread", &m_F2Spread, 0., 20.);
     if(ImGui::IsItemEdited()){m_n2_changed = true;}
-    ImGui::SliderAngle("O_0", &m_Or2Princ);
+    ImGui::SliderAngle("O_0", &m_Or2Princ, 0., 180.);
     if(ImGui::IsItemEdited()){m_n2_changed = true;}
-    ImGui::SliderAngle("O spread", &m_Or2Spread, 0., 180.);
+    ImGui::SliderAngle("O spread", &m_Or2Spread, 0., 90.);
     if(ImGui::IsItemEdited()){m_n2_changed = true;}
 
 
@@ -918,7 +923,7 @@ void ccvt_application::insertPoint(int vecPos, float xPos, float yPos, float r, 
 
 
 void ccvt_application::deletePoint(int id) {
-    if(m_CurrentPointsNb>1){
+    if(m_CurrentPointsNb>3){
         m_points.erase(m_points.begin()+id);
         m_cells.erase(m_cells.begin()+id);
         m_histo.erase(m_histo.begin()+id);
@@ -977,18 +982,18 @@ void ccvt_application::optimizeCCVT(){
     normilizeCap();
     updateCCVT();
     std::cout<<"optimizing CCVT..."<<std::endl;
-    FT stepX = 0.01; // pour les positions
+    FT stepX = 0.05; // pour les positions
     FT stepW = 0.1; // pour les poids
     FT epsilon = 1.;
     unsigned max_newton_iters = 500;
-    unsigned max_iters = 500;
+    unsigned max_iters = 50;
 
     // int iter_opt = m_ccvt.optimize_H(stepW, stepX, max_newton_iters, epsilon, max_iters);
     Timer::start_timer(m_timer, COLOR_BLUE, "optimize proportions");
     int iter_opt = m_ccvt.optimize_all(stepW, stepX, max_newton_iters, epsilon, max_iters, std::cout);
     double duration = Timer::stop_timer(m_timer, COLOR_BLUE);
 
-    std::cout<<iter_opt<<" itérations (max : "<<max_newton_iters<<")"<<std::endl;
+    std::cout<<iter_opt<<" itérations (max : "<<max_newton_iters*max_iters*2.<<")"<<std::endl;
     //m_infoBuffer = std::to_string(iter_opt) + " iterations in "+std::to_string(duration) + "s (max : " + std::to_string(max_newton_iters) + ")\n";
     std::sprintf(m_infoBuffer.data(), "%i iteration done in %.3fs", iter_opt, duration);
 
@@ -1066,6 +1071,20 @@ void ccvt_application::saveTexture(unsigned int fbo_id, int width, int height, c
     }
     output.close();
 //    delete[] pixel;
+}
+
+
+void ccvt_application::saveData(const std::string &filename)
+{
+    std::ofstream output(filename.c_str());
+    for(auto p=m_points.begin(); p<m_points.end(); p++)
+    {
+        output<<"position: ("<<(*p)._x<<", "<<(*p)._y<<"), ";
+        output<<"weigth: "<<(*p)._w<<", ";
+        output<<"colour: ("<<m_cells.at(p-m_points.begin())._r<<", "<<m_cells.at(p-m_points.begin())._g<<", "<<m_cells.at(p-m_points.begin())._b<<").";
+        output<<std::endl;
+    }
+    output.close();
 }
 
 

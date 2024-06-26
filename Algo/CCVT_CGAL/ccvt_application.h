@@ -92,6 +92,7 @@ private:
     void updateCCVT();
 
     void saveTexture(unsigned  int fbo_id, int width, int height, const std::string &filename);
+    void saveData(const std::string &filename);
 //    void savePPM(const std::string& filename, unsigned int* data, int width, int height);
 
 
@@ -178,7 +179,7 @@ private:
     float m_F2Princ = 20.;
     float m_F2Spread = 0.;
     float m_Or2Princ = 1.;
-    float m_Or2Spread = 3.;
+    float m_Or2Spread = 1.;
 };
 
 
