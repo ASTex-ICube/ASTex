@@ -695,7 +695,7 @@ void ccvt_application::updateGui() {
 
 
         // déplacement
-        for(auto p=m_points.begin(); p<m_points.end(); p++){
+        for(auto p=m_points.begin(); p<m_points.end(); ++p){
             bool clicked;
             bool hovered;
             bool held;
@@ -713,7 +713,34 @@ void ccvt_application::updateGui() {
                 m_selected.id = p-m_points.begin();
                 ImGui::OpenPopup("cell_param");
             }
+            if(held)
+            {
+                m_selected.toogle = true;
+            }
         }
+
+        // graphe adjacence
+        if(m_showAdjGraph){
+            if(m_adjGraph_id.empty())
+            {
+                getCCVTadjGraph();
+            }
+            if(m_selected.toogle)
+            {
+                getCCVTadjGraph();
+                m_selected.toogle = false;
+            }
+            for(int id=0; id<m_adjGraph_id.size()-1; id+=2)
+            {
+                int point_id = m_adjGraph_id.at(id);
+                int point_id_n = m_adjGraph_id.at(id+1);
+                std::vector<float> x{m_points.at(point_id)._x, m_points.at(point_id_n)._x};
+                std::vector<float> y{m_points.at(point_id)._y, m_points.at(point_id_n)._y};
+                ImPlot::SetNextLineStyle(ImVec4(1,0,0,1));
+                ImPlot::PlotLine("adjacence", x.data(), y.data(), 2, 0, 0);
+            }
+        }
+
 
 
         // suppression et changement de couleur
@@ -734,8 +761,8 @@ void ccvt_application::updateGui() {
 
 
     // barre proportion des couleurs
-    float window_x = ImGui::GetContentRegionAvail().x;
-    ImGui::GetStyle().ItemSpacing.x = 0.;
+    float window_x = ImGui::GetContentRegionAvail().x-m_CurrentPointsNb;
+    ImGui::GetStyle().ItemSpacing.x = 1.;
     m_selected.active = false;
     for(auto c=m_cells.begin(); c<m_cells.end(); c++)
     {
@@ -779,6 +806,8 @@ void ccvt_application::updateGui() {
     if(ImGui::Button("Optimize")){
         optimizeCCVT();
     }
+    ImGui::SameLine();
+    ImGui::Checkbox("Show adjacence graphe", &m_showAdjGraph);
 
     ImGui::Separator();
     ImGui::InputScalar("size H",   ImGuiDataType_U16,  &m_size_density,  NULL);
@@ -899,6 +928,7 @@ void ccvt_application::addPoint(float xPos, float yPos, float r, float g, float 
         m_CurrentPointsNb = m_points.size();
 
         normilizeCap();
+        getCCVTadjGraph();
         // m_histo.resize(m_CurrentPointsNb, m_cells.end()->_cap);
         computeProportions();
     }
@@ -909,13 +939,15 @@ void ccvt_application::insertPoint(int vecPos, float xPos, float yPos, float r, 
 {
     if(m_CurrentPointsNb < m_MaxPointsNb)
     {
-        float new_cap = 1.f/(m_cells.size()+1);
+        float new_cap = m_cells.at(vecPos)._cap;// 1.f/(m_cells.size()+1);
 
         m_points.insert(m_points.begin()+vecPos, point_info{xPos, yPos, 0.}); //emplace_back(xPos, yPos, 0.);
         m_cells.insert(m_cells.begin()+vecPos, cell_info{new_cap, r, g, b}); //emplace_back(new_cap, r, g, b);
         m_CurrentPointsNb = m_points.size();
 
+
         normilizeCap();
+        getCCVTadjGraph();
         // m_histo.resize(m_CurrentPointsNb, m_cells.end()->_cap);
         computeProportions();
     }
@@ -930,6 +962,7 @@ void ccvt_application::deletePoint(int id) {
         m_CurrentPointsNb = m_points.size();
 
         normilizeCap();
+        getCCVTadjGraph();
         computeProportions();
     }
 }
@@ -976,6 +1009,14 @@ void ccvt_application::getCCVTcells(){
 }
 
 
+void ccvt_application::getCCVTadjGraph()
+{
+    updateCCVT();
+    m_ccvt.get_adjacence_graph(m_adjGraph_id);
+}
+
+
+
 
 
 void ccvt_application::optimizeCCVT(){
@@ -990,7 +1031,7 @@ void ccvt_application::optimizeCCVT(){
 
     // int iter_opt = m_ccvt.optimize_H(stepW, stepX, max_newton_iters, epsilon, max_iters);
     Timer::start_timer(m_timer, COLOR_BLUE, "optimize proportions");
-    int iter_opt = m_ccvt.optimize_all(stepW, stepX, max_newton_iters, epsilon, max_iters, std::cout);
+    unsigned int iter_opt = m_ccvt.optimize_all(stepW, stepX, max_newton_iters, epsilon, max_iters, std::cout);
     double duration = Timer::stop_timer(m_timer, COLOR_BLUE);
 
     std::cout<<iter_opt<<" itérations (max : "<<max_newton_iters*max_iters*2.<<")"<<std::endl;
@@ -998,6 +1039,7 @@ void ccvt_application::optimizeCCVT(){
     std::sprintf(m_infoBuffer.data(), "%i iteration done in %.3fs", iter_opt, duration);
 
     getCCVTcells();
+    getCCVTadjGraph();
     computeProportions();
 }
 
@@ -1107,7 +1149,7 @@ void ccvt_application::computeStatistiques(unsigned int fbo_id, int width, int h
 }
 
 
-float ccvt_application::computeMean(std::vector<float> data) {
+float ccvt_application::computeMean(const std::vector<float>& data) {
     float value = 0;
     for(auto d:data){
         value += d;
@@ -1116,7 +1158,7 @@ float ccvt_application::computeMean(std::vector<float> data) {
 }
 
 
-float ccvt_application::computeSquareMean(std::vector<float> data) {
+float ccvt_application::computeSquareMean(const std::vector<float>& data) {
     float value = 0;
     for(auto d:data){
         value += d*d;
@@ -1138,7 +1180,7 @@ void ccvt_application::computeProportions() {
     for(int p=0; p<m_width_T*m_height_T*3; p+=3)
     {
         bool found = false;
-        for(auto c = histo.begin(); c<histo.end(); c++)
+        for(auto c = histo.begin(); c<histo.end(); ++c)
         {
             found = abs(pixel[p]-(*c)._r)<0.01 and abs(pixel[p+1]-(*c)._g)<0.01 and abs(pixel[p+2]-(*c)._b)<0.01;
             if(found)
@@ -1162,9 +1204,9 @@ void ccvt_application::computeProportions() {
         // }
     }
 
-    for(auto c=m_cells.begin(); c<m_cells.end(); c++)
+    for(auto c=m_cells.begin(); c<m_cells.end(); ++c)
     {
-        for(auto h = histo.begin(); h<histo.end(); h++)
+        for(auto h = histo.begin(); h<histo.end(); ++h)
         {
             bool found = abs((*h)._r-(*c)._r)<0.01 and abs((*h)._g-(*c)._g)<0.01 and abs((*h)._b-(*c)._b)<0.01;
             if(found)

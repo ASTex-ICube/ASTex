@@ -41,7 +41,7 @@ struct histo_info{
 
 struct selection{
     bool active = false;
-//    bool toogle = false;
+    bool toogle = false;
     int id = -1;
 };
 
@@ -88,17 +88,18 @@ private:
     void equalizeCap();
 
     void getCCVTcells();
+    void getCCVTadjGraph();
     void optimizeCCVT();
     void updateCCVT();
 
-    void saveTexture(unsigned  int fbo_id, int width, int height, const std::string &filename);
+    static void saveTexture(unsigned  int fbo_id, int width, int height, const std::string &filename);
     void saveData(const std::string &filename);
 //    void savePPM(const std::string& filename, unsigned int* data, int width, int height);
 
 
-    void computeStatistiques(unsigned int fbo_id, int width, int height, float &mean, float &var);
-    float computeMean(std::vector<float> data);
-    float computeSquareMean(std::vector<float> data);
+    static void computeStatistiques(unsigned int fbo_id, int width, int height, float &mean, float &var);
+    static float computeMean(const std::vector<float>& data);
+    static float computeSquareMean(const std::vector<float>& data);
     void computeProportions();
 
 
@@ -164,6 +165,9 @@ private:
     std::vector<point_info> m_points;
     std::vector<cell_info> m_cells;
     std::vector<histo_info> m_histo;
+
+    std::vector<unsigned> m_adjGraph_id;
+    bool m_showAdjGraph = false;
 
     selection m_selected;
 

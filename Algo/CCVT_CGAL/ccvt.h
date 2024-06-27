@@ -103,6 +103,33 @@ public:
         return areas;
     }
 
+    void get_adjacence_graph(std::vector<unsigned>& index)
+    {
+        std::vector<unsigned> index_tmp;
+        for(auto vi:m_vertices)
+        {
+            if (vi->is_hidden()) continue;
+
+            Edge_circulator ecirc = m_rt.incident_edges(vi); // liste des eij
+            Edge_circulator eend  = ecirc;
+
+            CGAL_For_all(ecirc, eend)
+            {
+                Edge edge = *ecirc; // e_ij
+                if (!m_rt.is_inside(edge)) continue;
+
+                // position graine x_j
+                Vertex_handle vj = m_rt.get_source(edge); // x_j
+                if (vj == vi) vj = m_rt.get_target(edge);
+                if(vj->get_index()<0) continue;
+
+                index_tmp.emplace_back(vi->get_index());
+                index_tmp.emplace_back(vj->get_index());
+            }
+        }
+        index=index_tmp;
+    }
+
     std::vector<std::vector<FT>> get_neightbour_proportion() const {
         std::vector<std::vector<FT>> proportions;
 
