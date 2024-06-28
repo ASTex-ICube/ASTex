@@ -1,10 +1,10 @@
-cmake_minimum_required(VERSION 3.0)
+cmake_minimum_required(VERSION 3.5)
 
 project(ASTex CXX C)
 
-if (MSVC)
-find_package(GTest REQUIRED)
-endif()
+#if (MSVC)
+#find_package(GTest REQUIRED)
+#endif()
 
 set(ASTEX_VERSION_MAJOR 0)
 set(ASTEX_VERSION_MINOR 9)

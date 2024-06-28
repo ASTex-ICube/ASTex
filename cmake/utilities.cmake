@@ -25,7 +25,7 @@ include(CMakePackageConfigHelpers)
 # cmake/<cmake-project-name>_INCLUDE_DIRS                                                    #
 ##############################################################################################
 
-cmake_minimum_required(VERSION 3.0)
+cmake_minimum_required(VERSION 3.5)
 
 include(CMakeParseArguments)
 include(GenerateExportHeader)
