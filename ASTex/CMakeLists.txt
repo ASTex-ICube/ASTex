@@ -2,13 +2,13 @@ cmake_minimum_required(VERSION 3.0)
 
 project(ASTex LANGUAGES CXX)
 
-if (WIN32 OR APPLE )
+#if (WIN32 OR APPLE )
   find_package(Imath CONFIG REQUIRED)
   find_package(OpenEXR CONFIG REQUIRED)
 
-else()
-  find_package(OpenEXR REQUIRED)
-endif()
+  #else()
+  #find_package(OpenEXR REQUIRED)
+  #endif()
 
 find_package(PNG REQUIRED)
 find_package(ITK CONFIG  REQUIRED)
@@ -145,12 +145,12 @@ target_compile_features(${PROJECT_NAME} PUBLIC cxx_std_17)
 
 target_compile_definitions(${PROJECT_NAME} PUBLIC "${PNG_DEFINITION}")
 
-if(WIN32 OR APPLE)
-	target_link_libraries(${PROJECT_NAME} PUBLIC OpenEXR::OpenEXR Eigen3::Eigen)
-else()
-	target_link_libraries(${PROJECT_NAME} PUBLIC ${OPENEXR_LIBRARIES})
-	target_include_directories(${PROJECT_NAME} PUBLIC ${OPENEXR_INCLUDE_DIRS} ${EIGEN3_INCLUDE_DIRS})
-endif()
+#if(WIN32 OR APPLE)
+	target_link_libraries(${PROJECT_NAME} PUBLIC OpenEXR::OpenEXR Imath::Imath Eigen3::Eigen)
+	#else()
+	#target_link_libraries(${PROJECT_NAME} PUBLIC ${OPENEXR_LIBRARIES})
+	#target_include_directories(${PROJECT_NAME} PUBLIC ${OPENEXR_INCLUDE_DIRS} ${EIGEN3_INCLUDE_DIRS})
+	#endif()
 
 target_link_libraries(${PROJECT_NAME} PUBLIC ${ASTEX_LIBRARIES})
 

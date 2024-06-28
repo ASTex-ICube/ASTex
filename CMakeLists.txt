@@ -1,6 +1,6 @@
 cmake_minimum_required(VERSION 3.0)
 
-project(ASTex CXX)
+project(ASTex CXX C)
 
 if (MSVC)
 find_package(GTest REQUIRED)

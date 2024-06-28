@@ -30,7 +30,7 @@
 #include <algorithm>
 #include <string>
 #include <cassert>
-
+#include <cstdint>
 
 namespace ASTex
 {
