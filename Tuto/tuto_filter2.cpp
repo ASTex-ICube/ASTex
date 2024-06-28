@@ -26,7 +26,6 @@
 #include <iostream>
 #include "itkImageToImageFilter.h"
 #include "itkInPlaceImageFilter.h"
-#include "itkSimpleFastMutexLock.h"
 
 
 #include <ASTex/image_gray.h>
@@ -207,13 +206,14 @@ protected:
 	long radius_;
 
 	// just for nice cout
-	itk::SimpleFastMutexLock mutex;
 
 	// protected constructor (forbid usage of new and variable declaration)
 	SimpleMTFilter():
 		center_({{0,0}}),
 		radius_(1)
 	{
+		// ITK oll school MT
+		this->DynamicMultiThreadingOff();
 	}
 
 	virtual ~SimpleMTFilter() {}
@@ -225,10 +225,6 @@ protected:
 	//
 	void ThreadedGenerateData(const Region& region, itk::ThreadIdType threadId) ITK_OVERRIDE
 	{
-		mutex.Lock();
-		std::cout << "Thread " << threadId << " given region: " << region << std::endl;
-		mutex.Unlock();
-
 		// create local images for ASTex syntax (no data copy, just a pointer)
 		ConstImageRGBu8 img_in(this->GetInput());
 		ImageGrayu8 img_out(this->GetOutput());

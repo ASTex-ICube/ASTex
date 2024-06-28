@@ -25,7 +25,6 @@
 
 #include <iostream>
 #include "itkInPlaceImageFilter.h"
-#include "itkSimpleFastMutexLock.h"
 
 
 #include <ASTex/image_gray.h>

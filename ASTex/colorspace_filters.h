@@ -465,13 +465,10 @@ template< class TInput, class TOutput>
 using FilterXYZtoLAB = itk::UnaryFunctorImageFilter< TInput, TOutput,
 						fonctorXYZtoLAB< typename TInput::PixelType, typename TOutput::PixelType> >;
 
-
 /// \brief type definition for filter LAB -> XYZ
 template< class TInput, class TOutput>
 using FilterLABtoXYZ = itk::UnaryFunctorImageFilter< TInput, TOutput,
 						fonctorLABtoXYZ< typename TInput::PixelType, typename TOutput::PixelType> >;
-
-
 
 // 255 -> 01
 
@@ -509,7 +506,39 @@ template< class TInput, class TOutput>
 using FilterGray01To255 = itk::UnaryFunctorImageFilter< TInput, TOutput,
 						fonctorGray01To255< typename TInput::PixelType, typename TOutput::PixelType> >;
 
+// 65535 -> 01
+template< class TInput, class TOutput>
+class fonctorGray65535To01
+{
+public:
+    inline TOutput operator()( const TInput & p ) const
+    {
+        return 1.0/65535.0*p;
+    }
+};
 
+
+
+template< class TInput, class TOutput>
+using FilterGray65535To01 = itk::UnaryFunctorImageFilter< TInput, TOutput,
+                        fonctorGray65535To01< typename TInput::PixelType, typename TOutput::PixelType> >;
+
+
+template< class TInput, class TOutput>
+class fonctorGray01To65535
+{
+public:
+    inline TOutput operator()( const TInput & p ) const
+    {
+        return 65535.0*p;
+    }
+};
+
+
+/// \brief type definition for filter LAB -> XYZ
+template< class TInput, class TOutput>
+using FilterGray01To65535 = itk::UnaryFunctorImageFilter< TInput, TOutput,
+                        fonctorGray01To65535< typename TInput::PixelType, typename TOutput::PixelType> >;
 
 
 
@@ -553,6 +582,96 @@ using FilterRGB01To255 = itk::UnaryFunctorImageFilter< TInput, TOutput,
 						fonctorRGB01To255< typename TInput::PixelType, typename TOutput::PixelType> >;
 
 
+template< class TInput, class TOutput>
+class fonctorRGB65535To01
+{
+public:
+    inline TOutput operator()( const TInput & p ) const
+    {
+        TOutput q;
+        for (uint32_t i=0; i<TInput::Length; ++i)
+            q[i] = 1.0/65535.0*p[i];
+        return q;
+    }
+};
+
+
+/// \brief type definition for filter LAB -> XYZ
+template< class TInput, class TOutput>
+using FilterRGB65535To01 = itk::UnaryFunctorImageFilter< TInput, TOutput,
+                        fonctorRGB65535To01< typename TInput::PixelType, typename TOutput::PixelType> >;
+
+
+template< class TInput, class TOutput>
+class fonctorRGB01To65535
+{
+public:
+    inline TOutput operator()( const TInput & p ) const
+    {
+        TOutput q;
+        for (uint32_t i=0; i<TInput::Length; ++i)
+            q[i] = 65535.0*p[i];
+        return q;
+    }
+};
+
+
+
+template< class TInput, class TOutput>
+using FilterRGB01To65535 = itk::UnaryFunctorImageFilter< TInput, TOutput,
+                        fonctorRGB01To65535< typename TInput::PixelType, typename TOutput::PixelType> >;
+
+template< class TInput, class TOutput>
+class fonctorRGBtoYCbCr
+{
+public:
+	inline TOutput operator()( const TInput & p ) const
+	{
+		TOutput pix;
+
+		pix[0] =		0.2999 * p[0]	+ 0.587	* p[1]		+ 0.114 * p[2];
+		pix[1] = 0.5 +	-0.168935 * p[0]- 0.331665 * p[1]	+ 0.50059 * p[2];
+		pix[2] = 0.5 +	0.499813 * p[0]	- 0.418531 * p[1]	- 0.081282 * p[2];
+
+		return pix;
+	}
+};
+
+/// \brief type definition for filter RGB -> YCbCr
+template< class TInput, class TOutput>
+using FilterRGBtoYCbCr = itk::UnaryFunctorImageFilter< TInput, TOutput,
+						fonctorRGBtoYCbCr< typename TInput::PixelType, typename TOutput::PixelType> >;
+
+template< class TInput, class TOutput>
+class fonctorYCbCrtoRGB
+{
+public:
+	inline TOutput operator()( const TInput & p ) const
+	{
+		double Y = (double) p[0]*255;
+		double Cb = (double) p[1]*255;
+		double Cr = (double) p[2]*255;
+		double r = (Y + 1.40200 * (Cr - 0x80))/255.0;
+		double g = (Y - 0.34414 * (Cb - 0x80) - 0.71414 * (Cr - 0x80))/255.0;
+		double b = (Y + 1.77200 * (Cb - 0x80))/255.0;
+
+		r = std::max(0.0, std::min(1.0, r));
+		g = std::max(0.0, std::min(1.0, g));
+		b = std::max(0.0, std::min(1.0, b));
+
+		TOutput pix;
+		pix[0] = r;
+		pix[1] = g;
+		pix[2] = b;
+
+		return pix;
+	}
+};
+
+/// \brief type definition for filter RGB -> YCbCr
+template< class TInput, class TOutput>
+using FilterYCbCrtoRGB = itk::UnaryFunctorImageFilter< TInput, TOutput,
+						fonctorYCbCrtoRGB< typename TInput::PixelType, typename TOutput::PixelType> >;
 
 
 
