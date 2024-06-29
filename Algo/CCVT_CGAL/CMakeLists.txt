@@ -19,9 +19,10 @@ find_package(GLEW CONFIG REQUIRED)
 find_package(glfw3 3.3 REQUIRED)
 find_package(OpenGL REQUIRED)
 
-find_package(blas REQUIRED)
-find_package(lapack REQUIRED)
 find_package(metis CONFIG REQUIRED)
+
+find_package(BLAS REQUIRED)
+find_package(LAPACK REQUIRED)
 find_package(TBB CONFIG REQUIRED)
 find_package(suitesparse CONFIG REQUIRED)
 
@@ -59,7 +60,7 @@ set( SUITESPARSE_LIBRARIES
         ${BLAS_LIBRARIES} ${LAPACK_LIBRARIES}
         SuiteSparse::amd SuiteSparse::camd SuiteSparse::colamd SuiteSparse::ccolamd SuiteSparse::cholmod SuiteSparse::spqr 
         TBB::tbb TBB::tbbmalloc TBB::tbbmalloc_proxy
-        metis
+#        metis
         )
 
 target_link_libraries(ccvt_cgal_chgrenier PRIVATE
