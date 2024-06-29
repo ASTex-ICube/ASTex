@@ -54,6 +54,12 @@ double ASTEX_API getMean (const ImageGrayd& input);
  */
 double ASTEX_API getStDev (const ImageGrayd& input);
 
+/**
+ * \brief max value of a scalar image
+ * \param [in] input input scalar image
+ * \return mean pixel value
+ */
+double ASTEX_API getMax (const ImageGrayd& input);
 
 namespace IO
 {

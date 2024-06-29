@@ -218,7 +218,7 @@ public:
 	{
      	img_out.parallel_for_all_pixels([&] (typename IMG::PixelType& P, int x, int y) 
 		{
-			Eigen::Vector2d uv{ double(x) / (img_input_.width()), double(y) / (img_input_.height()) };
+			Eigen::Vector2d uv{ double(x) / (img_out.width()), double(y) / (img_out.height()) };
 			P = tile_pixel(uv);
 		});
 	}

@@ -1451,7 +1451,7 @@ public:
 	  int i, count;
 	  unsigned char buf[2];
 
-	  if ((scanline_width < 8)||(scanline_width > 0x7fff)) { printf("not RLE encoded\n"); return false; } //RGBE_ReadPixels(fp,data,scanline_width*num_scanlines);
+	  if ((scanline_width < 8)||(scanline_width > 0x7fff)) { printf("! RLE encoded\n"); return false; } //RGBE_ReadPixels(fp,data,scanline_width*num_scanlines);
 	  reset(scanline_width, num_scanlines, hvColRGB<T>());
 	  scanline_buffer = 0;
 	  /* read in each successive scanline */

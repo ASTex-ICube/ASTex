@@ -530,7 +530,7 @@ I Pcts<I>::generate()
 													errMin = err2;
 													idErrMin = idPoisson;
 												}
-												//else std::cout << "check(" << i << "," << n << "):= " << err2 << ",ind=" << idPoisson[0] << "," << idPoisson[1] << "not better\n";
+												//else std::cout << "check(" << i << "," << n << "):= " << err2 << ",ind=" << idPoisson[0] << "," << idPoisson[1] << "! better\n";
 											}
 										}
 										px = idErrMin[0];

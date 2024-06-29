@@ -55,6 +55,17 @@ double ASTEX_API getMean (const ImageGrayd& input)
     return stats->GetMean();
 }
 
+
+double ASTEX_API getMax (const ImageGrayd& input)
+{
+    typedef itk::StatisticsImageFilter< ImageGrayd::ItkImg > StatisticsImageFilterType;
+    typename StatisticsImageFilterType::Pointer stats = StatisticsImageFilterType::New ();
+
+    stats->SetInput(input.itk());
+    stats->Update();
+    return stats->GetMaximum();
+}
+
 double ASTEX_API getStDev (const ImageGrayd& input)
 {
     typedef itk::StatisticsImageFilter< ImageGrayd::ItkImg > StatisticsImageFilterType;

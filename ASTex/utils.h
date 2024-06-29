@@ -32,6 +32,7 @@
 #include <cassert>
 #include <cstring>
 
+#define NOMINMAX
 #ifdef WIN32
 #include<windows.h>
 #endif
