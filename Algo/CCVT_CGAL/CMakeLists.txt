@@ -1,30 +1,39 @@
-# Created by the script cgal_create_cmake_script
-# This is the CMake script for compiling a CGAL application.
-
 cmake_minimum_required(VERSION 3.1...3.23)
 project(ccvt_cgal_chgrenier)
-
-
-# Include this package's headers first
-#include_directories(BEFORE ./ ./include)
-set(CMAKE_CXX_STANDARD 17)
 
 ## Find CGAL
 find_package(CGAL REQUIRED COMPONENTS Core)
 
-#find_package(ASTex REQUIRED)
-
-#add_subdirectory(glfw)
-find_package(GLEW CONFIG REQUIRED)
 find_package(glfw3 3.3 REQUIRED)
 find_package(OpenGL REQUIRED)
 
-find_package(metis CONFIG REQUIRED)
+if (WIN32)
+	find_package(GLEW CONFIG REQUIRED)
+	find_package(metis CONFIG REQUIRED)
+	find_package(BLAS REQUIRED)
+	find_package(LAPACK REQUIRED)
+	find_package(TBB CONFIG REQUIRED)
+	find_package(suitesparse CONFIG REQUIRED)
 
-find_package(BLAS REQUIRED)
-find_package(LAPACK REQUIRED)
-find_package(TBB CONFIG REQUIRED)
-find_package(suitesparse CONFIG REQUIRED)
+	set( SUITESPARSE_LIBRARIES
+        	${BLAS_LIBRARIES} ${LAPACK_LIBRARIES}
+		SuiteSparse::amd
+		SuiteSparse::camd
+		SuiteSparse::colamd
+		SuiteSparse::ccolamd
+	       	SuiteSparse::cholmod
+		SuiteSparse::spqr 
+		TBB:tbb )
+		#TBB::tbbmalloc TBB::tbbmalloc_proxy )
+	set (GLEW_LIBRARIES GLEW::GLEW)
+else ()
+
+	set( SUITESPARSE_LIBRARIES
+        	${BLAS_LIBRARIES} ${LAPACK_LIBRARIES}
+        	amd camd colamd ccolamd cholmod spqr 
+		tbb )
+	set (GLEW_LIBRARIES GLEW)
+endif()
 
 set(SRCS main_ccvt_cgal.cpp
         # matrix
@@ -56,12 +65,7 @@ add_executable(ccvt_cgal_chgrenier )
 
 target_sources(ccvt_cgal_chgrenier PRIVATE ${SRCS} main_ccvt_cgal.cpp)
 
-set( SUITESPARSE_LIBRARIES
-        ${BLAS_LIBRARIES} ${LAPACK_LIBRARIES}
-        SuiteSparse::amd SuiteSparse::camd SuiteSparse::colamd SuiteSparse::ccolamd SuiteSparse::cholmod SuiteSparse::spqr 
-        TBB::tbb TBB::tbbmalloc TBB::tbbmalloc_proxy
-#        metis
-        )
+target_include_directories(ccvt_cgal_chgrenier PRIVATE /usr/include/suitesparse)
 
 target_link_libraries(ccvt_cgal_chgrenier PRIVATE
         CGAL::CGAL
@@ -69,18 +73,10 @@ target_link_libraries(ccvt_cgal_chgrenier PRIVATE
         glfw
         OpenGL::GL
         OpenGL::GLU
-        GLEW::GLEW)
-        #${CMAKE_DL_LIBS})
+	${GLEW_LIBRARIES} )
 
 
-target_compile_features(ccvt_cgal_chgrenier  	 PUBLIC cxx_std_17)
-
-
-#target_link_libraries(ccvt_test_main PRIVATE ASTex)
-
-# Link with SuiteSparse
-#target_link_libraries( ccvt_test_main ${SUITESPARSE_LIBRARIES} )
-
+target_compile_features(ccvt_cgal_chgrenier PUBLIC cxx_std_17)
 
 cgal_add_compilation_test(ccvt_cgal_chgrenier)
 
