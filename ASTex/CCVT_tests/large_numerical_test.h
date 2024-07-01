@@ -176,7 +176,7 @@ void mesure_H(ImageGrayd cm, std::vector<color_info>& presence_theo, std::vector
 
 
 void large_test(int nb_iteration){
-    std::ofstream fichier("/home/grenier/Documents/ASTex_fork/results/equ_CCVT/test.txt", std::ios::out | std::ios::trunc);
+    std::ofstream fichier(TEMPO_PATH+"results/equ_CCVT/test.txt", std::ios::out | std::ios::trunc);
 
 
     int resolution = 512;

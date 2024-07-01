@@ -9,6 +9,10 @@
 #include <GL/gl.h>
 #include <GLFW/glfw3.h>
 
+#define STB_IMAGE_WRITE_IMPLEMENTATION
+#include "stb_image_write.h"
+
+
 #include "imgui/imgui.h"
 #include "imgui/imgui_impl_glfw.h"
 #include "imgui/imgui_impl_opengl3.h"
@@ -227,13 +231,13 @@ bool ccvt_application::onInit() {
     // fenêtre résultat
     window_creation(m_window_T, "composition", m_width_T, m_height_T);
 
-    shader_program(m_NoiseShaderProgram, "shaders/noise_shader.frag", "shaders/identity_shader.vert");
+    shader_program(m_NoiseShaderProgram, TEMPO_PATH+"shaders/noise_shader.frag", TEMPO_PATH+"shaders/identity_shader.vert");
     display_quad(m_NoiseVAO);
 
-    shader_program(m_ColorShaderProgram, "shaders/color_shader.frag", "shaders/identity_shader.vert");
+    shader_program(m_ColorShaderProgram, TEMPO_PATH+"shaders/color_shader.frag", TEMPO_PATH+"shaders/identity_shader.vert");
     display_quad(m_ColorVAO);
 
-    shader_program(m_CompositionShaderProgram, "shaders/composition_shader.frag", "shaders/identity_shader.vert");
+    shader_program(m_CompositionShaderProgram, TEMPO_PATH+"shaders/composition_shader.frag", TEMPO_PATH+"shaders/identity_shader.vert");
     display_quad(m_CompositionVAO);
 
 
@@ -646,20 +650,20 @@ void ccvt_application::updateGui() {
     static bool composition = true;
     if(ImGui::Button("Save")){
         if(color_map){
-            saveTexture(m_fbo_H, m_width_H, m_height_H, "color_map.ppm");
+            saveTexture(m_fbo_H, m_width_H, m_height_H, "color_map.png");
             saveData("color_map.txt");
         }
         if(noise_1){
-            saveTexture(m_fbo_N1, m_width_T, m_height_T, "noise_1.ppm");
+            saveTexture(m_fbo_N1, m_width_T, m_height_T, "noise_1.png");
         }
         if(noise_2){
-            saveTexture(m_fbo_N2, m_width_T, m_height_T, "noise_2.ppm");
+            saveTexture(m_fbo_N2, m_width_T, m_height_T, "noise_2.png");
         }
         if(composition){
             glBindFramebuffer(GL_FRAMEBUFFER, m_fbo_T);
             drawComposition();
             glBindFramebuffer(GL_FRAMEBUFFER, 0);
-            saveTexture(m_fbo_T, m_width_T, m_height_T, "composition.ppm");
+            saveTexture(m_fbo_T, m_width_T, m_height_T, "composition.png");
         }
     }
 
@@ -1094,31 +1098,18 @@ void ccvt_application::saveTexture(unsigned int fbo_id, int width, int height, c
 
     glBindFramebuffer(GL_FRAMEBUFFER, 0);
 
+    std::string fn = TEMPO_PATH+"results/CCVT_CGAL/application/"+filename; 
 
+	stbi_flip_vertically_on_write(0);
+	stbi_write_png(fn.c_str(), width, height, 3, pixel.data(), width * 3);
 
-    std::ofstream output(filename.c_str());
-    output << "P3" << std::endl;
-    output << "# " << filename << std::endl;
-    output << width << " " << height << std::endl;
-    output << "255" << std::endl;
-
-    int value;
-    for(int p=0; p<width*height*3; p+=3)
-    {
-        for(int c=0; c<3; c++){
-            value = static_cast<int>(255*pixel[p + c ]);
-            output << value <<" ";
-        }
-        output << std::endl;
-    }
-    output.close();
-//    delete[] pixel;
 }
 
 
 void ccvt_application::saveData(const std::string &filename)
 {
-    std::ofstream output(filename.c_str());
+    std::string fn = TEMPO_PATH+"results/CCVT_CGAL/application/"+filename;  
+    std::ofstream output(fn.c_str());
     for(auto p=m_points.begin(); p<m_points.end(); p++)
     {
         output<<"position: ("<<(*p)._x<<", "<<(*p)._y<<"), ";

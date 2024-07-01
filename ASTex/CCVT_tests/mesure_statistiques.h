@@ -122,7 +122,7 @@ ImageGrayd covariance_Fourier(ImageGrayd inputNoiseX)
     Fourier::fftForwardModulusAndPhase(noise, module, phase, false); // bool preserve_energy
 
     // affichage de test
-//    IO::save_spectrum(module, "/home/grenier/Documents/ASTex_fork/results/equ_CCVT/module.png");
+//    IO::save_spectrum(module, TEMPO_PATH+"results/equ_CCVT/module.png");
 
     // carré du module = PSD
     module.for_all_pixels([&] (typename ImageGrayd::PixelType& P, int x, int y)
@@ -131,8 +131,8 @@ ImageGrayd covariance_Fourier(ImageGrayd inputNoiseX)
                           });
 
     // affichage de test
-//    IO::save_spectrum(module, "/home/grenier/Documents/ASTex_fork/results/equ_CCVT/psd.png");
-//    IO::save_phase(phase, "/home/grenier/Documents/ASTex_fork/results/equ_CCVT/phase.png");
+//    IO::save_spectrum(module, TEMPO_PATH+"results/equ_CCVT/psd.png");
+//    IO::save_phase(phase, TEMPO_PATH+"results/equ_CCVT/phase.png");
 
     // phase nulle
     phase.initItk(phase.width(), phase.height(), true); // init_to_zero = true
@@ -149,7 +149,7 @@ ImageGrayd covariance_Fourier(ImageGrayd inputNoiseX)
 //                          {
 //                              P *= 100.;
 //                          });
-//    IO::save(result_tmp, "/home/grenier/Documents/ASTex_fork/results/equ_CCVT/acov.png");
+//    IO::save(result_tmp, TEMPO_PATH+"results/equ_CCVT/acov.png");
 
     return result; //result.pixelAbsolute(tauX, tauY);
 }
@@ -183,7 +183,7 @@ double autocorrelation_Fourier(ImageGrayd inputNoiseX, int tauX, int tauY)
                           });
 
     // affichage de test
-    IO::save(result, "/home/grenier/Documents/ASTex_fork/results/equ_CCVT/acorr.png");
+    IO::save(result, TEMPO_PATH+"results/equ_CCVT/acorr.png");
 
     return result.pixelAbsolute(tauX, tauY);
 }
@@ -257,7 +257,7 @@ ImageGrayd dF_dx(ImageGrayd image_)
                           int xmh = (x-1)%image_.width();
                           P = 2.*(image_.pixelAbsolute(xph, y) - image_.pixelAbsolute(xmh, y)) + 0.5;
                       });
-    IO::save(Dx, "/home/grenier/Documents/ASTex_fork/results/equ_CCVT/test_dx.png");
+    IO::save(Dx, TEMPO_PATH+"results/equ_CCVT/test_dx.png");
     return Dx;
 }
 
@@ -271,7 +271,7 @@ ImageGrayd dF_dy(ImageGrayd image_)
                           int ymh = (y-1)%image_.height();
                           P = 2.*(image_.pixelAbsolute(x, yph) - image_.pixelAbsolute(x, ymh)) + 0.5;
                       });
-    IO::save(Dy, "/home/grenier/Documents/ASTex_fork/results/equ_CCVT/test_dy.png");
+    IO::save(Dy, TEMPO_PATH+"results/equ_CCVT/test_dy.png");
     return Dy;
 }
 
@@ -363,7 +363,7 @@ ImageGrayd histo_2D_dist(ImageGrayd histo_reel, double moy1, double moy2, double
                          });
 
     std::cout<<"val max histo réel : "<<max_reel<<", val max histo théo : "<<max_theo<<", val max distance : "<<max_dist<<std::endl;
-    IO::save(histo, "/home/grenier/Documents/ASTex_fork/results/equ_CCVT/histo_noise_dist.png");
+    IO::save(histo, TEMPO_PATH+"results/equ_CCVT/histo_noise_dist.png");
     return histo;
 }
 
@@ -439,7 +439,7 @@ ImageGrayd histo_2D_AC(ImageGrayd noise1, int tauX, int tauY, int name)
                          {
                              P *= 1./double(norme);
                          });
-    IO::save(histo, "/home/grenier/Documents/ASTex_fork/results/equ_CCVT/histo_noise_AC_" + std::to_string(name) + ".png");
+    IO::save(histo, TEMPO_PATH+"results/equ_CCVT/histo_noise_AC_" + std::to_string(name) + ".png");
     return histo;
 }
 
@@ -460,7 +460,7 @@ ImageGrayd histo_2D_theo_vois(double moy, double var, double AC, int name)
                          });
 
 
-    IO::save(histo, "/home/grenier/Documents/ASTex_fork/results/equ_CCVT/histo_noise_theo_vois_" + std::to_string(name) + ".png");
+    IO::save(histo, TEMPO_PATH+"results/equ_CCVT/histo_noise_theo_vois_" + std::to_string(name) + ".png");
     return histo;
 }
 
@@ -492,7 +492,7 @@ ImageGrayd histo_2D_dist_vois(ImageGrayd histo_reel, double moy, double var, dou
                          });
 
     std::cout<<"bruit "<<std::to_string(name)<<" - val max histo réel : "<<max_reel<<", val max histo théo : "<<max_theo<<", val max distance : "<<max_dist<<std::endl;
-    IO::save(histo, "/home/grenier/Documents/ASTex_fork/results/equ_CCVT/histo_noise_dist_vois_" + std::to_string(name) + ".png");
+    IO::save(histo, TEMPO_PATH+"results/equ_CCVT/histo_noise_dist_vois_" + std::to_string(name) + ".png");
     return histo;
 }
 

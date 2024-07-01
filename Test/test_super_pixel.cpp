@@ -105,7 +105,7 @@ int main( int argc, char **argv )
 	std::string fname;
 
 	if (argc < 2)
-		fname = "/home/grenier/Documents/ASTex_fork/ASTex/Data/composition.jpg";//TEMPO_PATH + "single-leaf-photo-03.jpg";
+		fname = TEMPO_PATH+"ASTex/Data/composition.jpg";//TEMPO_PATH + "single-leaf-photo-03.jpg";
 	else
 		fname = std::string(argv[1]);
 

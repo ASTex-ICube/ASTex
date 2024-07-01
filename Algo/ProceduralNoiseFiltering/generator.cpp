@@ -813,7 +813,7 @@ int noiseCm(int argc, char **argv)
 {
 	if(argc < 2) usage(argv[0]);
 
-	std::string filename("/home/grenier/Documents/ASTex_fork/results/noise_color_mapped.png");
+	std::string filename(TEMPO_PATH+"results/noise_color_mapped.png");
 	std::string inputname;
 	int w(512),h(512);
 	double z(1);

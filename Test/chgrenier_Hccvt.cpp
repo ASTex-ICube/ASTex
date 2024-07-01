@@ -68,15 +68,15 @@ int main()
 
     // histogrammes
     ImageGrayd histo_theo = histo_2D_theo(mu_1, mu_2, var_1, var_2, cm_size); // théorique
-    IO::save(histo_theo, "/home/grenier/Documents/ASTex_fork/results/CCVT_CGAL/application/histo_theo.png");
+    IO::save(histo_theo, TEMPO_PATH+"results/CCVT_CGAL/application/histo_theo.png");
 
     ImageGrayd histo_theo_app = histo_2D_theo(0.5, 0.5, 0.02, 0.02, cm_size); // théorique
-    IO::save(histo_theo_app, "/home/grenier/Documents/ASTex_fork/results/CCVT_CGAL/application/histo_theo_app.png");
+    IO::save(histo_theo_app, TEMPO_PATH+"results/CCVT_CGAL/application/histo_theo_app.png");
 
 
 
     ImageGrayd histo_N1_N2 = histo_2D(noise_1, noise_2, cm_size); // réel
-    IO::save(histo_N1_N2, "/home/grenier/Documents/ASTex_fork/results/CCVT_CGAL/application/histo_reel.png");
+    IO::save(histo_N1_N2, TEMPO_PATH+"results/CCVT_CGAL/application/histo_reel.png");
 
 
 
@@ -89,7 +89,7 @@ int main()
 
 // ---------------------------------------------------------------------------
     ImageRGBu8 res_composition(img_size, img_size);
-    res_composition.load("/home/grenier/Documents/ASTex_fork/results/CCVT_CGAL/application/composition.png");
+    res_composition.load(TEMPO_PATH+"results/CCVT_CGAL/application/composition.png");
 
 
 

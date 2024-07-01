@@ -46,7 +46,7 @@ int main() {
 //int main()
 //{
 //
-//    std::string working_directory = "/home/grenier/Documents/ASTex_fork/results/CCVT_CGAL/";
+//    std::string working_directory = TEMPO_PATH+"results/CCVT_CGAL/";
 //
 //    FT stepX = 0.01; // pour les positions
 //    FT stepW = 0.1; // pour les poids

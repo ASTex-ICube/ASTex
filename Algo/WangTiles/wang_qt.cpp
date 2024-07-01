@@ -37,7 +37,7 @@ using namespace ASTex;
 int main(int argc, char** argv)
 {
 	QApplication app(argc, argv);
-	std::string fn = "/home/grenier/Documents/ASTex_fork/ASTex/Data/quilting_input.png";//TEMPO_PATH+"quilting_input8.png";
+	std::string fn = TEMPO_PATH+"ASTex/Data/quilting_input.png";//TEMPO_PATH+"quilting_input8.png";
 	int tw = 100;
 	int gen_sz = 1000;
 	int nbcol = 2;

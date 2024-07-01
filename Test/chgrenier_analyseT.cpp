@@ -85,7 +85,7 @@ int main()
                   random_offset_,
                   seed_);
     ImageGrayd image_1 = storing_noise_d(resolution, img_size, noise_1);
-    IO::save(image_1, "/home/grenier/Documents/ASTex_fork/results/equ_CCVT/gabor_1.png");
+    IO::save(image_1, TEMPO_PATH+"results/equ_CCVT/gabor_1.png");
 
 
     noise noise_2(K_, // anisotrope
@@ -97,7 +97,7 @@ int main()
                   random_offset_-4,
                   seed_+12);
     ImageGrayd image_2 = storing_noise_d(resolution, img_size, noise_2);
-    IO::save(image_2, "/home/grenier/Documents/ASTex_fork/results/equ_CCVT/gabor_2.png");
+    IO::save(image_2, TEMPO_PATH+"results/equ_CCVT/gabor_2.png");
 
 
 
@@ -156,7 +156,7 @@ int main()
 // histogrammes
     // présences
     ImageGrayd histo_theo = histo_2D_theo(mu_1, mu_2, var_1, var_2, cm_size); // théorique
-    IO::save(histo_theo, "/home/grenier/Documents/ASTex_fork/results/equ_CCVT/histo_noise_theo.png");
+    IO::save(histo_theo, TEMPO_PATH+"results/equ_CCVT/histo_noise_theo.png");
 
 //    double tot_pixel_t = 0;
 //    histo_theo.for_all_pixels([&] (typename ImageGrayd::PixelType& P, int x, int y){
@@ -169,7 +169,7 @@ int main()
 
 
     ImageGrayd histo_N1_N2 = histo_2D(image_1, image_2, cm_size); // réel
-    IO::save(histo_N1_N2, "/home/grenier/Documents/ASTex_fork/results/equ_CCVT/histo_noise_reel.png");
+    IO::save(histo_N1_N2, TEMPO_PATH+"results/equ_CCVT/histo_noise_reel.png");
 
 //    double tot_pixel_r = 0;
 //    histo_N1_N2.for_all_pixels([&] (typename ImageGrayd::PixelType& P, int x, int y){
@@ -271,8 +271,8 @@ int main()
                                         P = H_color.at(id_seed);
                                     }
                                 });
-    cm_.save("/home/grenier/Documents/ASTex_fork/results/equ_CCVT/cm.png");
-//    IO::save(cm_, "/home/grenier/Documents/ASTex_fork/results/equ_CCVT/cm.png");
+    cm_.save(TEMPO_PATH+"results/equ_CCVT/cm.png");
+//    IO::save(cm_, TEMPO_PATH+"results/equ_CCVT/cm.png");
 
 
 
@@ -293,12 +293,12 @@ int main()
 
                                                 P = cm_.pixelAbsolute(id_n1, id_n2);
                                             });
-    res_composition.save("/home/grenier/Documents/ASTex_fork/results/equ_CCVT/res_composition.png");
+    res_composition.save(TEMPO_PATH+"results/equ_CCVT/res_composition.png");
 
 
 
 //     chargement d'une texture à partir d'une image
-//    res_composition.load("/home/grenier/Documents/ASTex_fork/results/equ_CCVT/S_test_24.png");
+//    res_composition.load(TEMPO_PATH+"results/equ_CCVT/S_test_24.png");
 
 
 

@@ -123,7 +123,7 @@ void CCVT::save_cell_eps(const std::string& filename) const
 
 void CCVT::verbose() const
 {
-//   save_cell_eps("/home/grenier/Documents/ASTex_fork/results/CCVT_CGAL/cells.eps");
+//   save_cell_eps(TEMPO_PATH+"results/CCVT_CGAL/cells.eps");
 
     save_cell_eps("cells.eps");
 
