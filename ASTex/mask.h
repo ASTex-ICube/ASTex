@@ -102,6 +102,7 @@ protected :
 
 class ASTEX_API MaskBool : public MaskImage<uint8_t>
 {
+public:
 	inline MaskBool(const MaskBool& /*mb*/):MaskImage<uint8_t>() {}
 	inline MaskBool& operator=(const MaskBool& /*mb*/) {return *this;}
 
@@ -135,6 +136,7 @@ public :
 	}
 
 	void clear(bool val);
+
 
 	template <typename MASK>
 	MaskBool& operator&=(const MASK& m);
