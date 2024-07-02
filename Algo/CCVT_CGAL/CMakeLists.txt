@@ -21,10 +21,9 @@ if (WIN32)
 		SuiteSparse::camd
 		SuiteSparse::colamd
 		SuiteSparse::ccolamd
-	       	SuiteSparse::cholmod
+	    SuiteSparse::cholmod
 		SuiteSparse::spqr 
-		TBB:tbb )
-		#TBB::tbbmalloc TBB::tbbmalloc_proxy )
+		TBB::tbb TBB::tbbmalloc TBB::tbbmalloc_proxy )
 	set (GLEW_LIBRARIES GLEW::GLEW)
 else ()
 
@@ -83,3 +82,4 @@ cgal_add_compilation_test(ccvt_cgal_chgrenier)
 # nice vs solution
 set_target_properties(ccvt_cgal_chgrenier PROPERTIES FOLDER Algo)
 
+file(COPY ${CMAKE_CURRENT_SOURCE_DIR}/shaders DESTINATION "${ASTEX_TEMPO_PATH}")

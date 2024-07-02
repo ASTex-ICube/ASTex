@@ -25,6 +25,13 @@ STRING(REGEX REPLACE "\\\\" "/" TEMPO_P $ENV{userprofile}/Desktop/ASTex_data)
 ELSE()
 	set(ASTEX_TEMPO_PATH /tmp/ASTex_data CACHE STRING "tempo directory (tutos img) storage" )
 ENDIF()
+file (GLOB DATA_CONTENTS "${CMAKE_SOURCE_DIR}/Data/*")
+MESSAGE(WARNING "ASTEX TEMP PATH = " ${ASTEX_TEMPO_PATH})
+IF(NOT EXISTS ${ASTEX_TEMPO_PATH})
+    MESSAGE(WARNING "NO ASTEX TEMP PATH = ")
+    MESSAGE(WARNING ${DATA_CONTENTS})
+    file(COPY ${DATA_CONTENTS} DESTINATION "${ASTEX_TEMPO_PATH}")
+ENDIF()
 
 
 option(ASTEX_BUILD_Bench "compile benchmark" ON )
