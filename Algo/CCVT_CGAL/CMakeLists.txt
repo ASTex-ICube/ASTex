@@ -83,3 +83,41 @@ cgal_add_compilation_test(ccvt_cgal_chgrenier)
 set_target_properties(ccvt_cgal_chgrenier PROPERTIES FOLDER Algo)
 
 file(COPY ${CMAKE_CURRENT_SOURCE_DIR}/shaders DESTINATION "${ASTEX_TEMPO_PATH}")
+
+
+#install(TARGETS ccvt_cgal_chgrenier
+#        COMPONENT ink_edit_comp
+#        DESTINATION ink_edit
+#)
+#install(IMPORTED_RUNTIME_ARTIFACTS ccvt_cgal_chgrenier
+#        RUNTIME_DEPENDENCY_SET ink_edit_dep
+#        RUNTIME
+#        COMPONENT ink_edit_comp
+#        DESTINATION ink_edit/lib
+#)
+#install(RUNTIME_DEPENDENCY_SET ink_edit_dep
+#        COMPONENT ink_edit_comp
+#        DESTINATION ink_edit/lib
+#)
+#install(DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/shaders
+#        COMPONENT ink_edit_comp
+#        DESTINATION ink_edit
+#)
+#install(CODE [[
+#        file(GET_RUNTIME_DEPENDENCIES
+#            RESOLVED_DEPENDENCIES_VAR ink_edit_dep_var
+#            EXECUTABLES $<TARGET_FILE:ccvt_cgal_chgrenier>
+#        )
+#        MESSAGE(STATUS "blabla ${ink_edit_dep_var}")
+#        file(INSTALL ${ink_edit_dep_var}
+#            DESTINATION ink_edit/lib
+#        )
+#        ]]
+#        COMPONENT ink_edit_comp
+#)
+#install(FILES ${ink_edit_dep_var}
+#        COMPONENT ink_edit_comp
+#        DESTINATION ink_edit/lib
+#)
+
+set_target_properties(ccvt_cgal_chgrenier PROPERTIES INSTALL_RPATH $ORIGIN/lib)
