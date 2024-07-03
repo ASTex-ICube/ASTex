@@ -60,12 +60,12 @@ struct color_triple{
         compteurD_ = qtt;
     }
 
-    bool operator==(const color_triple& couleur2)
+    bool operator==(const color_triple& couleur2) const
     {
         return (couleur1_ == couleur2.couleur1_) && (couleur2_ == couleur2.couleur2_) && (couleur3_ == couleur2.couleur3_);
     }
 
-    bool operator<(const color_triple& couleur2)
+    bool operator<(const color_triple& couleur2) const
     {
         if(couleur1_ == couleur2.couleur1_ && couleur2_ == couleur2.couleur2_){
             return (couleur3_ < couleur2.couleur3_);

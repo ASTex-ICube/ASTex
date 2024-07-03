@@ -55,12 +55,12 @@ struct color_vois{
         compteurD_ = qtt;
     }
 
-    bool operator==(const color_vois& couleur2)
+    bool operator==(const color_vois& couleur2) const
     {
         return (couleur1_ == couleur2.couleur1_) && (couleur2_ == couleur2.couleur2_);
     }
 
-    bool operator<(const color_vois& couleur2)
+    bool operator<(const color_vois& couleur2) const
     {
         if(couleur1_ == couleur2.couleur1_){
             return (couleur2_ < couleur2.couleur2_);

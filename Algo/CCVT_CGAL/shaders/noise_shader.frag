@@ -7,6 +7,8 @@ uniform float uOprinc;
 uniform float uOspread;
 uniform float uSeed;
 
+out vec4 FragColor;
+
 // CONSTANTE -----------------------------
 #define _PI_ 3.14159265358979
 
@@ -85,6 +87,6 @@ void main() {
     noise = 0.5 + 0.155*noise; // *0.155 -> variance de 0.155*0.155 = 0,024025; +0.5 -> moyenne de 0.5
 //    noise = 0.16*noise+0.5;
 
-    gl_FragColor = vec4(vec3(noise), 1.);
+    FragColor = vec4(vec3(noise), 1.);
 
 }
