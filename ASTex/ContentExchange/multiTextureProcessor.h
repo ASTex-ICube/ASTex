@@ -360,7 +360,7 @@ Mipmap<I> MultiTextureProcessor<I>::generateFromExemplar(const I &exemplar)
 				}
 			}
 	}
-	// IO::save01_in_u8(uvMap, ${ASTEX_TEMPO_PATH}+"_uvMap" + std::to_string(time(nullptr)) + ".png");
+	// IO::save01_in_u8(uvMap, TEMPO_PATH+"_uvMap" + std::to_string(time(nullptr)) + ".png");
 	Mipmap<ImageType> mipmapOutput(output);
 	mipmapOutput.setMaxPowReductionLevel(this->m_patchMapMipmap.maxPowReductionLevel());
 	mipmapOutput.setMode(this->m_patchMapMipmap.mode());

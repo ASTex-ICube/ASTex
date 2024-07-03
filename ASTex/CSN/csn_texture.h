@@ -455,7 +455,7 @@ typename CSN_Texture<I>::ImageType CSN_Texture<I>::synthesize(unsigned width, un
 					inCoordinates[1] = int(std::round(inY + (subX*m_cycles[0][1] + subY*m_cycles[1][1])*m_exemplar.height()))%pcaOutputCopy.height();
 					pcaOutput.pixelAbsolute(inCoordinates) = pix;
 				});
-				save_debug(pcaGaussianSubTexture, ${ASTEX_TEMPO_PATH}+"pcaInput.png");
+				save_debug(pcaGaussianSubTexture, TEMPO_PATH+"pcaInput.png");
 			});
 		}
 		else
@@ -642,7 +642,7 @@ void CSN_Texture<I>::estimateCycles(const Eigen::Vector2d &guidX, const Eigen::V
 				texture = adjustSizeForEvaluation(centeredTexture, alteredCycle);
 				projection = testCycles(texture, Eigen::Vector2d(1, 0), alteredCycle);
 			}
-			save_debug(texture, ${ASTEX_TEMPO_PATH}+"interpolatedTexture.png");
+			save_debug(texture, TEMPO_PATH+"interpolatedTexture.png");
 			projectionValue = projectionPixelTypeToDouble(projection);
 			if(projectionValue < maxProjectionValue)
 			{
@@ -1132,7 +1132,7 @@ typename CSN_Texture<I>::PixelType CSN_Texture<I>::testCycles(const I& texture, 
 							p2Norm += pixelTypeProduct(parallelogram2.pixelAbsolute(x, y), parallelogram2.pixelAbsolute(x, y));
 						});
 
-						//save_debug(parallelogram1, ${ASTEX_TEMPO_PATH}+"parallelogram1.png");
+						//save_debug(parallelogram1, TEMPO_PATH+"parallelogram1.png");
 
 						p1Norm = sqrtPixelType(p1Norm);
 						p2Norm = sqrtPixelType(p2Norm);
@@ -1185,7 +1185,7 @@ typename CSN_Texture<I>::PixelType CSN_Texture<I>::testCycles(const I& texture, 
 			pix[i] = (pix[i] - minAverageProjection[i]) / (maxAverageProjection[i] - minAverageProjection[i]);
 		}
 	});
-	save_debug(averageProjectionImage, ${ASTEX_TEMPO_PATH}+"averageProjectionImage.png");
+	save_debug(averageProjectionImage, TEMPO_PATH+"averageProjectionImage.png");
 	projection = projection * (1.0/(projectionSize[0] * projectionSize[1]));
 	return projection;
 }

@@ -122,7 +122,7 @@ int main(int argc, char **argv)
 			{
 				pix = input.pixelAbsolute(unsigned((t0[0]*nbTilesX + t1[0]*nbTilesY)*input.width() + x + xOffset)%input.width(), unsigned((t1[1]*nbTilesY + t0[1]*nbTilesX)*input.height() + y + yOffset)%input.height());
 			});
-			IO::save01_in_u8(idiot, std::string(${ASTEX_TEMPO_PATH}+"csn_tiles/") + textureName + "_" + std::to_string(nbTilesX) + "_" + std::to_string(nbTilesY) + ".png");
+			IO::save01_in_u8(idiot, std::string(TEMPO_PATH+"csn_tiles/") + textureName + "_" + std::to_string(nbTilesX) + "_" + std::to_string(nbTilesY) + ".png");
 		}
 	}
 
@@ -166,7 +166,7 @@ int main(int argc, char **argv)
 //	{
 //			pix = pix > 1.0 ? 1.0 : (pix < 0.0 ? 0.0 : pix);
 //	});
-//	IO::save01_in_u8(output, ${ASTEX_TEMPO_PATH}+"output.png");
+//	IO::save01_in_u8(output, TEMPO_PATH+"output.png");
 
 	return 0;
 }

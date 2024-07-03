@@ -94,7 +94,7 @@ int main(int argc, char **argv)
 
 //	for(unsigned p=0; p<pProcessor.nbPatches(); ++p)
 //		for(unsigned c=0; c<pProcessor.nbContents(); ++c)
-//			IO::save01_in_u8(pProcessor.patchAt(p).contentAt(c).texture(), std::string(${ASTEX_TEMPO_PATH}+"content_p") + std::to_string(p) + "_c" + std::to_string(c) + ".png");
+//			IO::save01_in_u8(pProcessor.patchAt(p).contentAt(c).texture(), std::string(TEMPO_PATH+"content_p") + std::to_string(p) + "_c" + std::to_string(c) + ".png");
 
 //	std::string renderingDirectory = out_dir + "/" + name_noext + "_" + std::to_string(time((0)) + "/";
 //	create_directory(renderingDirectory);
