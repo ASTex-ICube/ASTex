@@ -13,7 +13,7 @@
 #include "ASTex/ContentExchange/benchmarker.h"
 
 // v define your own
-#define MY_PATH std::string(${ASTEX_TEMPO_PATH}+"img/")
+#define MY_PATH std::string(TEMPO_PATH+"img/")
 
 using namespace ASTex;
 
@@ -141,10 +141,10 @@ int test_contentExchangeRenderingPack(int argc, char **argv)
         pProcessor.contents_initDefault();
         pProcessor.contents_initRandom();
 
-//        pProcessor.patchAt(1).contentAt(0).mipmap(0, 0).save(${ASTEX_TEMPO_PATH}+"mipmap1.png");
-//        pProcessor.patchAt(1).contentAt(0).mipmap(1, 1).save(${ASTEX_TEMPO_PATH}+"mipmap2.png");
-//        pProcessor.patchAt(1).contentAt(0).mipmap(2, 2).save(${ASTEX_TEMPO_PATH}+"mipmap3.png");
-//        pProcessor.patchAt(1).contentAt(0).mipmap(3, 3).save(${ASTEX_TEMPO_PATH}+"mipmap4.png");
+//        pProcessor.patchAt(1).contentAt(0).mipmap(0, 0).save(TEMPO_PATH+"mipmap1.png");
+//        pProcessor.patchAt(1).contentAt(0).mipmap(1, 1).save(TEMPO_PATH+"mipmap2.png");
+//        pProcessor.patchAt(1).contentAt(0).mipmap(2, 2).save(TEMPO_PATH+"mipmap3.png");
+//        pProcessor.patchAt(1).contentAt(0).mipmap(3, 3).save(TEMPO_PATH+"mipmap4.png");
 
 		std::string renderingDirectory = out_dir + "/" + std::to_string(std::time(0)) + "_random_" + name_noext + "/";
 
@@ -156,7 +156,7 @@ int test_contentExchangeRenderingPack(int argc, char **argv)
             pix = std::ceil(log2(w)) != std::floor(log2(w)) ? 255 : 0;
         });
 
-		 im_patches.save(${ASTEX_TEMPO_PATH}+"im_seams.png");
+		 im_patches.save(TEMPO_PATH+"im_seams.png");
 
 		create_directory(renderingDirectory);
 		pProcessor.saveRenderingPack(renderingDirectory, false);
@@ -190,7 +190,7 @@ int test_benchmarkingContentExchange(int argc, char **argv)
 		ceb.setNbContentsPerPatch(6);
         ceb.setNbOutputs(3);
 		ceb.setOutputSize(512, 512);
-        ceb.setRoot(std::string(${ASTEX_TEMPO_PATH}+"eg2019_contentExchange/") + name_noext);
+        ceb.setRoot(std::string(TEMPO_PATH+"eg2019_contentExchange/") + name_noext);
         ceb.setOutputDirectories("usingOldMethod", "usingRandomPatchesAndContents", "usingGetisGI", "usingPCTS");
 		ceb.setGenerateOld(true);
 		ceb.setGenerateRandom(true);

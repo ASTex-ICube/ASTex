@@ -6,7 +6,7 @@
 #include "ASTex/Stamping/sampler.h"
 #include "ASTex/utils.h"
 
-//#define PCTS_DEBUG_DIRECTORY ${ASTEX_TEMPO_PATH}+"img/PCTS_debug/"
+//#define PCTS_DEBUG_DIRECTORY TEMPO_PATH+"img/PCTS_debug/"
 
 namespace ASTex
 {
