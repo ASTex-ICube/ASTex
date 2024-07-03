@@ -57,7 +57,7 @@ class ASTEX_API MaskTrue : public Mask
 {
 public :
 	inline bool operator()(int,int) const { return true; }
-	inline void set_value(int, int, bool) {	std::cerr << "not possible to set a value in MaskTrue" << std::endl;}
+	inline void set_value(int, int, bool) {	std::cerr << "! possible to set a value in MaskTrue" << std::endl;}
 };
 
 
@@ -102,6 +102,7 @@ protected :
 
 class ASTEX_API MaskBool : public MaskImage<uint8_t>
 {
+public:
 	inline MaskBool(const MaskBool& /*mb*/):MaskImage<uint8_t>() {}
 	inline MaskBool& operator=(const MaskBool& /*mb*/) {return *this;}
 
@@ -135,6 +136,7 @@ public :
 	}
 
 	void clear(bool val);
+
 
 	template <typename MASK>
 	MaskBool& operator&=(const MASK& m);
@@ -336,7 +338,7 @@ public:
 
     inline int get_number_of_true () const {return m_n_true;}
 
-	inline void set_value(int, int, bool) {	std::cerr << "not possible to set a value in MaskTrue" << std::endl;}
+	inline void set_value(int, int, bool) {	std::cerr << "! possible to set a value in MaskTrue" << std::endl;}
 
 protected:
 	int m_n_true; /**< number of pixels inside (test = true) */
@@ -382,7 +384,7 @@ public:
 
     inline int get_number_of_true () const {return m_n_true;}
 
-	inline void set_value(int, int, bool) {	std::cerr << "not possible to set a value in MaskTrue" << std::endl;}
+	inline void set_value(int, int, bool) {	std::cerr << "! possible to set a value in MaskTrue" << std::endl;}
 
 
 protected:
@@ -435,7 +437,7 @@ public:
 
     inline int get_number_of_true () const {return m_n_true;}
 
-	inline void set_value(int, int, bool) {	std::cerr << "not possible to set a value in MaskTrue" << std::endl;}
+	inline void set_value(int, int, bool) {	std::cerr << "! possible to set a value in MaskTrue" << std::endl;}
 
 protected:
 	int m_n_true; /**< number of pixels inside (test = true) */
@@ -472,7 +474,7 @@ public:
 
     inline int get_number_of_true () const {return m_n_true;}
 
-	inline void set_value(int, int, bool) {	std::cerr << "not possible to set a value in MaskTrue" << std::endl;}
+	inline void set_value(int, int, bool) {	std::cerr << "! possible to set a value in MaskTrue" << std::endl;}
 
 protected:
 	int m_n_true; /**< number of pixels inside (test = true) */

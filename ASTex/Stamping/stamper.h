@@ -90,29 +90,29 @@ public:
 	 * @return the sampler class is used
 	 * to generate an array of coordinates during the convolution process.
 	 */
-	SamplerBase* sampler() const  {return m_sampler;}
+	inline SamplerBase* sampler() const  {return m_sampler;}
 
 	/**
 	 * @param index the position in the vector of stamps.
 	 * @return a reference on a stamp pointer which may be used during the convolution process.
 	 */
-	const StampBase<I>* stamp(size_t index)                     {return m_stampVec[index];}
+	inline const StampBase<I>* stamp(size_t index)                     {return m_stampVec[index];}
 
 	/**
 	 * @brief same as stamp(index), const version (result reference cannot be modified).
 	 */
-	const StampBase<I>* const & stamp(size_t index) const       {return m_stampVec[index];}
+	inline const StampBase<I>* const & stamp(size_t index) const       {return m_stampVec[index];}
 
 	/**
 	 * @brief operator [] same as stamp(index).
 	 */
-	const StampBase<I>*& operator[] (size_t index)              {return m_stampVec[index];}
+	inline const StampBase<I>*& operator[] (size_t index)              {return m_stampVec[index];}
 	/**
 	 * @brief operator [] calls stamp(index), const version (result reference cannot be modified).
 	 */
-	const StampBase<I>* const & operator[] (size_t index) const {return m_stampVec[index];}
+	inline const StampBase<I>* const & operator[] (size_t index) const {return m_stampVec[index];}
 
-	size_t stampVecSize() const                                 {return m_stampVec.size();}
+	inline size_t stampVecSize() const                                 {return m_stampVec.size();}
 
 	//set
 
@@ -120,14 +120,14 @@ public:
 	 * @param sampler is the sampler which will be used
 	 * to generate an array of coordinates during the convolution process.
 	 */
-	void setSampler(const SamplerBase* sampler)                 {m_sampler = sampler;}
+	inline void setSampler(SamplerBase* sampler)                 {m_sampler = sampler;}
 	/**
 	 * @brief setStamp changes the stamp at vector position index to stamp.
 	 * @param stamp this stamp may be used during the convolution process.
 	 * @param index the position of the vector on which the stamp is modified.
 	 * @pre index is in the range of available stamps.
 	 */
-	void setStamp(const StampBase<I>* stamp, size_t index)      {m_stampVec[index] = stamp;}
+	inline void setStamp(const StampBase<I>* stamp, size_t index)      {m_stampVec[index] = stamp;}
 
 	//add/remove
 
@@ -136,13 +136,13 @@ public:
 	 * It is pushed at the end of the internal vector.
 	 * @param stamp the stamp to be added.
 	 */
-	void addStamp(const StampBase<I>* stamp)                    {m_stampVec.push_back(stamp);}
+	inline void addStamp(const StampBase<I>* stamp)                    {m_stampVec.push_back(stamp);}
 	/**
 	 * @brief removeStamp removes a stamp at position index.
 	 * Warning: complexity is linear.
 	 * @param index position of the stamp.
 	 */
-	void removeStamp(size_t index)                              {m_stampVec.erase(m_stampVec.begin() + index); }
+	inline void removeStamp(size_t index)                              {m_stampVec.erase(m_stampVec.begin() + index); }
 
 protected:
 

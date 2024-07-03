@@ -246,7 +246,7 @@ public:
 	// 
 	// NOTE: 
 	//   - This option cannot be used in the first call to maxflow().
-	//   - It is not necessary to call mark_node() if the change is ``not essential'',
+	//   - It is not necessary to call mark_node() if the change is ``! essential'',
 	//     i.e. sign(trcap) is preserved for a node and zero/nonzero status is preserved for an arc.
 	//   - To check that you marked all necessary nodes, you can call maxflow(false) after calling maxflow(true).
 	//     If everything is correct, the two calls must return the same value of flow. (Useful for debugging).

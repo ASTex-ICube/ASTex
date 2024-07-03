@@ -26,7 +26,7 @@ class CompareWeightedPCA
 {
 public:
 	CompareWeightedPCA() {}
-	bool operator()(const typename ImageRGBd::PixelType &object, const typename ImageRGBd::PixelType &other)
+	bool operator()(const typename ImageRGBd::PixelType &object, const typename ImageRGBd::PixelType &other) const
 	{
 		return object[0] * weight[0] + object[1] * weight[1] + object[2] * weight[2]
 			<  other[0]  * weight[0] + other[1]  * weight[1] + other[2]  * weight[2];
