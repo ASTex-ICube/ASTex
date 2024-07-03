@@ -33,7 +33,7 @@ else ()
 		tbb )
 	set (GLEW_LIBRARIES GLEW)
 endif()
-
+	
 set(SRCS main_ccvt_cgal.cpp
         # matrix
         matrix/sparse_array.cpp
@@ -64,7 +64,11 @@ add_executable(ccvt_cgal_chgrenier )
 
 target_sources(ccvt_cgal_chgrenier PRIVATE ${SRCS} main_ccvt_cgal.cpp)
 
-target_include_directories(ccvt_cgal_chgrenier PRIVATE /usr/include/suitesparse)
+target_include_directories(ccvt_cgal_chgrenier PRIVATE 
+				/usr/include/suitesparse
+				/usr/local/include/suitesparse)
+
+target_link_directories(ccvt_cgal_chgrenier PRIVATE /usr/local/lib/)
 
 target_link_libraries(ccvt_cgal_chgrenier PRIVATE
         CGAL::CGAL
@@ -73,6 +77,7 @@ target_link_libraries(ccvt_cgal_chgrenier PRIVATE
         OpenGL::GL
         OpenGL::GLU
 	${GLEW_LIBRARIES} )
+
 
 
 target_compile_features(ccvt_cgal_chgrenier PUBLIC cxx_std_17)

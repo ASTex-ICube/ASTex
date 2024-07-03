@@ -5,6 +5,8 @@
 uniform vec2 uRes;
 uniform int uPointsNb;
 
+out vec4 FragColor;
+
 layout (std140) uniform uPoints
 {
     vec4[MaxGraine] uGraines;
@@ -38,5 +40,5 @@ void main() {
             dist = new_dist;
         }
     }
-    gl_FragColor = vec4(color, 1.0);
+    FragColor = vec4(color, 1.0);
 }

@@ -57,12 +57,12 @@ struct color_info{
         compteurD_ = qtt;
     }
 
-    bool operator==(const color_info& couleur2)
+    bool operator==(const color_info& couleur2) const
     {
         return couleur_ == couleur2.couleur_;
     }
 
-    bool operator<(const color_info& couleur2)
+    bool operator<(const color_info& couleur2) const
     {
         return couleur_ < couleur2.couleur_;
     }
