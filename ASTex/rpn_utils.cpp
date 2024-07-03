@@ -568,7 +568,7 @@ void matchImage(ImageRGBd& source, const ImageRGBd& target, std::string external
 		fold3Channels(pcaSourceImage, pcaSourceChannels[0], pcaSourceChannels[1], pcaSourceChannels[2]);
 
 		pcaSource.back_project(pcaSourceImage, source);
-		//IO::save01_in_u8(source, "/home/nlutz/matchedImage.png");
+		//IO::save01_in_u8(source, ${ASTEX_TEMPO_PATH}+"matchedImage.png");
 	}
 }
 
