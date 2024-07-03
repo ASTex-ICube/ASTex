@@ -344,7 +344,7 @@ int main(int argc, char **argv)
 				pix[i] += meanImage.pixelAbsolute(index)[i];
 			}
 		});
-//		IO::save01_in_u8(meanImage, "/home/nlutz/average.png");
+//		IO::save01_in_u8(meanImage, ${ASTEX_TEMPO_PATH}+"average.png");
 		return centeredImage;
 	};
 
@@ -353,7 +353,7 @@ int main(int argc, char **argv)
 
 //	//The following is how I produced the figure showing the distance map
 //	ImageRGBd cycleEvaluationMap = csn.debug_cycleEvaluationMap(129, 129, Eigen::Vector2d(cyclePair.vectors[0][0], cyclePair.vectors[1][1]), 0.1);
-//	IO::save01_in_u8(cycleEvaluationMap, std::string("/home/nlutz/cycleEvaluationMap129_") + textureName + ".png");
+//	IO::save01_in_u8(cycleEvaluationMap, std::string(${ASTEX_TEMPO_PATH}+"cycleEvaluationMap129_") + textureName + ".png");
 
 	csn.setCycles(cyclePair.vectors[0], cyclePair.vectors[1]);
 	csn.setUseCycles(arguments.useCycles);

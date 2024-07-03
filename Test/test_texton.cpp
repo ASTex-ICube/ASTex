@@ -105,7 +105,7 @@ int main(int argc, char **argv)
 		pix = pix - 0.5;//meanImage.pixelAbsolute(x, y);
 		pix = pix * (1.0/std::sqrt(im_texton.width()*im_texton.height()));
 	});
-	//IO::save01_in_u8(meanImage, "/home/nlutz/meanImage.png");
+	//IO::save01_in_u8(meanImage, ${ASTEX_TEMPO_PATH}+"meanImage.png");
 
 	//Testing
 

@@ -670,7 +670,7 @@ void DictionaryProcessor<I>::updateDictionaryApproximateKSVD(size_t atomId)
 			resultPatchesByG += patch * weight;
 		}
 	}
-	//IO::save01_in_u8(resultPatchesByG, "/home/nlutz/debugResultYg.png");
+	//IO::save01_in_u8(resultPatchesByG, ${ASTEX_TEMPO_PATH}+"debugResultYg.png");
 
 	resultDictionaryByXi.setAtomSize(m_patchSize[0], m_patchSize[1]);
 	resultDictionaryByXi.initEmpty(G.size());
@@ -691,7 +691,7 @@ void DictionaryProcessor<I>::updateDictionaryApproximateKSVD(size_t atomId)
 
 	AtomType d;
 	d.content() = resultPatchesByG - resultDictionaryXiByG; //Step 10: d := Y_Ig - DX_Ig
-	Histogram<I>::saveImageToCsv(resultPatchesByG, "/home/nlutz/resultPatchedByG.csv");
+	// Histogram<I>::saveImageToCsv(resultPatchesByG, ${ASTEX_TEMPO_PATH}+"resultPatchedByG.csv");
 	d.forceUpdateStatistics();
 	PixelType norm = d.norm();
 

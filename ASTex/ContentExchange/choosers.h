@@ -578,7 +578,7 @@ void PatchProcessor<I>::ChooserContents_PCTSEnhanced<CC_Base>::generate()
                 }
             }
         }
-        mask.save(std::string("/home/nlutz/ieee2019/_debug/mask_p") + std::to_string(i) + ".png");
+        // mask.save(std::string(${ASTEX_TEMPO_PATH}+"ieee2019/_debug/mask_p") + std::to_string(i) + ".png");
         for(int j=1; j<p.nbContents(); ++j)
         {
             Content<I> &c = p.contentAt(j);
@@ -598,10 +598,10 @@ void PatchProcessor<I>::ChooserContents_PCTSEnhanced<CC_Base>::generate()
                     }
                 }
             }
-            contentTexture.save(std::string("/home/nlutz/ieee2019/_debug/inputWithContent_p") + std::to_string(i) + "_c" + std::to_string(j) + ".png");
+//           contentTexture.save(std::string(${ASTEX_TEMPO_PATH}+"ieee2019/_debug/inputWithContent_p") + std::to_string(i) + "_c" + std::to_string(j) + ".png");
             pcts.setMask(contentTexture, mask);
             contentTexture = pcts.generate();
-            contentTexture.save(std::string("/home/nlutz/ieee2019/_debug/pctsd_p") + std::to_string(i) + "_c" + std::to_string(j) + ".png");
+//          contentTexture.save(std::string(${ASTEX_TEMPO_PATH}+"ieee2019/_debug/pctsd_p") + std::to_string(i) + "_c" + std::to_string(j) + ".png");
             Content<I> pctsdContent(contentTexture, p);
             c = pctsdContent;
         }

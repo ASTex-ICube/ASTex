@@ -52,7 +52,7 @@ int main(int argc, char **argv)
 		inputArgs.close();
 	}
 
-	std::string ioPath = std::string("/home/nlutz/dictionaries") + "/" + name_noext
+	std::string ioPath = std::string(${ASTEX_TEMPO_PATH}+"dictionaries") + "/" + name_noext
 			+ "_learn" + std::to_string(numberIterationsLearning)
 			+ "_" + std::to_string(nbAtoms) + "atoms"
 			+ "_s" + std::to_string(sparsity)
@@ -73,10 +73,10 @@ int main(int argc, char **argv)
 
 
 	ASTex::ImageRGBd test_output = dp->reconstructInput();
-	IO::save01_in_u8(test_output, "/home/nlutz/terrain7Reconstructed.png");
+	IO::save01_in_u8(test_output, ${ASTEX_TEMPO_PATH}+"terrain7Reconstructed.png");
 
 	im_output = dp->amplify<CompareRGBSum>(im_target, amplificationFactor);
-	IO::save01_in_u8(im_output, "/home/nlutz/terrainAmplified.png");
+	IO::save01_in_u8(im_output, ${ASTEX_TEMPO_PATH}+"terrainAmplified.png");
 
 	return 0;
 }

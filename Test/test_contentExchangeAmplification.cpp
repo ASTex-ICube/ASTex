@@ -164,9 +164,9 @@ int main(int argc, char **argv)
 		texture.initItk(texturePool[i].texture.width(), texturePool[i].texture.height());
 		texture.copy_pixels(texturePool[i].texture);
 		lmbd_uncenterGradient(texture);
-		IO::save01_in_u8(texturePool[i].texture, "/home/nlutz/expTexture.png");
-		IO::save01_in_u8(texture, "/home/nlutz/expTexture_i" + std::to_string(i) + ".png");
-//		IO::save01_in_u8(texturePool[i].boundaries, "/home/nlutz/inBoundsMipmap_i" + std::to_string(i) + ".png");
+		IO::save01_in_u8(texturePool[i].texture, ${ASTEX_TEMPO_PATH}+"expTexture.png");
+		IO::save01_in_u8(texture, ${ASTEX_TEMPO_PATH}+"expTexture_i" + std::to_string(i) + ".png");
+//		IO::save01_in_u8(texturePool[i].boundaries, ${ASTEX_TEMPO_PATH}+"inBoundsMipmap_i" + std::to_string(i) + ".png");
 	}
 
 	pProcessor.setSeed(seed == 0 ? time(nullptr) : seed);

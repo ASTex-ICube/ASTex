@@ -63,7 +63,7 @@ int main(int argc, char **argv)
 		}
 	});
 
-	IO::save01_in_u8(checker, "/home/nlutz/checkerG.png");
+	IO::save01_in_u8(checker, ${ASTEX_TEMPO_PATH}+"checkerG.png");
 
 	return 0;
 }

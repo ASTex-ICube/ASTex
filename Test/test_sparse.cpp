@@ -74,9 +74,9 @@ int main(int argc, char **argv)
 	dp.saveVizualisableAtoms(ioPath);
 
 	ASTex::ImageRGBd exemplarImage;//temporary, move as a proper argument field
-	ASTex::IO::loadu8_in_01(exemplarImage, "/home/nlutz/img/fake_cobblestone.png");
+	ASTex::IO::loadu8_in_01(exemplarImage, ${ASTEX_TEMPO_PATH}+"img/fake_cobblestone.png");
 
-	dp.external_imageMatcher_path = "/home/nlutz/Git/colour-transfer/matchHistogram.sh";
+	dp.external_imageMatcher_path = ${ASTEX_TEMPO_PATH}+"Git/colour-transfer/matchHistogram.sh";
 	dp.synthesize(	outputSize[0]==0 ? im_in.width() : outputSize[0],
 					outputSize[1]==0 ? im_in.height() : outputSize[1],
 					nbIterationsSynthesis==0 ? dp.weights().size() * dp.sparsity() * 2 : nbIterationsSynthesis,
