@@ -55,7 +55,7 @@ protected:
 
 public:
 	ImageGrayBase():
-		itk_img_(NULL)
+        itk_img_(nullptr)
 	{}
 
 	ImageGrayBase(typename itk::Image< CHANNEL_TYPE >::Pointer itk_im):

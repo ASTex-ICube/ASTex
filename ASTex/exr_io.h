@@ -45,11 +45,13 @@
 #endif
 
 
-
+#include <ImfHeader.h>
+#include <ImfFrameBuffer.h>
 #include <ImfOutputFile.h>
 #include <ImfInputFile.h>
 #include <ImfChannelList.h>
 #include <ImfStringAttribute.h>
+
 
 
 #if defined(__clang__)

@@ -1,4 +1,4 @@
-cmake_minimum_required(VERSION 3.0)
+cmake_minimum_required(VERSION 3.5)
  
 project(ASTexTutos LANGUAGES CXX)
 
@@ -8,9 +8,11 @@ set( exec_list
  tuto_pixel_types tuto_gray tuto_rgb tuto_mask 
  tuto_traverse_iterators tuto_traverse_for_all 
  tuto_color_filters
- tuto_filter1 tuto_filter2 tuto_filter3 tuto_filter4 tuto_filter5 tuto_filter6 tuto_filter7 
+ #tuto_filter1 tuto_filter2 tuto_filter3 tuto_filter4 tuto_filter5 tuto_filter6 tuto_filter7 
  tuto_png_indexed
- tuto_store)
+ tuto_store
+ tuto_mp
+ tuto_tnb)
 
 foreach(exec ${exec_list})
 	add_executable(${exec} "")

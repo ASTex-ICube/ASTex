@@ -413,7 +413,7 @@ namespace hview {
 				{
 					col = this->get(i, iline);
 					int lfp = lf.search(col);
-					if (lfp == -1) { lf.push_back(col); lfp = lf.size() - 1; } //printf("push new color %d,%d,%d at %d,%d, %s\n", col.RED(), col.GREEN(), col.BLUE(), i, iline,yet.get(i,iline)?"yet":"not yet" ); }
+					if (lfp == -1) { lf.push_back(col); lfp = lf.size() - 1; } //printf("push new color %d,%d,%d at %d,%d, %s\n", col.RED(), col.GREEN(), col.BLUE(), i, iline,yet.get(i,iline)?"yet":"! yet" ); }
 					ncol[lfp]++;
 				}
 				//printf("colors: "); for (i=0; i<lf.length(); i++) printf("%d  ", ncol[i]); printf("\n");
@@ -588,7 +588,7 @@ namespace hview {
 					{
 						col = this->get(iline, j);
 						int lfp = lf.search(col);
-						if (lfp == -1) { lf.push_back(col); lfp = lf.size() - 1; } //printf("push new color %d,%d,%d at %d,%d, %s\n", col.RED(), col.GREEN(), col.BLUE(), iline,j, yet.get(iline,j)?"yet":"not yet" ); }
+						if (lfp == -1) { lf.push_back(col); lfp = lf.size() - 1; } //printf("push new color %d,%d,%d at %d,%d, %s\n", col.RED(), col.GREEN(), col.BLUE(), iline,j, yet.get(iline,j)?"yet":"! yet" ); }
 						ncol[lfp]++;
 					}
 					//printf("colors: "); for (i=0; i<lf.length(); i++) printf("%d  ", ncol[i]); printf("\n");

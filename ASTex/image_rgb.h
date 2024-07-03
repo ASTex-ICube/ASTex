@@ -68,7 +68,7 @@ protected:
 
 public:
 	ImageRGBBase():
-		itk_img_(NULL)
+        itk_img_(nullptr)
 	{}
 
 	ImageRGBBase(typename itk::Image< itk::RGBPixel<CHANNEL_TYPE> >::Pointer itk_im):

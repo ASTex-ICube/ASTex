@@ -136,14 +136,14 @@ public:
 	// standard boolean orperators
 	void operator|=(const hvBoolArray2 &x)
 	{
-		if (x.sizeX()!=sizeX()) hvFatal("not same sizeX in hvBoolArray1::operator|");
-		if (x.sizeY()!=sizeY()) hvFatal("not same sizeY in hvBoolArray1::operator|");
+		if (x.sizeX()!=sizeX()) hvFatal("! same sizeX in hvBoolArray1::operator|");
+		if (x.sizeY()!=sizeY()) hvFatal("! same sizeY in hvBoolArray1::operator|");
 		for (int i=0; i<(sx/8+1)*sy; i++) t[i] |= x.t[i];
 	}
 	void operator&=(const hvBoolArray2 &x)
 	{
-		if (x.sizeX()!=sizeX()) hvFatal("not same sizeX in hvBoolArray1::operator|");
-		if (x.sizeY()!=sizeY()) hvFatal("not same sizeY in hvBoolArray1::operator|");
+		if (x.sizeX()!=sizeX()) hvFatal("! same sizeX in hvBoolArray1::operator|");
+		if (x.sizeY()!=sizeY()) hvFatal("! same sizeY in hvBoolArray1::operator|");
 		for (int i=0; i<(sx/8+1)*sy; i++) t[i] &= x.t[i];
 	}
 	void operator~()
@@ -154,8 +154,8 @@ public:
 	}
 	void operator^=(const hvBoolArray2 &x)
 	{
-		if (x.sizeX()!=sizeX()) hvFatal("not same sizeX in hvBoolArray1::operator|");
-		if (x.sizeY()!=sizeY()) hvFatal("not same sizeY in hvBoolArray1::operator|");
+		if (x.sizeX()!=sizeX()) hvFatal("! same sizeX in hvBoolArray1::operator|");
+		if (x.sizeY()!=sizeY()) hvFatal("! same sizeY in hvBoolArray1::operator|");
 		for (int i=0; i<(sx/8+1)*sy; i++) t[i] ^= x.t[i];
 	}
 

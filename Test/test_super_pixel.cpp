@@ -23,8 +23,8 @@
 
 
 
-#include <ASTex/easy_io.h>
 #include <ASTex/slic.h>
+#include <ASTex/easy_io.h>
 
 using namespace ASTex;
 
@@ -32,8 +32,8 @@ using namespace ASTex;
 void slicTest(const ASTex::ImageRGBu8 &img, ASTex::ImageRGBu8 &imgSLIC, ASTex::ImageRGBu8& imgSLIC_false )
 {
 	const float sizeRatio = 0.02f;
-	const int compactness = 15;
-	const int iterations  = 10;
+	const int compactness = 10;
+	const int iterations  = 12;
 
 	const int superPixelSize = std::ceil( img.width()*sizeRatio * img.height()*sizeRatio );
 
@@ -105,7 +105,7 @@ int main( int argc, char **argv )
 	std::string fname;
 
 	if (argc < 2)
-		fname = TEMPO_PATH + "single-leaf-photo-03.jpg";
+		fname = TEMPO_PATH+"ASTex/Data/composition.jpg";//TEMPO_PATH + "single-leaf-photo-03.jpg";
 	else
 		fname = std::string(argv[1]);
 
@@ -127,6 +127,7 @@ int main( int argc, char **argv )
 		imgSLIC_false.save(name2);
 		std::cout << name2 << " generated"<< std::endl;
 	}
+    else{std::cout<<"pb";}
 
     return EXIT_SUCCESS;
 }

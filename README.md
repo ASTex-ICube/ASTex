@@ -8,7 +8,7 @@ The purpose of this library is to support collaborative coding and to allow for 
 
 ## Dependencies:
 To compile and use ASTex, you need some libraries:
-- ITK 4.10 min (4.13 recom)
+- ITK 5. min 
 - zlib
 - openexr for saving/loading images in floating point format.
 
@@ -16,15 +16,15 @@ You need some classic development tools (minimal supported version)
 - git
 - cmake 3.0 min
 - a _recent_ C++ compiler 
-	- g++ 4.9 5 6 7.3
+	- g++ 6 
 	- clang 3.3
-	- Visual Studio C++ 2015 /2017
+	- Visual Studio C++ 2017 /2019
 
 ## Linux
 Just install packages:
-- libinsighttoolkit4-dev (4.10 min)
 - libpng-dev
 - libopenexr-dev 
+And get github version of InsightToolkit, compile & install
 
 ## Mac OS/X
 The most simple way to install dependencies is to use [homebrew](https://brew.sh/) package system.
@@ -37,15 +37,27 @@ Then you can install the dependencies:
 
 ### Softwares:
 
-- VisualStudio C++ (2015 min)
+- VisualStudio C++ (2017 min)
+- Git
 - CMake (3.0 min)
-- jom (already installed if you have QtCreator) for multi-threaded compilation of dependencies 
-- ninja (accessible by PATH)
 
-###  Automatic install of deps
-- use cmake with Install_windows dir
-- see local README
-- **WARNING** due to a limitation in Visual-Studio, source and build (of itk) directory path should not be too long (50 char) !
+### install VCPKG For ASTex
+- open a power-shell
+- git clone https://github.com/Microsoft/vcpkg.git 
+- var env VCPKG_DEFAULT_TRIPLET=x64-windows
+- cd  vcpkg
+- .\vcpkg\bootstrap-vcpkg.bat
+- .\vcpkg.exe install itk openexr
+
+- Remarque: ATTENTION LA COMPILATION NECESSITE X.X Go D'ESPACE DISQUE ! Vous pouvez enlever les répertoires buildtrees, downloads et packages
+
+### Compile ASTex
+- launch CMake, chose src dir and binary dir
+- Specify tool chain file:  `XXXX/vcpkg_ast/scripts/buildsystems/vcpkg.cmake`
+- Configure again
+- Generate
+- Launch Solution 
+- Enjoy
 
 ## Data
 Some tests, tutorials and algorithms use read example images and write some results.
@@ -62,11 +74,6 @@ Use CMake as usual:
 * go inside build directory and do cmake ../ASTex (or use gui)
 * or let (a recent) Qtcreator do the job !
 
-### on Windows + VisualStudio
-
-* build directory has been createde by install script
-* use CMake-gui to customize the build
-* then launch Visual and load ASTex solution which has been generated in the build directory
 
 ### CMake Options
 There are some original options/values that can be set at the cmake stage:
@@ -75,7 +82,6 @@ There are some original options/values that can be set at the cmake stage:
 * ASTEX\_BUILD\_xxx choose to build bench/tuto/test
 * ASTEX\_PERSO\_xxx for each directory added in ASTex that contain a CMakeLists.txt set this to ON to build. When you add a directory just relaunch cmake.
 * ASTEX\_TEMPO\_PATH path of directory use to store images for test and tuto (copy ASTex/Data into it)
-* ASTEX\_USE\_CPP14 set this to ON if VXL say that you are using a C++ standard version older than the one used ton compile the lib.
 
 # Contributing to ASTex
 

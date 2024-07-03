@@ -1,6 +1,10 @@
-cmake_minimum_required(VERSION 3.0)
- 
-project(ASTex)
+cmake_minimum_required(VERSION 3.5)
+
+project(ASTex CXX C)
+
+#if (MSVC)
+#find_package(GTest REQUIRED)
+#endif()
 
 set(ASTEX_VERSION_MAJOR 0)
 set(ASTEX_VERSION_MINOR 9)
@@ -8,7 +12,8 @@ set(ASTEX_VERSION_PATCH 0)
 
 set(ENV{PATH}=${CMAKE_PREFIX_PATH};$ENV{PATH})
 
-set(CMAKE_MODULE_PATH  ${CMAKE_SOURCE_DIR}/cmake)
+#set(CMAKE_MODULE_PATH  "${CMAKE_SOURCE_DIR}/cmake")
+list(APPEND CMAKE_MODULE_PATH  ${CMAKE_SOURCE_DIR}/cmake)
 list(APPEND CMAKE_PREFIX_PATH "${CMAKE_BINARY_DIR}")
 include ( ${CMAKE_SOURCE_DIR}/cmake/utilities.cmake)
 
@@ -20,13 +25,20 @@ STRING(REGEX REPLACE "\\\\" "/" TEMPO_P $ENV{userprofile}/Desktop/ASTex_data)
 ELSE()
 	set(ASTEX_TEMPO_PATH /tmp/ASTex_data CACHE STRING "tempo directory (tutos img) storage" )
 ENDIF()
+file (GLOB DATA_CONTENTS "${CMAKE_SOURCE_DIR}/Data/*")
+MESSAGE(WARNING "ASTEX TEMP PATH = " ${ASTEX_TEMPO_PATH})
+IF(NOT EXISTS ${ASTEX_TEMPO_PATH})
+    MESSAGE(WARNING "NO ASTEX TEMP PATH = ")
+    MESSAGE(WARNING ${DATA_CONTENTS})
+    file(COPY ${DATA_CONTENTS} DESTINATION "${ASTEX_TEMPO_PATH}")
+ENDIF()
 
 
 option(ASTEX_BUILD_Bench "compile benchmark" ON )
 option(ASTEX_BUILD_Test "compile tests" ON )
 option(ASTEX_BUILD_Tuto "compile tutorials" ON )
 option(BUILD_SHARED_LIBS "build dynamic lib" OFF )
-option(ASTEX_USE_CPP14 "set this to on if VXL say that you are using a C++ standard version older than ..." OFF )
+#option(ASTEX_USE_CPP14 "set this to on if VXL say that you are using a C++ standard version older than ..." OFF )
 
 set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${PROJECT_BINARY_DIR}/bin)
 set(CMAKE_LIBRARY_OUTPUT_DIRECTORY ${PROJECT_BINARY_DIR}/lib)

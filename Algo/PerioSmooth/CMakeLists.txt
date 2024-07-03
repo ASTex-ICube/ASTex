@@ -1,4 +1,4 @@
-cmake_minimum_required(VERSION 3.0)
+cmake_minimum_required(VERSION 3.5)
  
 project(PerioSmooth LANGUAGES CXX)
 
@@ -17,6 +17,6 @@ target_link_libraries(perio_smooth PRIVATE ASTex)
 
 
 # nice vs solution
-set_target_properties(perio_smooth perio_smooth_color PROPERTIES FOLDER Perio_Smooth)
+set_target_properties(perio_smooth perio_smooth_color PROPERTIES FOLDER Algo)
 
 
