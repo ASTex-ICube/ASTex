@@ -29,7 +29,7 @@ jobs:
     steps:
       - uses: actions/checkout@v1
       - name: 'install deps'
-        run: vcpkg install eigen3 glfw3 imath openexr openmpi itk cgal
+        run: vcpkg install eigen3 glfw3 imath openexr itk cgal
       - name: 'Trying to compile ASTex on Windows'
         run: |
           mkdir Build
