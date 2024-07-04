@@ -15,7 +15,7 @@ jobs:
         run: |
           lsb_release -a
           sudo apt update
-          sudo apt install libeigen3-dev libpng-dev libopenmpi-dev libopenexr-dev libimath-dev libinsighttoolkit5-dev libglfw3-dev
+          sudo apt install libeigen3-dev libglfw3-dev libpng-dev libopenmpi-dev libopenexr-dev libimath-dev libinsighttoolkit5-dev libcgal-dev 
       - name: 'Trying to compile ASTex on Linux' 
         run:  |
           mkdir Build
@@ -29,7 +29,7 @@ jobs:
     steps:
       - uses: actions/checkout@v1
       - name: 'install deps'
-        run: vcpkg install eigen3 glfw3 imath openexr openmpi itk
+        run: vcpkg install eigen3 glfw3 imath openexr openmpi itk cgal
       - name: 'Trying to compile ASTex on Windows'
         run: |
           mkdir Build
@@ -43,7 +43,7 @@ jobs:
     steps:
       - uses: actions/checkout@v1
       - name: 'install deps'
-        run: brew install eigen glfw imath openexr openmpi itk
+        run: brew install eigen glfw imath openexr openmpi itk cgal
       - name: 'Trying to compile ASTEx on mac'
         run:  |
           mkdir Build
