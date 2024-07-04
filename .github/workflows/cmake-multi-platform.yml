@@ -13,8 +13,7 @@ jobs:
       - name: 'Package installations'
         shell: bash
         run: |
-          uname -a
-          lsb_realease
+          lsb_release -a
           sudo apt update
           sudo apt install libeigen3-dev libpng-dev libopenmpi-dev libopenexr-dev libilmbase-dev libinsighttoolkit5-dev libglfw3-dev
       - name: 'Trying to compile ASTex on Linux' 
