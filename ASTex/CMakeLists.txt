@@ -138,13 +138,20 @@ else()
   endif()
 endif()
   
+target_compile_definitions(${PROJECT_NAME} PUBLIC "${PNG_DEFINITION}")
   
 target_compile_features(${PROJECT_NAME} PUBLIC cxx_std_17)
 
-target_compile_definitions(${PROJECT_NAME} PUBLIC "${PNG_DEFINITION}")
 
-target_link_libraries(${PROJECT_NAME} PUBLIC ${ASTEX_LIBRARIES} Eigen3::Eigen)
+# use itkeigen if exist (itk5.2)
+list(GET ITK_INCLUDE_DIRS 0 ITK_PATH)
+if(EXISTS ${ITK_PATH}/itkeigen)
+	target_include_directories(${PROJECT_NAME} BEFORE PUBLIC ${ITK_PATH}/itkeigen/)
+else()
+	target_link_libraries(${PROJECT_NAME} PUBLIC ${ASTEX_LIBRARIES} Eigen3::Eigen)
+endif()
 
+# link with good libs function of openEXR version
 target_link_libraries (${PROJECT_NAME} PUBLIC 
         # For OpenEXR/Imath 3.x:
           $<$<TARGET_EXISTS:OpenEXR::OpenEXR>:OpenEXR::OpenEXR>
