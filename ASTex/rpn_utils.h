@@ -1,7 +1,6 @@
 #ifndef __NOISE__H__
 #define __NOISE__H__
 
-#include<Eigen/Eigen>
 #include <ASTex/pca.h>
 #include <ASTex/utils.h>
 #include <ASTex/special_io.h>
@@ -12,6 +11,7 @@
 #include <ASTex/distances_maps.h>
 #include <ASTex/easy_io.h>
 #include "histogram.h"
+
 
 using namespace ASTex;
 

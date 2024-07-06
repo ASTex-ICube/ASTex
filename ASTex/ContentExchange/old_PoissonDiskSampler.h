@@ -30,7 +30,7 @@
 
 
 #include <ASTex/image_gray.h>
-#include "Eigen/Eigen"
+#include "Eigen/Core"
 
 
 namespace ASTex

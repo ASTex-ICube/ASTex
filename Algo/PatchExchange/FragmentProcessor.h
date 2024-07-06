@@ -26,7 +26,7 @@
 #ifndef __CONTENTEXCHG__FRAGMENTPROCESSOR__
 #define __CONTENTEXCHG__FRAGMENTPROCESSOR__
 
-#include <Eigen/Eigen>
+#include <Eigen/Core>
 
 #include <ASTex/region_growing/region_growing.h>
 #include <ASTex/image_rgb.h>

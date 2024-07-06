@@ -26,12 +26,14 @@
 #ifndef _ASTEX_PCA_H_
 #define _ASTEX_PCA_H_
 
-#include <Eigen/Eigen>
 #include <cmath>
 
 #include <ASTex/mask.h>
 #include <ASTex/image_gray.h>
 #include <ASTex/image_rgb.h>
+
+#include <Eigen/Core>
+
 
 namespace ASTex
 {

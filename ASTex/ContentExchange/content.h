@@ -1,7 +1,7 @@
 #ifndef __CTEXCH_CONTENT_H__
 #define __CTEXCH_CONTENT_H__
 
-#include <Eigen/Eigen>
+#include <Eigen/Core>
 #include "ASTex/mipmap.h"
 #include "patch.h"
 
