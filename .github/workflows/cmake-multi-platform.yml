@@ -29,7 +29,7 @@ jobs:
     steps:
       - uses: actions/checkout@v1
       - name: 'install deps'
-        run: vcpkg install eigen3 glfw3 imath openexr itk cgal suitesparse glew
+        run: vcpkg install eigen3 glfw3 imath openexr itk cgal suitesparse glew tbb
       - name: 'Trying to compile ASTex on Windows'
         run: |
           mkdir Build
@@ -39,11 +39,11 @@ jobs:
 
   build-OsX:
     name: 'On Mac'
-    runs-on: macos-latest
+    runs-on: macos-13
     steps:
       - uses: actions/checkout@v1
       - name: 'install deps'
-        run: brew install eigen glfw imath openexr openmpi itk cgal suitesparse
+        run: brew install eigen glfw imath openexr openmpi itk cgal suitesparse tbb
       - name: 'Trying to compile ASTEx on mac'
         run:  |
           mkdir Build
