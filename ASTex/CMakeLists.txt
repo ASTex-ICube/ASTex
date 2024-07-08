@@ -1,24 +1,22 @@
 cmake_minimum_required(VERSION 3.5)
 
-project(ASTex LANGUAGES CXX)
+project(ASTex LANGUAGES CXX C)
 
-#if (WIN32 OR APPLE )
-#  find_package(Imath CONFIG REQUIRED)
-#  find_package(OpenEXR CONFIG REQUIRED)
-
-find_package(PNG QUIET REQUIRED)
-find_package(ITK QUIET CONFIG REQUIRED)
+find_package(PNG REQUIRED)
+find_package(ITK CONFIG REQUIRED)
 include(${ITK_USE_FILE})
-find_package(OpenMP QUIET)
-find_package(Eigen3 QUIET REQUIRED)
+find_package(OpenMP)
+find_package(OpenMP)
 
-find_package(Imath QUIET CONFIG)
+find_package(Eigen3 REQUIRED)
+
+find_package(Imath CONFIG)
 if(NOT TARGET Imath::Imath)
-    find_package(IlmBase QUIET)
+    find_package(IlmBase)
 endif()
-find_package(OpenEXR QUIET CONFIG REQUIRED)
+find_package(OpenEXR CONFIG REQUIRED)
 
-if(APPLE)
+if(__APPLE__)
 	find_library(CORE_FOUNDATION CoreFoundation)
 	find_library(CARBON Carbon)
 	set (APPLE_LINK "${CORE_FOUNDATION} ${CARBON}")
@@ -127,24 +125,25 @@ target_include_directories(${PROJECT_NAME} PUBLIC $<INSTALL_INTERFACE:include> $
 
 set ( ASTEX_LIBRARIES ${ITK_LIBRARIES} ${FFTW_LIBRARIES} ${PNG_LIBRARIES} ${APPLE_LINK})
 
-if (NOT(MSVC OR APPLE))
-  target_compile_options(${PROJECT_NAME} PUBLIC -pthread)
+# if (NOT(MSVC OR APPLE))
+#   target_compile_options(${PROJECT_NAME} PUBLIC -pthread)
+# endif()
+
+if(OpenMP_CXX_FOUND)
+	target_link_libraries(${PROJECT_NAME} PUBLIC OpenMP::OpenMP_CXX)
 endif()
 
 if(MSVC)
-  target_compile_definitions(${PROJECT_NAME} PUBLIC -D_USE_MATH_DEFINES -D_SCL_SECURE_NO_WARNINGS -D_CRT_SECURE_NO_WARNINGS -D_SECURE_SCL=0 -D_SECURE_SCL_THROWS=0)
-  if(${BUILD_SHARED_LIBS})
-    target_compile_definitions(${PROJECT_NAME} PRIVATE "-DASTEX_DLL_EXPORT")
-  else()
-    target_compile_definitions(${PROJECT_NAME} PUBLIC "-DBUILD_STATIC")
-  endif()
+	target_compile_definitions(${PROJECT_NAME} PUBLIC -D_USE_MATH_DEFINES -D_SCL_SECURE_NO_WARNINGS -D_CRT_SECURE_NO_WARNINGS -D_SECURE_SCL=0 -D_SECURE_SCL_THROWS=0)
+	if(${BUILD_SHARED_LIBS})
+		target_compile_definitions(${PROJECT_NAME} PRIVATE "-DASTEX_DLL_EXPORT")
+	else()
+		target_compile_definitions(${PROJECT_NAME} PUBLIC "-DBUILD_STATIC")
+	endif()
 else()
-  target_compile_options(${PROJECT_NAME} PUBLIC -Wall -Wextra -Wno-unknown-pragmas -Wno-missing-braces -fPIC )
-  if (${OpenMP_CXX_FLAGS})
-      target_compile_options(${PROJECT_NAME} PUBLIC ${OpenMP_CXX_FLAGS})
-  endif()
+	target_compile_options(${PROJECT_NAME} PUBLIC -Wall -Wextra -Wno-unknown-pragmas -Wno-missing-braces -fPIC )
 endif()
-  
+
 target_compile_definitions(${PROJECT_NAME} PUBLIC "${PNG_DEFINITION}")
   
 target_compile_features(${PROJECT_NAME} PUBLIC cxx_std_17)
