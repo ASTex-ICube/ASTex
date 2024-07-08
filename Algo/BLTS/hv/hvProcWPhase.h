@@ -167,7 +167,7 @@ public:
 
 hvProcWPhase(char *name, int ncol, bool e1=false, bool e2=false, bool e3=false):lfr(100)
 {
-	char buff[512];
+	char buff[1024];
 	strcpy(tname, name);
 	NCOLORS = ncol;
 	exportc1=e1; exportc2=e2; exportc3=e3;
@@ -218,7 +218,7 @@ hvProcWPhase(char *name, int ncol, bool e1=false, bool e2=false, bool e3=false):
 
 hvProcWPhase(const std::string& fname, int ncol, bool e1=false, bool e2=false, bool e3=false):lfr(100)
 {
-//	char buff[512];
+//	char buff[1024];
 //	strcpy(tname, name);
 	NCOLORS = ncol;
 	exportc1=e1; exportc2=e2; exportc3=e3;
@@ -271,7 +271,7 @@ hvProcWPhase(const std::string& fname, int ncol, bool e1=false, bool e2=false, b
 hvProcWPhase(char *name, int nclusters, int mask, 
 	bool e1 = false, bool e2 = false, bool e3 = false) :lfr(100)
 {
-	char buff[512];
+	char buff[1024];
 	strcpy(tname, name);
 	NCOLORS = 1;
 	exportc1 = e1; exportc2 = e2; exportc3 = e3;
@@ -863,7 +863,7 @@ for (i=0; i<exfeature.sizeX(); i++) for (j=0; j<exfeature.sizeY(); j++)
 //	}
 if (exportc1)
 {
-	char buff[512];
+	char buff[1024];
 	sprintf(buff, "%s_C1.ppm",tname);
 	FILE *fd = fopen(buff, "wb");
 	colfeature.savePPM(fd,1);
@@ -872,7 +872,7 @@ if (exportc1)
 if (exportc2)
 {
 	hvPictRGB<unsigned char> pp(pvar, HV_RED);
-	char buff[512];
+	char buff[1024];
 	sprintf(buff, "%s_C2.ppm",tname);
 	FILE *fd = fopen(buff, "wb");
 	pp.savePPM(fd,1);
@@ -881,7 +881,7 @@ if (exportc2)
 if (exportc3)
 {
 	hvPictRGB<unsigned char> pp(pvar, HV_GREEN);
-	char buff[512];
+	char buff[1024];
 	sprintf(buff, "%s_C3.ppm",tname);
 	FILE *fd = fopen(buff, "wb");
 	pp.savePPM(fd,1);
@@ -996,7 +996,7 @@ for (ii=0; ii<maxsize; ii++) for (jj=0; jj<maxsize; jj++) meanenrg.update(ii,jj,
 //meanenrg.bilateral(BILAT,1.0,15,15);
 if (exportc1)
 {
-	char buff[512];
+	char buff[1024];
 	hvPict<unsigned char> expen(meanenrg, meanenrg.maxValue(), fftdrawlog, 255.0,0,0,meanenrg.sizeX()-1, meanenrg.sizeY()-1);
 	expen.update(expen.sizeX()/2, expen.sizeY()/2, 0);
 	hvPictRGB<unsigned char> expergb(expen, 1);
@@ -1037,7 +1037,7 @@ else
 }
 if (exportc2)
 {
-	char buff[512];
+	char buff[1024];
 	hvPict<unsigned char> expen(meanenrgv, meanenrgv.maxValue(), fftdrawlog, 255.0,0,0,meanenrgv.sizeX()-1, meanenrgv.sizeY()-1);
 	expen.update(expen.sizeX()/2, expen.sizeY()/2, 0);
 	hvPictRGB<unsigned char> expergb(expen, 1);
@@ -1077,7 +1077,7 @@ else
 }
 if (exportc3)
 {
-	char buff[512];
+	char buff[1024];
 	hvPict<unsigned char> expen(meanenrgv2, meanenrgv2.maxValue(), fftdrawlog, 255.0,0,0,meanenrgv2.sizeX()-1, meanenrgv2.sizeY()-1);
 	expen.update(expen.sizeX()/2, expen.sizeY()/2, 0);
 	hvPictRGB<unsigned char> expergb(expen, 1);
@@ -1130,7 +1130,7 @@ if (exportc1 || exportc2 || exportc3)
 		pp.update(ii,jj,this->toRGB(val,0.0,0.0, true));
 	}
 	delete rft;
-	char buff[512];
+	char buff[1024];
 	sprintf(buff, "%s_C1_gaussian.ppm",tname);
 	FILE *fdes = fopen(buff, "wb");
 	pp.savePPM(fdes, 1);
@@ -1292,7 +1292,7 @@ for (ii=0; ii<maxsize; ii++) for (jj=0; jj<maxsize; jj++)
 
 if (exportc1)
 {
-	char buff[512];
+	char buff[1024];
 	sprintf(buff,"%s_C1_period.ppm", tname);
 	FILE *fd=fopen(buff,"wb");
 	fcolfeature.savePPM(fd,1);
@@ -1318,7 +1318,7 @@ if (exportc1)
 }
 if (exportc2)
 {
-	char buff[512];
+	char buff[1024];
 	sprintf(buff,"%s_C2_period.ppm", tname);
 	hvPictRGB<unsigned char> pp(fpvar,HV_RED);
 	FILE *fd=fopen(buff,"wb");
@@ -1338,7 +1338,7 @@ if (exportc2)
 }
 if (exportc3)
 {
-	char buff[512];
+	char buff[1024];
 	sprintf(buff,"%s_C3_period.ppm", tname);
 	hvPictRGB<unsigned char> pp(fpvar,HV_GREEN);
 	FILE *fd=fopen(buff,"wb");
@@ -1358,7 +1358,7 @@ if (exportc3)
 }
 if (exportc1 || exportc2 || exportc3)
 {
-	char buff[512];
+	char buff[1024];
 	sprintf(buff,"%s_period.ppm", tname);
 	FILE *fd=fopen(buff,"wb");
 	fexample.savePPM(fd,1);
@@ -1433,7 +1433,7 @@ if (exportc1)
 		if (gsel.get(ii,jj)) spectrum.update(ii,jj, hvColRGB<unsigned char>(255,50,50));
 		else spectrum.update(ii,jj, hvColRGB<unsigned char>(expen.get(ii,jj)));
 	}
-	char buff[512];
+	char buff[1024];
 	sprintf(buff,"%s_C1_grid.ppm", tname);
 	FILE *fd=fopen(buff,"wb");
 	spectrum.savePPM(fd,1);
@@ -1448,7 +1448,7 @@ if (exportc2)
 		if (gselv.get(ii,jj)) spectrum.update(ii,jj, hvColRGB<unsigned char>(expen.get(ii,jj), expen.get(ii,jj)/2, expen.get(ii,jj)/2));
 		else spectrum.update(ii,jj, hvColRGB<unsigned char>(expen.get(ii,jj)));
 	}
-	char buff[512];
+	char buff[1024];
 	sprintf(buff,"%s_C2_grid.ppm", tname);
 	FILE *fd=fopen(buff,"wb");
 	spectrum.savePPM(fd,1);
@@ -1463,7 +1463,7 @@ if (exportc3)
 		if (gselv2.get(ii,jj)) spectrum.update(ii,jj, hvColRGB<unsigned char>(expen.get(ii,jj), expen.get(ii,jj)/2, expen.get(ii,jj)/2));
 		else spectrum.update(ii,jj, hvColRGB<unsigned char>(expen.get(ii,jj)));
 	}
-	char buff[512];
+	char buff[1024];
 	sprintf(buff,"%s_C3_grid.ppm", tname);
 	FILE *fd=fopen(buff,"wb");
 	spectrum.savePPM(fd,1);
@@ -1704,7 +1704,7 @@ void doRndFreqSel(int ncos, double percentage)
 		hvPictRGB<unsigned char> ppp(maxsize, maxsize, hvColRGB<unsigned char>(255));
 		//printf("tname(%d)=%s\n", strlen(tname), tname);
 		hvProcWPhase::doRndCosSel(maxsize, ceilind, nstrates, maxrndcosines, stratumfreq, findex, raa, rphi, rffx, rffy, gauss, meanenrg, &pp, &ppe, &ppp, false);
-		char buff[512];
+		char buff[1024];
 		sprintf(buff,"%s_C1_FFT_strates_erosion.ppm",tname);
 		FILE *fd=fopen(buff,"wb");
 		pp.savePPM(fd,1);
@@ -1722,7 +1722,7 @@ void doRndFreqSel(int ncos, double percentage)
 		hvPictRGB<unsigned char> ppe(maxsize,maxsize,hvColRGB<unsigned char>(0));
 		hvPictRGB<unsigned char> ppp(maxsize,maxsize,hvColRGB<unsigned char>(255));
 		hvProcWPhase::doRndCosSel(maxsize, ceilindv, nstratesv, maxrndcosinesv, stratumfreqv, findexv, raav, rphiv, rffxv, rffyv, gaussv, meanenrgv,&pp,&ppe, &ppp, false);
-		char buff[512];
+		char buff[1024];
 		sprintf(buff,"%s_C2_FFT_strates_erosion.ppm",tname);
 		FILE *fd=fopen(buff,"wb");
 		pp.savePPM(fd,1);
@@ -1744,7 +1744,7 @@ void doRndFreqSel(int ncos, double percentage)
 		hvPictRGB<unsigned char> ppe(maxsize,maxsize,hvColRGB<unsigned char>(0));
 		hvPictRGB<unsigned char> ppp(maxsize, maxsize, hvColRGB<unsigned char>(255));
 		hvProcWPhase::doRndCosSel(maxsize, ceilindv2, nstratesv2, maxrndcosinesv2, stratumfreqv2, findexv2, raav2, rphiv2, rffxv2, rffyv2, gaussv2, meanenrgv2, &pp, &ppe, &ppp);
-		char buff[512];
+		char buff[1024];
 		sprintf(buff,"%s_C3_FFT_strates_erosion.ppm",tname);
 		FILE *fd=fopen(buff,"wb");
 		pp.savePPM(fd,1);
@@ -1836,7 +1836,7 @@ gaussapprox[expcind-1].reset(maxsize, maxsize, 0.0);
 	}
 if (exportc)
 {
-	char buff[512];
+	char buff[1024];
 	sprintf(buff,"%s_C%d_FFT_strates.ppm",tname,expcind);
 	FILE *fd=fopen(buff,"wb");
 	pstratif.savePPM(fd,1);

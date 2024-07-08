@@ -2,7 +2,7 @@ cmake_minimum_required(VERSION 3.5)
  
 project(ASTexBench LANGUAGES CXX)
 
-find_package(ASTex)
+#find_package(ASTex)  ## done outside
 
 add_executable(bench_traversals "")
 target_sources(bench_traversals PRIVATE bench_traversals.cpp)

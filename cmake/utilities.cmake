@@ -19,7 +19,7 @@ include(CMakePackageConfigHelpers)
 # 2.<install-dir>/lib/cmake/<cmake-project-name>/<cmake-project-name>Config.cmake            #
 # 3.<install-dir>/lib/cmake/<cmake-project-name>/<cmake-project-name>ConfigVersion.cmake     #
 #                                                                                            #
-# Usage example : find_package(astex);                                                       #
+# Usage example : #find_package(ASTex)  ## done outside;                                                       #
 # By convention they have to define the following two variables:                             #
 # cmake/<cmake-project-name>_LIBRARIES                                                       #
 # cmake/<cmake-project-name>_INCLUDE_DIRS                                                    #

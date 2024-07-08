@@ -2,7 +2,7 @@ cmake_minimum_required(VERSION 3.5)
  
 project(Quilting LANGUAGES CXX)
 
-find_package(ASTex)
+#find_package(ASTex)  ## done outside
 
 add_definitions(-DTEMPO_PATH=std::string\(\"${ASTEX_TEMPO_PATH}/\"\) )
 

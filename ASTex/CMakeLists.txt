@@ -6,17 +6,17 @@ project(ASTex LANGUAGES CXX)
 #  find_package(Imath CONFIG REQUIRED)
 #  find_package(OpenEXR CONFIG REQUIRED)
 
-find_package(PNG REQUIRED)
-find_package(ITK CONFIG  REQUIRED)
+find_package(PNG QUIET REQUIRED)
+find_package(ITK QUIET CONFIG REQUIRED)
 include(${ITK_USE_FILE})
 find_package(OpenMP QUIET)
-find_package(Eigen3 REQUIRED)
+find_package(Eigen3 QUIET REQUIRED)
 
-find_package(Imath CONFIG)
-if (NOT TARGET Imath::Imath)
-    find_package(IlmBase CONFIG)
-endif ()
-find_package(OpenEXR CONFIG REQUIRED )
+find_package(Imath QUIET CONFIG)
+if(NOT TARGET Imath::Imath)
+    find_package(IlmBase QUIET)
+endif()
+find_package(OpenEXR QUIET CONFIG REQUIRED)
 
 if(APPLE)
 	find_library(CORE_FOUNDATION CoreFoundation)
@@ -120,15 +120,15 @@ target_sources (${PROJECT_NAME} PRIVATE
         rpn_utils.cpp
 )
 
-target_include_directories(${PROJECT_NAME} PUBLIC ${ITK_INCLUDE_DIRS} ${PNG_INCLUDE_DIRS}  ${FFTW_INCLUDES})
+target_include_directories(${PROJECT_NAME} PUBLIC ${ITK_INCLUDE_DIRS} ${PNG_INCLUDE_DIRS}  ${FFTW_INCLUDES} ${OPENEXR_INCLUDE_DIR})
 target_include_directories(${PROJECT_NAME} PUBLIC $<INSTALL_INTERFACE:include> $<BUILD_INTERFACE:${ASTEX_SOURCE_DIR}>)
 
-target_include_directories(${PROJECT_NAME} PUBLIC ${OPENEXR_INCLUDE_DIR}/OpenEXR/)
+
 
 set ( ASTEX_LIBRARIES ${ITK_LIBRARIES} ${FFTW_LIBRARIES} ${PNG_LIBRARIES} ${APPLE_LINK})
 
 if (NOT(MSVC OR APPLE))
-	list(APPEND ASTEX_LIBRARIES -pthread)
+  target_compile_options(${PROJECT_NAME} PUBLIC -pthread)
 endif()
 
 if(MSVC)
@@ -149,13 +149,14 @@ target_compile_definitions(${PROJECT_NAME} PUBLIC "${PNG_DEFINITION}")
   
 target_compile_features(${PROJECT_NAME} PUBLIC cxx_std_17)
 
+target_link_libraries(${PROJECT_NAME} PUBLIC ${ASTEX_LIBRARIES})
 
 # use itkeigen if exist (itk5.2)
 list(GET ITK_INCLUDE_DIRS 0 ITK_PATH)
 if(EXISTS ${ITK_PATH}/itkeigen)
 	target_include_directories(${PROJECT_NAME} BEFORE PUBLIC ${ITK_PATH}/itkeigen/)
 else()
-	target_link_libraries(${PROJECT_NAME} PUBLIC ${ASTEX_LIBRARIES} Eigen3::Eigen)
+	target_link_libraries(${PROJECT_NAME} PUBLIC Eigen3::Eigen)
 endif()
 
 # link with good libs function of openEXR version
