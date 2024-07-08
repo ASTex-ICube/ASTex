@@ -2,7 +2,7 @@ cmake_minimum_required(VERSION 3.5)
  
 project(PatchMatch LANGUAGES CXX)
 
-find_package(ASTex)
+#find_package(ASTex)  ## done outside
 
 add_executable(test_patchmatch "")
 target_sources(test_patchmatch PRIVATE pm_minimal.cpp)

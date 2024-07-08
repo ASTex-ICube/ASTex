@@ -2,7 +2,7 @@ cmake_minimum_required(VERSION 3.5)
  
 project(ASTexTutos LANGUAGES CXX)
 
-find_package(ASTex)
+find_package(ASTex)  
 
 set( exec_list 
  tuto_pixel_types tuto_gray tuto_rgb tuto_mask 

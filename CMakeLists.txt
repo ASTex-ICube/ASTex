@@ -81,6 +81,7 @@ endif()
 set ( ALGO_DIR ${ASTEX_SOURCE_DIR}/Algo)
 file(GLOB algos RELATIVE ${ALGO_DIR} ${ALGO_DIR}/*)
 
+#find_package(ASTex)  ## done outside
 foreach(child ${algos})
   if(IS_DIRECTORY  ${ALGO_DIR}/${child})
     if(EXISTS "${ALGO_DIR}/${child}/CMakeLists.txt")

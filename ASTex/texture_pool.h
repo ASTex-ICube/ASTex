@@ -1,4 +1,4 @@
-#include <Eigen/Eigen>
+#include <Eigen/Core>
 #include "mipmap.h"
 #include "image_gray.h"
 #include "image_common.h"

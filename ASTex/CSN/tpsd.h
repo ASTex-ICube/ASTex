@@ -1,7 +1,7 @@
 #ifndef TPSD_H_
 #define TPSD_H_
 
-#include <Eigen/Eigen>
+#include <Eigen/Core>
 #include "Algo/ProceduralNoiseFiltering/gaussian_transfer.h"
 #include "ASTex/utils.h"
 #include "ASTex/pca.h"

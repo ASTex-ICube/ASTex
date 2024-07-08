@@ -5,7 +5,7 @@ project(Graphcut)
 add_definitions(-DTEMPO_PATH=std::string\(\"${ASTEX_TEMPO_PATH}/\"\) )
 
 
-find_package(ASTex)
+#find_package(ASTex)  ## done outside
 
 add_executable(test_graphcut "")
 target_sources(test_graphcut PRIVATE test_graphcut.cpp graphcut.h graphcut.cpp maxflow/block.h maxflow/graph.h maxflow/graph.cpp maxflow/maxflow.cpp)

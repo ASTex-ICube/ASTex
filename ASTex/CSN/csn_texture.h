@@ -1,7 +1,7 @@
 #ifndef CSN_TEXTURE_H_
 #define CSN_TEXTURE_H_
 
-#include <Eigen/Eigen>
+#include <Eigen/Core>
 #include "Algo/ProceduralNoiseFiltering/gaussian_transfer.h"
 #include "ASTex/utils.h"
 #include "ASTex/pca.h"

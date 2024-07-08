@@ -1,22 +1,29 @@
 cmake_minimum_required(VERSION 3.5)
 
-project(ASTex LANGUAGES CXX)
-
-#if (WIN32 OR APPLE )
-  find_package(Imath CONFIG REQUIRED)
-  find_package(OpenEXR CONFIG REQUIRED)
-
-  #else()
-  #find_package(OpenEXR REQUIRED)
-  #endif()
+project(ASTex LANGUAGES CXX C)
 
 find_package(PNG REQUIRED)
-find_package(ITK CONFIG  REQUIRED)
+find_package(ITK CONFIG REQUIRED)
 include(${ITK_USE_FILE})
-find_package(OpenMP QUIET)
+find_package(OpenMP)
+find_package(OpenMP)
+
 find_package(Eigen3 REQUIRED)
 
-add_library( ${PROJECT_NAME} "")
+find_package(Imath CONFIG)
+if(NOT TARGET Imath::Imath)
+    find_package(IlmBase)
+endif()
+find_package(OpenEXR CONFIG REQUIRED)
+
+if(__APPLE__)
+	find_library(CORE_FOUNDATION CoreFoundation)
+	find_library(CARBON Carbon)
+	set (APPLE_LINK "${CORE_FOUNDATION} ${CARBON}")
+endif()
+
+
+add_library( ${PROJECT_NAME} )
 
 
 target_sources (${PROJECT_NAME} PRIVATE 
@@ -111,47 +118,60 @@ target_sources (${PROJECT_NAME} PRIVATE
         rpn_utils.cpp
 )
 
-target_include_directories(${PROJECT_NAME} PUBLIC ${ITK_INCLUDE_DIRS} ${PNG_INCLUDE_DIRS}  ${FFTW_INCLUDES})
+target_include_directories(${PROJECT_NAME} PUBLIC ${ITK_INCLUDE_DIRS} ${PNG_INCLUDE_DIRS}  ${FFTW_INCLUDES} ${OPENEXR_INCLUDE_DIR})
 target_include_directories(${PROJECT_NAME} PUBLIC $<INSTALL_INTERFACE:include> $<BUILD_INTERFACE:${ASTEX_SOURCE_DIR}>)
 
 
-set ( ASTEX_LIBRARIES ${ITK_LIBRARIES} ${FFTW_LIBRARIES} ${PNG_LIBRARIES})
 
-if (NOT(MSVC OR APPLE))
-	set ( ASTEX_LIBRARIES ${ASTEX_LIBRARIES} -pthread )
+set ( ASTEX_LIBRARIES ${ITK_LIBRARIES} ${FFTW_LIBRARIES} ${PNG_LIBRARIES} ${APPLE_LINK})
+
+# if (NOT(MSVC OR APPLE))
+#   target_compile_options(${PROJECT_NAME} PUBLIC -pthread)
+# endif()
+
+if(OpenMP_CXX_FOUND)
+	target_link_libraries(${PROJECT_NAME} PUBLIC OpenMP::OpenMP_CXX)
 endif()
 
 if(MSVC)
-  target_compile_definitions(${PROJECT_NAME} PUBLIC -D_USE_MATH_DEFINES -D_SCL_SECURE_NO_WARNINGS -D_CRT_SECURE_NO_WARNINGS -D_SECURE_SCL=0 -D_SECURE_SCL_THROWS=0)
-  if(${BUILD_SHARED_LIBS})
-    target_compile_definitions(${PROJECT_NAME} PRIVATE "-DASTEX_DLL_EXPORT")
-  else()
-    target_compile_definitions(${PROJECT_NAME} PUBLIC "-DBUILD_STATIC")
-  endif()
+	target_compile_definitions(${PROJECT_NAME} PUBLIC -D_USE_MATH_DEFINES -D_SCL_SECURE_NO_WARNINGS -D_CRT_SECURE_NO_WARNINGS -D_SECURE_SCL=0 -D_SECURE_SCL_THROWS=0)
+	if(${BUILD_SHARED_LIBS})
+		target_compile_definitions(${PROJECT_NAME} PRIVATE "-DASTEX_DLL_EXPORT")
+	else()
+		target_compile_definitions(${PROJECT_NAME} PUBLIC "-DBUILD_STATIC")
+	endif()
 else()
-  target_compile_options(${PROJECT_NAME} PUBLIC -Wall -Wextra -Wno-unknown-pragmas -Wno-missing-braces -fPIC )
-  if (ITK_VERSION VERSION_LESS 4.10.0)
-    target_compile_options(${PROJECT_NAME} PUBLIC -fpermissive )
-    message (INFO " Old ITK version, add -fpermissive compil option")
-  endif()
-  if (${OpenMP_CXX_FLAGS})
-      target_compile_options(${PROJECT_NAME} PUBLIC ${OpenMP_CXX_FLAGS})
-  endif()
+	target_compile_options(${PROJECT_NAME} PUBLIC -Wall -Wextra -Wno-unknown-pragmas -Wno-missing-braces -fPIC )
 endif()
-  
+
+target_compile_definitions(${PROJECT_NAME} PUBLIC "${PNG_DEFINITION}")
   
 target_compile_features(${PROJECT_NAME} PUBLIC cxx_std_17)
 
-target_compile_definitions(${PROJECT_NAME} PUBLIC "${PNG_DEFINITION}")
-
-#if(WIN32 OR APPLE)
-	target_link_libraries(${PROJECT_NAME} PUBLIC OpenEXR::OpenEXR Imath::Imath Eigen3::Eigen)
-	#else()
-	#target_link_libraries(${PROJECT_NAME} PUBLIC ${OPENEXR_LIBRARIES})
-	#target_include_directories(${PROJECT_NAME} PUBLIC ${OPENEXR_INCLUDE_DIRS} ${EIGEN3_INCLUDE_DIRS})
-	#endif()
-
 target_link_libraries(${PROJECT_NAME} PUBLIC ${ASTEX_LIBRARIES})
+
+# use itkeigen if exist (itk5.2)
+list(GET ITK_INCLUDE_DIRS 0 ITK_PATH)
+if(EXISTS ${ITK_PATH}/itkeigen)
+	target_include_directories(${PROJECT_NAME} BEFORE PUBLIC ${ITK_PATH}/itkeigen/)
+else()
+	target_link_libraries(${PROJECT_NAME} PUBLIC Eigen3::Eigen)
+endif()
+
+# link with good libs function of openEXR version
+target_link_libraries (${PROJECT_NAME} PUBLIC 
+        # For OpenEXR/Imath 3.x:
+          $<$<TARGET_EXISTS:OpenEXR::OpenEXR>:OpenEXR::OpenEXR>
+          $<$<TARGET_EXISTS:Imath::Imath>:Imath::Imath>
+          $<$<TARGET_EXISTS:Imath::Half>:Imath::Half>
+        # For OpenEXR 2.4/2.5:
+          $<$<TARGET_EXISTS:OpenEXR::IlmImf>:OpenEXR::IlmImf>
+          $<$<TARGET_EXISTS:IlmBase::Imath>:IlmBase::Imath>
+          $<$<TARGET_EXISTS:IlmBase::Half>:IlmBase::Half>
+          $<$<TARGET_EXISTS:IlmBase::IlmThread>:IlmBase::IlmThread>
+          $<$<TARGET_EXISTS:IlmBase::Iex>:IlmBase::Iex>
+    )
+
 
 file(GLOB HEADERS "." "*.h" "*.hpp")
 install(FILES ${HEADERS} DESTINATION include/ASTex/)

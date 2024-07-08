@@ -30,7 +30,7 @@
 
 
 #include <unordered_map>
-#include "Eigen/Eigen"
+#include "Eigen/Core"
 
 template <typename ARRAY>
 void assign_array( ARRAY& ar, typename ARRAY::value_type x)

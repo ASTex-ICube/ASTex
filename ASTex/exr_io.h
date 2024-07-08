@@ -45,12 +45,12 @@
 #endif
 
 
-#include <ImfHeader.h>
-#include <ImfFrameBuffer.h>
-#include <ImfOutputFile.h>
-#include <ImfInputFile.h>
-#include <ImfChannelList.h>
-#include <ImfStringAttribute.h>
+#include <OpenEXR/ImfHeader.h>
+#include <OpenEXR/ImfFrameBuffer.h>
+#include <OpenEXR/ImfOutputFile.h>
+#include <OpenEXR/ImfInputFile.h>
+#include <OpenEXR/ImfChannelList.h>
+#include <OpenEXR/ImfStringAttribute.h>
 
 
 

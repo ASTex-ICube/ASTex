@@ -1,4 +1,4 @@
-#include <stdlib.h>
+#include <cstdlib>
 #include "ASTex/easy_io.h"
 #include "ASTex/utils.h"
 #include "ASTex/Stamping/stamper.h"

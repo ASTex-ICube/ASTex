@@ -26,7 +26,7 @@
 #ifndef __ASTEX__SLIC_H__
 #define __ASTEX__SLIC_H__
 
-#include <Eigen/Eigen>
+#include <Eigen/Core>
 
 #include <ASTex/region_growing/connected_components.h>
 #include <itkImageToImageFilter.h>

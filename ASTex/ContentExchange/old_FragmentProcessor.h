@@ -31,7 +31,7 @@
 
 #include <ASTex/region_growing/region_growing.h>
 #include <ASTex/image_rgb.h>
-#include <Eigen/Eigen>
+#include <Eigen/Core>
 
 
 
