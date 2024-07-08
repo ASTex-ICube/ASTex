@@ -38,7 +38,7 @@ jobs:
             core.exportVariable('ACTIONS_CACHE_URL', process.env.ACTIONS_CACHE_URL || '');
              core.exportVariable('ACTIONS_RUNTIME_TOKEN', process.env.ACTIONS_RUNTIME_TOKEN || '');
       - name: 'install deps'
-        run: vcpkg install eigen3:x64-windows-release glfw3:x64-windows-release zlib:x64-windows-release png:x64-windows-release imath:x64-windows-release openexr:x64-windows-release itk:x64-windows-release cgal:x64-windows-release suitesparse:x64-windows-release glew tbb:x64-windows-release 
+        run: vcpkg install eigen3:x64-windows-release glfw3:x64-windows-release zlib:x64-windows-release libpng:x64-windows-release imath:x64-windows-release openexr:x64-windows-release itk:x64-windows-release cgal:x64-windows-release suitesparse:x64-windows-release glew tbb:x64-windows-release 
       - name: 'Trying to compile ASTex on Windows'
         run: |
           mkdir Build
