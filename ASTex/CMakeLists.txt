@@ -18,6 +18,13 @@ if (NOT TARGET Imath::Imath)
 endif ()
 find_package(OpenEXR CONFIG REQUIRED )
 
+if(APPLE)
+	find_library(CORE_FOUNDATION CoreFoundation)
+	find_library(CARBON Carbon)
+	set (APPLE_LINK "${CORE_FOUNDATION} ${CARBON}")
+endif()
+
+
 add_library( ${PROJECT_NAME} )
 
 
@@ -118,10 +125,10 @@ target_include_directories(${PROJECT_NAME} PUBLIC $<INSTALL_INTERFACE:include> $
 
 target_include_directories(${PROJECT_NAME} PUBLIC ${OPENEXR_INCLUDE_DIR}/OpenEXR/)
 
-set ( ASTEX_LIBRARIES ${ITK_LIBRARIES} ${FFTW_LIBRARIES} ${PNG_LIBRARIES})
+set ( ASTEX_LIBRARIES ${ITK_LIBRARIES} ${FFTW_LIBRARIES} ${PNG_LIBRARIES} ${APPLE_LINK})
 
 if (NOT(MSVC OR APPLE))
-	set ( ASTEX_LIBRARIES ${ASTEX_LIBRARIES} -pthread )
+	list(APPEND ASTEX_LIBRARIES -pthread)
 endif()
 
 if(MSVC)
