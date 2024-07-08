@@ -1,0 +1,52 @@
+name: 'Continuous Integration ASTex'
+on:
+  pull_request:
+     branches:
+       - develop
+
+jobs:
+  build-linux:
+    name: 'On Linux'
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v1
+      - name: 'Package installations'
+        shell: bash
+        run: |
+          lsb_release -a
+          sudo apt update
+          sudo apt install libeigen3-dev libglfw3-dev libpng-dev libopenmpi-dev libopenexr-dev libimath-dev libinsighttoolkit5-dev libcgal-dev libsuitesparse-dev
+      - name: 'Trying to compile ASTex on Linux' 
+        run:  |
+          mkdir Build
+          cd Build
+          cmake ..
+          cmake --build . 
+
+  build-windows:
+    name: 'On Windows'
+    runs-on: windows-2022
+    steps:
+      - uses: actions/checkout@v1
+      - name: 'install deps'
+        run: vcpkg install eigen3 glfw3 imath openexr itk cgal suitesparse glew tbb
+      - name: 'Trying to compile ASTex on Windows'
+        run: |
+          mkdir Build
+          cd Build
+          cmake .. "-DCMAKE_TOOLCHAIN_FILE=$env:VCPKG_INSTALLATION_ROOT\scripts\buildsystems\vcpkg.cmake"
+          cmake --build .
+
+  build-OsX:
+    name: 'On Mac'
+    runs-on: macos-13
+    steps:
+      - uses: actions/checkout@v1
+      - name: 'install deps'
+        run: brew install eigen glfw imath openexr openmpi itk cgal suitesparse tbb
+      - name: 'Trying to compile ASTEx on mac'
+        run:  |
+          mkdir Build
+          cd Build
+          cmake .. 
+          cmake --build . # This starter workflow is for a CMake project running on multiple platforms. There is a different starter workflow if you just want a single platform.
