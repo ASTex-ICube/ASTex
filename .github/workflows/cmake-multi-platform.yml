@@ -6,23 +6,6 @@ on:
 
 jobs:
 
-#  build-linux:
-#    name: 'On Linux'
-#    runs-on: ubuntu-24.04
-#    steps:
-#      - uses: actions/checkout@v1
-#      - name: 'Package installations'
-#        shell: bash
-#        run: |
-#          lsb_release -a
-#          sudo apt update
-#          sudo apt install libeigen3-dev libglfw3-dev libpng-dev libopenmpi-dev libopenexr-dev libimath-dev libinsighttoolkit5-dev libcgal-dev libsuitesparse-dev
-#      - name: 'Trying to compile ASTex on Linux' 
-#        run:  |
-#          mkdir Build
-#          cd Build
-#          cmake ..
-#          cmake --build . 
 
   build-windows:
     name: 'On Windows'
