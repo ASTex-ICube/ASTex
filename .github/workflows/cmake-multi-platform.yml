@@ -11,7 +11,7 @@ jobs:
     name: 'On Windows'
     runs-on: windows-2022
     steps:
-        - name: Export GitHub Actions cache environment variables
+      - name: Export GitHub Actions cache environment variables
         uses: actions/github-script@v7
         with:
           script: |
