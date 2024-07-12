@@ -44,7 +44,7 @@ jobs:
         run: |
           mkdir Build
           cd Build
-          cmake .. "-DCMAKE_TOOLCHAIN_FILE=C:\vcpkg\scripts\buildsystems\vcpkg.cmake -DCMAKE_BUILD_TYPE=Release"
+          cmake .. "-DCMAKE_TOOLCHAIN_FILE=C:\vcpkg\scripts\buildsystems\vcpkg.cmake"
           cmake --build .
 
   build-OsX:
