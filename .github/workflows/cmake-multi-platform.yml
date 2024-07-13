@@ -25,6 +25,7 @@ jobs:
       - uses: actions/checkout@v1
       - name: 'Trying to compile ASTex on Windows'
         run: |
+          ls C:\vcpkg\installed\x64-windows\lib
           mkdir Build
           cd Build
           cmake .. "-DCMAKE_TOOLCHAIN_FILE=C:\vcpkg\scripts\buildsystems\vcpkg.cmake"
