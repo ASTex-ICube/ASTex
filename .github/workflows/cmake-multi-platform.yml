@@ -22,13 +22,13 @@ jobs:
           VCPKG_BINARY_SOURCES: "clear;x-gha,readwrite"
         run:
           ls C:\vcpkg\installed\x64-windows\lib
-          ls ${{VCPKG_BINARY_SOURCES}}\lib
+          ls $VCPKG_BINARY_SOURCES\lib
           vcpkg install zlib libpng eigen3 glfw3 imath openexr itk cgal suitesparse glew tbb 
       - uses: actions/checkout@v1
       - name: 'Trying to compile ASTex on Windows'
         run: |
           ls C:\vcpkg\installed\x64-windows\lib
-          ls ${{VCPKG_BINARY_SOURCES}}\lib
+          ls $VCPKG_BINARY_SOURCES\lib
           mkdir Build
           cd Build
           cmake .. "-DCMAKE_TOOLCHAIN_FILE=C:\vcpkg\scripts\buildsystems\vcpkg.cmake"
