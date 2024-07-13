@@ -20,7 +20,7 @@ jobs:
       - name: 'install deps'
         env: 
           VCPKG_BINARY_SOURCES: "clear;x-gha,readwrite"
-        run:|
+        run: |
           ls C:\vcpkg\installed\x64-windows\lib
           ls $VCPKG_BINARY_SOURCES\lib
           vcpkg install zlib libpng eigen3 glfw3 imath openexr itk cgal suitesparse glew tbb 
