@@ -33,6 +33,7 @@ jobs:
   build-windows:
     name: 'On Windows'
     runs-on: meinau
+    steps:
       - uses: actions/checkout@v1
       - name: 'Trying to compile ASTex on Windows'
         run: |
