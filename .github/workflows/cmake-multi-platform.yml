@@ -43,16 +43,12 @@ jobs:
           cmake --build .
   build-OsX:
     name: 'On Mac'
-    runs-on: macos-latest
+    runs-on: MyPortMac
     steps:
-      - name: install deps
-        run:
-          brew install eigen glfw imath openexr openmpi itk cgal suitesparse tbb
       - uses: actions/checkout@v1
       - name: 'Trying to compile ASTEx on mac'
         run:  |
-          sudo sudo xcode-select --switch /Library/Developer/CommandLineTools
+#          sudo sudo xcode-select --switch /Library/Developer/CommandLineTools
           mkdir Build
           cd Build
-          cmake .. @
           cmake --build . 
