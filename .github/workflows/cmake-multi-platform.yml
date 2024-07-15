@@ -20,16 +20,16 @@ jobs:
       - name: 'install deps'
         env: 
           VCPKG_BINARY_SOURCES: "clear;x-gha,readwrite"
-        run:
+        run: |
+          choco install gh
           vcpkg install zlib libpng eigen3 glfw3 imath openexr itk cgal suitesparse glew tbb 
       - uses: actions/checkout@v1
       - name: 'Trying to compile ASTex on Windows'
         run: |
           mkdir Build
           cd Build
-          cmake .. "-DCMAKE_TOOLCHAIN_FILE=C:\vcpkg\scripts\buildsystems\vcpkg.cmake"
+          cmake --debug-find .. "-DCMAKE_TOOLCHAIN_FILE=C:\vcpkg\scripts\buildsystems\vcpkg.cmake"
           cmake --build .
-
   build-OsX:
     name: 'On Mac'
     runs-on: macos-latest
@@ -40,8 +40,8 @@ jobs:
       - uses: actions/checkout@v1
       - name: 'Trying to compile ASTEx on mac'
         run:  |
-          sudo xcode-select --switch /Library/Developer/CommandLineTools
+          sudo sudo xcode-select --switch /Library/Developer/CommandLineTools
           mkdir Build
           cd Build
-          cmake .. 
+          cmake .. -DBUILD_ZLIB=OFF
           cmake --build . 
