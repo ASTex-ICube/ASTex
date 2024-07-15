@@ -9,7 +9,7 @@ jobs:
 
   build-windows:
     name: 'On Windows'
-    runs-on: windows-2022
+    runs-on: windows-latest
     steps:
       - name: Export GitHub Actions cache environment variables
         uses: actions/github-script@v7
@@ -32,7 +32,7 @@ jobs:
 
   build-OsX:
     name: 'On Mac'
-    runs-on: macos-13
+    runs-on: macos-latest
     steps:
       - name: install deps
         run:
