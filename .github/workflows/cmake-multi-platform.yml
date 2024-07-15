@@ -21,15 +21,14 @@ jobs:
         env: 
           VCPKG_BINARY_SOURCES: "clear;x-gha,readwrite"
         run: |
+          choco install gh
           vcpkg install zlib libpng eigen3 glfw3 imath openexr itk cgal suitesparse glew tbb 
-          ls C:\vcpkg\installed\x64-windows\lib
-          ls $VCPKG_BINARY_SOURCES
-      - uses: actions/checkout@v1
+          - uses: actions/checkout@v1
       - name: 'Trying to compile ASTex on Windows'
         run: |
           mkdir Build
           cd Build
-          cmake .. "-DCMAKE_TOOLCHAIN_FILE=C:\vcpkg\scripts\buildsystems\vcpkg.cmake"
+          cmake --debug-find .. "-DCMAKE_TOOLCHAIN_FILE=C:\vcpkg\scripts\buildsystems\vcpkg.cmake"
           cmake --build .
   build-OsX:
     name: 'On Mac'
@@ -41,9 +40,8 @@ jobs:
       - uses: actions/checkout@v1
       - name: 'Trying to compile ASTEx on mac'
         run:  |
-          sudo xcode-select --switch /Library/Developer/CommandLineTools
+          sudo xcode-select --install 
           mkdir Build
           cd Build
-          export PKG_CONFIG_PATH="/usr/local/opt/zlib/lib/pkgconfig"
-          cmake .. 
+          cmake .. -DBUILD_ZLIB=OFF
           cmake --build . 
