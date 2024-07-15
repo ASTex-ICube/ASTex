@@ -16,7 +16,20 @@ jobs:
           mkdir Build
           cd Build
           cmake ..
-          cmake --build . 
+          cmake --build --parallel 8 . 
+
+  build-OsX:
+    name: 'On Mac'
+    runs-on: MyPortMac
+    steps:
+      - uses: actions/checkout@v1
+      - name: 'Trying to compile ASTEx on mac'
+        run: |
+          mkdir Build
+          cd Build
+          cmake ..
+          cmake --build --parallel 8 . 
+
 
   build-windows:
     name: 'On Windows'
@@ -41,13 +54,3 @@ jobs:
           cd Build
           cmake --debug-find .. "-DCMAKE_TOOLCHAIN_FILE=C:\vcpkg\scripts\buildsystems\vcpkg.cmake"
           cmake --build .
-  build-OsX:
-    name: 'On Mac'
-    runs-on: MyPortMac
-    steps:
-      - uses: actions/checkout@v1
-      - name: 'Trying to compile ASTEx on mac'
-        run:  |
-          mkdir Build
-          cd Build
-          cmake --build . 
