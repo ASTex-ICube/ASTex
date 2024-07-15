@@ -30,27 +30,13 @@ jobs:
           cmake ..
           cmake --build . --parallel 8
 
-
   build-windows:
     name: 'On Windows'
-    runs-on: windows-latest
-    steps:
-      - name: Export GitHub Actions cache environment variables
-        uses: actions/github-script@v7
-        with:
-          script: |
-            core.exportVariable('ACTIONS_CACHE_URL', process.env.ACTIONS_CACHE_URL || '');
-             core.exportVariable('ACTIONS_RUNTIME_TOKEN', process.env.ACTIONS_RUNTIME_TOKEN || '');
-      - name: 'install deps'
-        env: 
-          VCPKG_BINARY_SOURCES: "clear;x-gha,readwrite"
-        run: |
-          choco install gh
-          vcpkg install zlib libpng eigen3 glfw3 imath openexr itk cgal suitesparse glew tbb 
+    runs-on: meinau
       - uses: actions/checkout@v1
       - name: 'Trying to compile ASTex on Windows'
         run: |
           mkdir Build
           cd Build
-          cmake --debug-find .. "-DCMAKE_TOOLCHAIN_FILE=C:\vcpkg\scripts\buildsystems\vcpkg.cmake"
+          cmake .. "-DCMAKE_TOOLCHAIN_FILE=C:\vcpkg\scripts\buildsystems\vcpkg.cmake"
           cmake --build .
