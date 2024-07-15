@@ -40,7 +40,7 @@ jobs:
       - uses: actions/checkout@v1
       - name: 'Trying to compile ASTEx on mac'
         run:  |
-          sudo xcode-select --install 
+          sudo sudo xcode-select --switch /Library/Developer/CommandLineTools
           mkdir Build
           cd Build
           cmake .. -DBUILD_ZLIB=OFF
