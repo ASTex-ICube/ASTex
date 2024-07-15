@@ -8,7 +8,7 @@ jobs:
 
   build-linux:
     name: 'On Linux'
-    runs-on: Linux
+    runs-on: colibris
     steps:
       - uses: actions/checkout@v1
       - name: 'Trying to compile ASTex on Linux' 
