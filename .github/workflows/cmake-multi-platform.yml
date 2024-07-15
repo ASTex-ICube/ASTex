@@ -16,7 +16,7 @@ jobs:
           mkdir Build
           cd Build
           cmake ..
-          cmake --build --parallel 8 . 
+          cmake --build . --parallel 8
 
   build-OsX:
     name: 'On Mac'
@@ -28,7 +28,7 @@ jobs:
           mkdir Build
           cd Build
           cmake ..
-          cmake --build --parallel 8 . 
+          cmake --build . --parallel 8
 
 
   build-windows:
