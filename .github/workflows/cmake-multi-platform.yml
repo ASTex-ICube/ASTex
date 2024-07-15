@@ -23,7 +23,7 @@ jobs:
         run: |
           choco install gh
           vcpkg install zlib libpng eigen3 glfw3 imath openexr itk cgal suitesparse glew tbb 
-          - uses: actions/checkout@v1
+      - uses: actions/checkout@v1
       - name: 'Trying to compile ASTex on Windows'
         run: |
           mkdir Build
