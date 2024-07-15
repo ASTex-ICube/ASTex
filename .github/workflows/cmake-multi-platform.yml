@@ -36,7 +36,7 @@ jobs:
     steps:
       - name: install deps
         run:
-          brew install zlib eigen glfw imath openexr openmpi itk cgal suitesparse tbb
+          brew install eigen glfw imath openexr openmpi itk cgal suitesparse tbb
       - uses: actions/checkout@v1
       - name: 'Trying to compile ASTEx on mac'
         run:  |
