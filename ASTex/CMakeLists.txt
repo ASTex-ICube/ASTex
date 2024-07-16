@@ -6,7 +6,7 @@ find_package(PNG REQUIRED)
 find_package(ITK CONFIG REQUIRED)
 include(${ITK_USE_FILE})
 find_package(OpenMP)
-find_package(OpenMP)
+
 
 find_package(Eigen3 REQUIRED)
 
