@@ -8,7 +8,7 @@ jobs:
 
   build-linux:
     name: 'On Linux'
-    runs-on: VBLM
+    runs-on: Linux
     steps:
       - uses: actions/checkout@v1
       - name: 'Trying to compile ASTex on Linux' 
@@ -20,7 +20,7 @@ jobs:
 
   build-OsX:
     name: 'On Mac'
-    runs-on: MyPortMac
+    runs-on: macOS
     steps:
       - uses: actions/checkout@v1
       - name: 'Trying to compile ASTEx on mac'
@@ -32,7 +32,7 @@ jobs:
 
   build-windows:
     name: 'On Windows'
-    runs-on: meinau
+    runs-on: Windows
     steps:
       - uses: actions/checkout@v1
       - name: 'Trying to compile ASTex on Windows'
