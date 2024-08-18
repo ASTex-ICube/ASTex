@@ -10,15 +10,14 @@ set(ASTEX_VERSION_MAJOR 0)
 set(ASTEX_VERSION_MINOR 9)
 set(ASTEX_VERSION_PATCH 0)
 
-#cmake_policy(SET CMP0167 NEW)
+cmake_policy(SET CMP0167 NEW)
 
 
-set(ENV{PATH}=${CMAKE_PREFIX_PATH};$ENV{PATH})
+#set(ENV{PATH} ${CMAKE_PREFIX_PATH}:$ENV{PATH})
 
-#set(CMAKE_MODULE_PATH  "${CMAKE_SOURCE_DIR}/cmake")
 list(APPEND CMAKE_MODULE_PATH  ${CMAKE_SOURCE_DIR}/cmake)
 list(APPEND CMAKE_PREFIX_PATH "${CMAKE_BINARY_DIR}")
-include ( ${CMAKE_SOURCE_DIR}/cmake/utilities.cmake)
+include( ${CMAKE_SOURCE_DIR}/cmake/utilities.cmake )
 
 set_property(GLOBAL PROPERTY USE_FOLDERS ON)
 
@@ -28,8 +27,9 @@ STRING(REGEX REPLACE "\\\\" "/" TEMPO_P $ENV{userprofile}/Desktop/ASTex_data)
 ELSE()
 	set(ASTEX_TEMPO_PATH /tmp/ASTex_data CACHE STRING "tempo directory (tutos img) storage" )
 ENDIF()
+
 file (GLOB DATA_CONTENTS "${CMAKE_SOURCE_DIR}/Data/*")
-MESSAGE(WARNING "ASTEX TEMP PATH = " ${ASTEX_TEMPO_PATH})
+
 IF(NOT EXISTS ${ASTEX_TEMPO_PATH})
     MESSAGE(WARNING "NO ASTEX TEMP PATH = ")
     MESSAGE(WARNING ${DATA_CONTENTS})
@@ -62,8 +62,7 @@ ENDIF()
 
 add_definitions(-DTEMPO_PATH=std::string\(\"${ASTEX_TEMPO_PATH}/\"\) )
 
-add_subdirectory( ${ASTEX_SOURCE_DIR}/ASTex )
-
+add_subdirectory( ${ASTEX_SOURCE_DIR}/ASTex)
 if (${ASTEX_BUILD_Bench})
 	add_subdirectory( Bench )
 endif()
@@ -74,17 +73,16 @@ endif()
 
 if (${ASTEX_BUILD_Tuto})
         add_subdirectory( Tuto )
-endif()
+endif()			
 
-if (MSVC)
-	add_subdirectory( deploy_dll )
-endif()
+#if (MSVC)
+#	add_subdirectory( deploy_dll )
+#endif()
 
 
 set ( ALGO_DIR ${ASTEX_SOURCE_DIR}/Algo)
 file(GLOB algos RELATIVE ${ALGO_DIR} ${ALGO_DIR}/*)
 
-#find_package(ASTex)  ## done outside
 foreach(child ${algos})
   if(IS_DIRECTORY  ${ALGO_DIR}/${child})
     if(EXISTS "${ALGO_DIR}/${child}/CMakeLists.txt")
@@ -116,17 +114,4 @@ foreach(child ${children})
     endif()
   endif()
 endforeach()
-
-foreach(child ${children})
-  if(IS_DIRECTORY  ${ASTEX_SOURCE_DIR}/${child})
-    if(EXISTS "${ASTEX_SOURCE_DIR}/${child}/CMakeLists.txt")
-      if (NOT("${child}"  MATCHES "^(${EXCLUDED_DIRS})$"))
-        if (${ASTEX_PERSO_${child}})
-          add_subdirectory( ${child} )
-        endif()
-      endif()
-    endif()
-  endif()
-endforeach()
-
 

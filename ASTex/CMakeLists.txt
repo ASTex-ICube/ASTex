@@ -16,15 +16,17 @@ if(NOT TARGET Imath::Imath)
 endif()
 find_package(OpenEXR CONFIG REQUIRED)
 
+
+add_library( ${PROJECT_NAME} )
+
+
 if(__APPLE__)
 	find_library(CORE_FOUNDATION CoreFoundation)
 	find_library(CARBON Carbon)
 	set (APPLE_LINK "${CORE_FOUNDATION} ${CARBON}")
+	target_include_directories(${PROJECT_NAME} BEFORE PUBLIC /usr/local/includeà)
+	target_link_directories (${PROJECT_NAME} PUBLIC /usr/local/lib)
 endif()
-
-
-add_library( ${PROJECT_NAME} )
-
 
 target_sources (${PROJECT_NAME} PRIVATE 
 	internal.h
@@ -123,7 +125,7 @@ target_include_directories(${PROJECT_NAME} PUBLIC $<INSTALL_INTERFACE:include> $
 
 
 
-set ( ASTEX_LIBRARIES ${ITK_LIBRARIES} ${FFTW_LIBRARIES} ${PNG_LIBRARIES} ${APPLE_LINK})
+set ( ASTEX_LIBRARIES ${ITK_LIBRARIES} ${FFTW_LIBRARIES} ${PNG_LIBRARIES} ${APPLE_LINK} )
 
 # if (NOT(MSVC OR APPLE))
 #   target_compile_options(${PROJECT_NAME} PUBLIC -pthread)
@@ -134,6 +136,9 @@ if(OpenMP_CXX_FOUND)
 endif()
 
 if(MSVC)
+	target_include_directories (${PROJECT_NAME} PUBLIC ${VCPKG_INSTALLED_DIR}/include)
+	target_link_directories (${PROJECT_NAME} PUBLIC ${VCPKG_INSTALLED_DIR}/lib)
+
 	target_compile_definitions(${PROJECT_NAME} PUBLIC -D_USE_MATH_DEFINES -D_SCL_SECURE_NO_WARNINGS -D_CRT_SECURE_NO_WARNINGS -D_SECURE_SCL=0 -D_SECURE_SCL_THROWS=0)
 	if(${BUILD_SHARED_LIBS})
 		target_compile_definitions(${PROJECT_NAME} PRIVATE "-DASTEX_DLL_EXPORT")
@@ -171,6 +176,7 @@ target_link_libraries (${PROJECT_NAME} PUBLIC
           $<$<TARGET_EXISTS:IlmBase::IlmThread>:IlmBase::IlmThread>
           $<$<TARGET_EXISTS:IlmBase::Iex>:IlmBase::Iex>
     )
+
 
 
 file(GLOB HEADERS "." "*.h" "*.hpp")

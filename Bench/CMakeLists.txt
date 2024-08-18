@@ -1,14 +1,13 @@
-cmake_minimum_required(VERSION 3.5)
- 
 project(ASTexBench LANGUAGES CXX)
 
-#find_package(ASTex)  ## done outside
+find_package(ASTex)  ## done outside
 
-add_executable(bench_traversals "")
+add_executable(bench_traversals)
 target_sources(bench_traversals PRIVATE bench_traversals.cpp)
 target_link_libraries(bench_traversals PRIVATE ASTex)
 
-add_executable(bench_eigen_pixels bench_eigen_pixels.cpp)
+add_executable(bench_eigen_pixels )
+target_sources(bench_eigen_pixels PRIVATE bench_eigen_pixels.cpp)
 target_link_libraries(bench_eigen_pixels ASTex)
 
 
