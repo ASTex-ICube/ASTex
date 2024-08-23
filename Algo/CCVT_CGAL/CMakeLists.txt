@@ -8,6 +8,9 @@ find_package(glfw3 3.3 REQUIRED)
 find_package(OpenGL REQUIRED)
 
 if (WIN32)
+       target_include_directories (${PROJECT_NAME} PUBLIC ${VCPKG_INSTALLED_DIR}/include)
+       target_link_directories (${PROJECT_NAME} PUBLIC ${VCPKG_INSTALLED_DIR}/lib)
+
 	find_package(GLEW CONFIG REQUIRED)
 	find_package(metis CONFIG REQUIRED)
 	find_package(BLAS REQUIRED)
@@ -60,17 +63,17 @@ set(SRCS main_ccvt_cgal.cpp
         ccvt_sites.cpp
         ccvt_application.cpp)
 
-add_executable(ccvt_cgal_chgrenier )
+add_executable(${PROJECT_NAME} )
 
-target_sources(ccvt_cgal_chgrenier PRIVATE ${SRCS} main_ccvt_cgal.cpp)
+target_sources(${PROJECT_NAME} PRIVATE ${SRCS} main_ccvt_cgal.cpp)
 
-target_include_directories(ccvt_cgal_chgrenier PRIVATE 
+target_include_directories(${PROJECT_NAME} PRIVATE 
 				/usr/include/suitesparse
 				/usr/local/include/suitesparse)
 
-target_link_directories(ccvt_cgal_chgrenier PRIVATE /usr/local/lib/)
+target_link_directories(${PROJECT_NAME} PRIVATE /usr/local/lib/)
 
-target_link_libraries(ccvt_cgal_chgrenier PRIVATE
+target_link_libraries(${PROJECT_NAME} PRIVATE
         CGAL::CGAL
         ${SUITESPARSE_LIBRARIES}
         glfw
@@ -79,22 +82,24 @@ target_link_libraries(ccvt_cgal_chgrenier PRIVATE
 	${GLEW_LIBRARIES} )
 
 
+       target_include_directories (${PROJECT_NAME} PUBLIC /usr/local/include)
+       target_link_directories (${PROJECT_NAME} PUBLIC /usr/local/lib)
 
-target_compile_features(ccvt_cgal_chgrenier PUBLIC cxx_std_17)
+target_compile_features(${PROJECT_NAME} PUBLIC cxx_std_17)
 
-cgal_add_compilation_test(ccvt_cgal_chgrenier)
+cgal_add_compilation_test(${PROJECT_NAME})
 
 # nice vs solution
-set_target_properties(ccvt_cgal_chgrenier PROPERTIES FOLDER Algo)
+set_target_properties(${PROJECT_NAME} PROPERTIES FOLDER Algo)
 
 file(COPY ${CMAKE_CURRENT_SOURCE_DIR}/shaders DESTINATION "${ASTEX_TEMPO_PATH}")
 
 
-#install(TARGETS ccvt_cgal_chgrenier
+#install(TARGETS ${PROJECT_NAME}
 #        COMPONENT ink_edit_comp
 #        DESTINATION ink_edit
 #)
-#install(IMPORTED_RUNTIME_ARTIFACTS ccvt_cgal_chgrenier
+#install(IMPORTED_RUNTIME_ARTIFACTS ${PROJECT_NAME}
 #        RUNTIME_DEPENDENCY_SET ink_edit_dep
 #        RUNTIME
 #        COMPONENT ink_edit_comp
@@ -111,7 +116,7 @@ file(COPY ${CMAKE_CURRENT_SOURCE_DIR}/shaders DESTINATION "${ASTEX_TEMPO_PATH}")
 #install(CODE [[
 #        file(GET_RUNTIME_DEPENDENCIES
 #            RESOLVED_DEPENDENCIES_VAR ink_edit_dep_var
-#            EXECUTABLES $<TARGET_FILE:ccvt_cgal_chgrenier>
+#            EXECUTABLES $<TARGET_FILE:${PROJECT_NAME}>
 #        )
 #        MESSAGE(STATUS "blabla ${ink_edit_dep_var}")
 #        file(INSTALL ${ink_edit_dep_var}
@@ -125,4 +130,4 @@ file(COPY ${CMAKE_CURRENT_SOURCE_DIR}/shaders DESTINATION "${ASTEX_TEMPO_PATH}")
 #        DESTINATION ink_edit/lib
 #)
 
-set_target_properties(ccvt_cgal_chgrenier PROPERTIES INSTALL_RPATH $ORIGIN/lib)
+set_target_properties(${PROJECT_NAME} PROPERTIES INSTALL_RPATH $ORIGIN/lib)

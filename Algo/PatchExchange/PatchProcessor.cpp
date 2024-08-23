@@ -382,11 +382,13 @@ void BuildImagePyramid( const T &img, std::vector<T> &pyramid, itk::SizeValueTyp
 
     pyramid.push_back( img );
 
+    double ori[2] = { 0.5,0.5 };
     while( *currentSize > targetSize )
     {
 		typename ResamplerType::Pointer resampler = ResamplerType::New();
         resampler->SetTransform( transform );
-        resampler->SetOutputOrigin( 0.5 );
+        const double orig[2]={0.5,0.5};
+        resampler->SetOutputOrigin( orig );
         resampler->SetInterpolator( interpolator );
         resampler->SetInput( inputImage );
         resampler->SetSize( reducedSize );

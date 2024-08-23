@@ -30,7 +30,7 @@
 
 using namespace ASTex;
 
-const int NB_ITER = 50;
+const int NB_ITER = 40;
 const int IMG_SZ = 2048;
 
 struct PipoImg
