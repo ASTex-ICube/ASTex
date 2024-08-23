@@ -32,7 +32,7 @@ jobs:
 
   build-windows:
     name: 'On Windows'
-    runs-on: pm_indows11
+    runs-on: pm_windows11
     steps:
       - uses: actions/checkout@v1
       - name: 'Trying to compile ASTex on Windows'
